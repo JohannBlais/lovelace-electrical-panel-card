@@ -28,11 +28,11 @@ Custom Lovelace card for Home Assistant — interactive one-line electrical pane
 
 ### Manual
 
-Download `electrical-panel-card.js` from the latest [release](https://github.com/JohannBlais/lovelace-electrical-panel-card/releases), copy it to `<config>/www/`, then add a Lovelace resource:
+Download `electrical-panel-card.js` from the latest [release](https://github.com/JohannBlais/lovelace-electrical-panel-card/releases), copy it to `<config>/www/electrical-panel-card/`, then add a Lovelace resource:
 
 ```yaml
 resources:
-  - url: /local/electrical-panel-card.js
+  - url: /local/electrical-panel-card/electrical-panel-card.js
     type: module
 ```
 

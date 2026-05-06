@@ -7,14 +7,17 @@ import terser from '@rollup/plugin-terser';
 
 const dev = process.env.ROLLUP_WATCH === 'true';
 
-// Optional dev mirror: drop the bundle straight into Home Assistant's www/.
+// Optional dev mirror: drop the bundle into a dedicated subfolder under
+// Home Assistant's www/, mirroring the per-card layout used by HACS.
 // Set HA_WWW_DIR to override; defaults to Z:/www if that drive is mounted.
 const haWwwCandidate = process.env.HA_WWW_DIR ?? 'Z:/www';
-const haWww = existsSync(haWwwCandidate) ? haWwwCandidate : null;
+const haCardDir = existsSync(haWwwCandidate)
+  ? `${haWwwCandidate}/electrical-panel-card`
+  : null;
 
-if (haWww) {
+if (haCardDir) {
   // eslint-disable-next-line no-console
-  console.log(`[rollup] mirroring bundle to ${haWww}/electrical-panel-card.js`);
+  console.log(`[rollup] mirroring bundle to ${haCardDir}/electrical-panel-card.js`);
 }
 
 const baseOutput = {
@@ -27,7 +30,7 @@ export default {
   input: 'src/electrical-panel-card.ts',
   output: [
     { ...baseOutput, file: 'dist/electrical-panel-card.js' },
-    ...(haWww ? [{ ...baseOutput, file: `${haWww}/electrical-panel-card.js` }] : []),
+    ...(haCardDir ? [{ ...baseOutput, file: `${haCardDir}/electrical-panel-card.js` }] : []),
   ],
   plugins: [
     resolve({ browser: true }),
