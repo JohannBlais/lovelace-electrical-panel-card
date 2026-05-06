@@ -544,9 +544,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   }
 
   private _renderPv(layout: Layout, pvEntity?: string, pvLabel?: string): unknown {
-    const pvC = '#92400e';
-    const pvS = '#d97706';
-    const pvF = '#fef3c7';
     const pvMidY = layout.pvYOff + GHDR / 2;
     const GW = layout.groupWidth;
     const pvR1 = layout.pvYOff + GHDR;
@@ -554,23 +551,20 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const title = pvLabel ?? 'Découplage 4P — Synergrid C10/11';
 
     return svg`
-      <circle cx=${PHASE_X.L3} cy=${pvMidY} r="3.5" fill=${pvS}/>
-      <circle cx=${PHASE_X.L2} cy=${pvMidY} r="3.5" fill=${pvS}/>
-      <circle cx=${PHASE_X.L1} cy=${pvMidY} r="3.5" fill=${pvS}/>
-      <line x1=${PHASE_X.L3} y1=${pvMidY} x2=${ML} y2=${pvMidY}
-            stroke=${pvS} stroke-width="2"/>
-      <polygon
+      <circle class="pv-accent" cx=${PHASE_X.L3} cy=${pvMidY} r="3.5"/>
+      <circle class="pv-accent" cx=${PHASE_X.L2} cy=${pvMidY} r="3.5"/>
+      <circle class="pv-accent" cx=${PHASE_X.L1} cy=${pvMidY} r="3.5"/>
+      <line class="pv-accent-line" x1=${PHASE_X.L3} y1=${pvMidY} x2=${ML} y2=${pvMidY}/>
+      <polygon class="pv-accent"
         points="${PHASE_X.L3 - 5},${pvMidY + 14} ${PHASE_X.L3},${pvMidY + 2} ${PHASE_X.L3 + 5},${pvMidY + 14}"
-        fill=${pvS}
       />
-      <rect x=${ML} y=${layout.pvYOff} width=${GW} height=${GHDR}
-            fill=${pvF} stroke=${pvS} stroke-width="1.8" rx="5"/>
-      <text x=${ML + 14} y=${layout.pvYOff + GHDR / 2 + 5} text-anchor="middle"
-            font-size="14" fill=${pvS}>⚡</text>
-      <text x=${ML + 30} y=${layout.pvYOff + 14} text-anchor="start"
-            font-size="8" font-weight="bold" fill=${pvC}>${title}</text>
-      <text x=${ML + 30} y=${layout.pvYOff + 27} text-anchor="start"
-            font-size="7.5" fill=${pvS}>↑ Injection réseau</text>
+      <rect class="pv-bg" x=${ML} y=${layout.pvYOff} width=${GW} height=${GHDR} rx="5"/>
+      <text class="pv-icon" x=${ML + 14} y=${layout.pvYOff + GHDR / 2 + 5}
+            text-anchor="middle" font-size="14">⚡</text>
+      <text class="pv-text" x=${ML + 30} y=${layout.pvYOff + 14}
+            text-anchor="start" font-size="8" font-weight="bold">${title}</text>
+      <text class="pv-text" x=${ML + 30} y=${layout.pvYOff + 27}
+            text-anchor="start" font-size="7.5">↑ Injection réseau</text>
       ${this._bubble({
         id: 'pv',
         x: PWR_X,
@@ -578,19 +572,17 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         fill: 'var(--primary-text-color)',
         powerEntity: pvEntity,
       })}
-      <rect x=${ML} y=${pvR1} width=${GW} height=${ZH}
-            fill=${pvF} stroke=${pvS} stroke-width="0.5"/>
-      <text x=${ML + 6} y=${pvR1 + ZH / 2 + 3.5} text-anchor="start" font-size="12">☀</text>
-      <text x=${ML + 22} y=${pvR1 + ZH / 2 + 3.5} text-anchor="start"
-            font-size="8" fill=${pvC}>Onduleurs PV</text>
-      <rect x=${ML} y=${pvR2} width=${GW} height=${ZH}
-            fill="#fffbeb" stroke=${pvS} stroke-width="0.5"/>
-      <text x=${ML + 6} y=${pvR2 + ZH / 2 + 3.5} text-anchor="start"
-            font-size="10" fill="#d97706">☀</text>
-      <text x=${ML + 22} y=${pvR2 + ZH / 2 + 3.5} text-anchor="start"
-            font-size="8" fill=${pvC}>Panneaux PV</text>
-      <line x1=${ML} y1=${pvR2 + ZH} x2=${ML + GW} y2=${pvR2 + ZH}
-            stroke=${pvS} stroke-width="1"/>
+      <rect class="pv-bg-row" x=${ML} y=${pvR1} width=${GW} height=${ZH}/>
+      <text class="pv-icon" x=${ML + 6} y=${pvR1 + ZH / 2 + 3.5}
+            text-anchor="start" font-size="12">☀</text>
+      <text class="pv-text" x=${ML + 22} y=${pvR1 + ZH / 2 + 3.5}
+            text-anchor="start" font-size="8">Onduleurs PV</text>
+      <rect class="pv-bg-row-alt" x=${ML} y=${pvR2} width=${GW} height=${ZH}/>
+      <text class="pv-icon" x=${ML + 6} y=${pvR2 + ZH / 2 + 3.5}
+            text-anchor="start" font-size="10">☀</text>
+      <text class="pv-text" x=${ML + 22} y=${pvR2 + ZH / 2 + 3.5}
+            text-anchor="start" font-size="8">Panneaux PV</text>
+      <line class="pv-divider" x1=${ML} y1=${pvR2 + ZH} x2=${ML + GW} y2=${pvR2 + ZH}/>
     `;
   }
 
@@ -695,6 +687,54 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
       .phase-label {
         fill: var(--primary-text-color);
+      }
+      /* PV / injection block — uses HA energy-solar accent variable so the
+         block stays recognisable as solar without imposing a custom palette
+         (themes can override --energy-solar-color). Texts use the standard
+         primary text colour. */
+      .pv-accent {
+        fill: var(--energy-solar-color, #ff9800);
+      }
+      .pv-accent-line {
+        stroke: var(--energy-solar-color, #ff9800);
+        stroke-width: 2;
+      }
+      .pv-icon {
+        fill: var(--energy-solar-color, #ff9800);
+      }
+      .pv-text {
+        fill: var(--primary-text-color);
+      }
+      .pv-bg {
+        fill: color-mix(
+          in srgb,
+          var(--energy-solar-color, #ff9800) 15%,
+          var(--ha-card-background, var(--card-background-color, transparent))
+        );
+        stroke: var(--energy-solar-color, #ff9800);
+        stroke-width: 1.8;
+      }
+      .pv-bg-row {
+        fill: color-mix(
+          in srgb,
+          var(--energy-solar-color, #ff9800) 10%,
+          var(--ha-card-background, var(--card-background-color, transparent))
+        );
+        stroke: var(--energy-solar-color, #ff9800);
+        stroke-width: 0.5;
+      }
+      .pv-bg-row-alt {
+        fill: color-mix(
+          in srgb,
+          var(--energy-solar-color, #ff9800) 5%,
+          var(--ha-card-background, var(--card-background-color, transparent))
+        );
+        stroke: var(--energy-solar-color, #ff9800);
+        stroke-width: 0.5;
+      }
+      .pv-divider {
+        stroke: var(--energy-solar-color, #ff9800);
+        stroke-width: 1;
       }
     `;
   }
