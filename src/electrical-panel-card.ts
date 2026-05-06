@@ -5,6 +5,7 @@ import {
   css,
   nothing,
   type CSSResultGroup,
+  type PropertyValues,
   type TemplateResult,
 } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
@@ -97,7 +98,19 @@ interface Layout {
 export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
+  // Reflected so :host([dark]) can swap CSS variables. Driven by
+  // hass.themes.darkMode (the authoritative HA signal), which beats the
+  // @media (prefers-color-scheme: dark) fallback when they disagree.
+  @property({ type: Boolean, reflect: true }) public dark = false;
+
   @state() private _config?: ElectricalPanelCardConfig;
+
+  protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('hass')) {
+      const darkMode = !!(this.hass?.themes as { darkMode?: boolean } | undefined)?.darkMode;
+      if (this.dark !== darkMode) this.dark = darkMode;
+    }
+  }
 
   public setConfig(config: LovelaceCardConfig): void {
     if (!config) throw new Error('Invalid configuration');
@@ -634,15 +647,24 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         --electrical-panel-phase-l2-color: #1a202c;
         --electrical-panel-phase-l3-color: #5a6474;
       }
+      /* Dark mode — driven by HA's hass.themes.darkMode (reflected to the
+         host attribute) and falling back to the OS preference for users
+         outside HA's control. Host-attribute selectors win on specificity. */
+      :host([dark]) {
+        --electrical-panel-phase-l1-color: #d2a679;
+        --electrical-panel-phase-l2-color: #cbd5e0;
+        --electrical-panel-phase-l3-color: #a0aec0;
+      }
+      :host([dark]) text.pwr-value[data-id^='g-'],
+      :host([dark]) text.pwr-value[data-id^='c-'] {
+        filter: brightness(1.55) saturate(0.85);
+      }
       @media (prefers-color-scheme: dark) {
         :host {
           --electrical-panel-phase-l1-color: #d2a679;
           --electrical-panel-phase-l2-color: #cbd5e0;
           --electrical-panel-phase-l3-color: #a0aec0;
         }
-        /* User-configured group / circuit colours are designed for a light
-           background. Lighten the on-bubble text in dark mode so dark hues
-           remain readable on the dark card surface. */
         text.pwr-value[data-id^='g-'],
         text.pwr-value[data-id^='c-'] {
           filter: brightness(1.55) saturate(0.85);
