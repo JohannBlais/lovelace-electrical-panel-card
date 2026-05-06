@@ -53,10 +53,12 @@ const PH_TAP_ZONE = 42;
 const PV_HEIGHT = GHDR + 2 * ZH;
 
 const PHASE_X: Record<'L1' | 'L2' | 'L3', number> = { L3: 24, L2: 36, L1: 48 };
+// Phase colours resolved at render time via CSS custom properties so they can
+// adapt to light/dark themes (or be overridden in a HA theme YAML).
 const PHASE_COLOR: Record<'L1' | 'L2' | 'L3', string> = {
-  L1: '#8B4513',
-  L2: '#1A202C',
-  L3: '#5A6474',
+  L1: 'var(--electrical-panel-phase-l1-color, #8B4513)',
+  L2: 'var(--electrical-panel-phase-l2-color, #1A202C)',
+  L3: 'var(--electrical-panel-phase-l3-color, #5A6474)',
 };
 
 const TYPE_ICON: Record<string, string> = {
@@ -514,7 +516,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                   id: `z-${c.id}-${j}`,
                   x: PWR_X,
                   y: zoneY + 3,
-                  fill: '#4a5568',
+                  fill: 'var(--primary-text-color)',
                   connX: 270,
                   switchEntity: zone.switch,
                   criticalLabel: zone.critical ? zone.room : undefined,
@@ -626,6 +628,25 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     return css`
       :host {
         display: block;
+        /* Phase colours — light-theme defaults. Override in a HA theme YAML
+           (under \`card-mod\` or theme-level vars) for custom palettes. */
+        --electrical-panel-phase-l1-color: #8b4513;
+        --electrical-panel-phase-l2-color: #1a202c;
+        --electrical-panel-phase-l3-color: #5a6474;
+      }
+      @media (prefers-color-scheme: dark) {
+        :host {
+          --electrical-panel-phase-l1-color: #d2a679;
+          --electrical-panel-phase-l2-color: #cbd5e0;
+          --electrical-panel-phase-l3-color: #a0aec0;
+        }
+        /* User-configured group / circuit colours are designed for a light
+           background. Lighten the on-bubble text in dark mode so dark hues
+           remain readable on the dark card surface. */
+        text.pwr-value[data-id^='g-'],
+        text.pwr-value[data-id^='c-'] {
+          filter: brightness(1.55) saturate(0.85);
+        }
       }
       ha-card {
         padding: 8px;
