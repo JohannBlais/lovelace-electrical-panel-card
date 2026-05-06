@@ -71,7 +71,7 @@ groups:
           - { floor: E1, room: laundry }
 ```
 
-See [docs/configuration.md](docs/configuration.md) (TBD) for the full schema.
+See [docs/data-model.md](docs/data-model.md) for the full schema, theming variables, and special concepts (three-phase loads, critical-toggle confirmation, internationalisation).
 
 ## Development
 
