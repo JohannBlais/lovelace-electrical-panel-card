@@ -333,21 +333,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               stroke-width="3"
             />
 
-            <!-- Phase labels -->
-            <text x=${PHASE_X.L3} y="16" text-anchor="middle"
-                  font-size="7.5" font-weight="bold" fill=${PHASE_COLOR.L3}>L3</text>
-            <text x=${PHASE_X.L2} y="16" text-anchor="middle"
-                  font-size="7.5" font-weight="bold" fill=${PHASE_COLOR.L2}>L2</text>
-            <text x=${PHASE_X.L1} y="16" text-anchor="middle"
-                  font-size="7.5" font-weight="bold" fill=${PHASE_COLOR.L1}>L1</text>
+            <!-- Phase labels (text uses theme color, not cable color) -->
+            <text class="phase-label" x=${PHASE_X.L3} y="16" text-anchor="middle"
+                  font-size="7.5" font-weight="bold">L3</text>
+            <text class="phase-label" x=${PHASE_X.L2} y="16" text-anchor="middle"
+                  font-size="7.5" font-weight="bold">L2</text>
+            <text class="phase-label" x=${PHASE_X.L1} y="16" text-anchor="middle"
+                  font-size="7.5" font-weight="bold">L1</text>
 
-            <!-- Staggered phase taps + bubbles -->
+            <!-- Staggered phase taps + bubbles. Tap dot uses cable colour;
+                 bubble value text uses theme colour for readability. -->
             <circle cx=${PHASE_X.L1} cy=${phTapY1} r="2" fill=${PHASE_COLOR.L1}/>
             ${this._bubble({
               id: 'phase_l1',
               x: 150,
               y: phTapY1,
-              fill: PHASE_COLOR.L1,
+              fill: 'var(--primary-text-color)',
               connX: PHASE_X.L1,
               powerEntity: sensors.phase_l1?.entity,
             })}
@@ -356,7 +357,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               id: 'phase_l2',
               x: 185,
               y: phTapY2,
-              fill: PHASE_COLOR.L2,
+              fill: 'var(--primary-text-color)',
               connX: PHASE_X.L2,
               powerEntity: sensors.phase_l2?.entity,
             })}
@@ -365,7 +366,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               id: 'phase_l3',
               x: 220,
               y: phTapY3,
-              fill: PHASE_COLOR.L3,
+              fill: 'var(--primary-text-color)',
               connX: PHASE_X.L3,
               powerEntity: sensors.phase_l3?.entity,
             })}
@@ -574,7 +575,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         id: 'pv',
         x: PWR_X,
         y: layout.pvYOff + GHDR / 2 + 5,
-        fill: pvC,
+        fill: 'var(--primary-text-color)',
         powerEntity: pvEntity,
       })}
       <rect x=${ML} y=${pvR1} width=${GW} height=${ZH}
@@ -649,22 +650,14 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
       /* Dark mode — driven by HA's hass.themes.darkMode (reflected to the
          host attribute) and falling back to the OS preference for users
-         outside HA's control. Host-attribute selectors win on specificity. */
-      :host([dark]) {
-        --electrical-panel-phase-l1-color: #d2a679;
-        --electrical-panel-phase-l2-color: #cbd5e0;
-        --electrical-panel-phase-l3-color: #a0aec0;
-      }
+         outside HA's control. Phase wire colours stay canonical IEC 60446
+         in both themes (real cables don't lighten at night); text uses
+         theme-aware variables so labels and values stay readable. */
       :host([dark]) text.pwr-value[data-id^='g-'],
       :host([dark]) text.pwr-value[data-id^='c-'] {
         filter: brightness(1.55) saturate(0.85);
       }
       @media (prefers-color-scheme: dark) {
-        :host {
-          --electrical-panel-phase-l1-color: #d2a679;
-          --electrical-panel-phase-l2-color: #cbd5e0;
-          --electrical-panel-phase-l3-color: #a0aec0;
-        }
         text.pwr-value[data-id^='g-'],
         text.pwr-value[data-id^='c-'] {
           filter: brightness(1.55) saturate(0.85);
@@ -699,6 +692,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       .label-secondary,
       .zone-room {
         fill: var(--secondary-text-color, #718096);
+      }
+      .phase-label {
+        fill: var(--primary-text-color);
       }
     `;
   }
