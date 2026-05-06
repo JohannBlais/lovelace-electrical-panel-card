@@ -16,6 +16,8 @@ Custom Lovelace card for Home Assistant — interactive one-line electrical pane
 - Three-phase loads, PV / grid injection block
 - 100 % YAML configuration — adapt it to any panel layout
 - Pure SVG, no iframe, no token, no polling — uses the standard `hass` object
+- Light / dark theme aware (cable colours stay IEC 60446; texts adapt)
+- English (default) and French built-in; auto-detected from `hass.locale.language`
 
 ## Installation
 
@@ -43,6 +45,9 @@ Add the card to a dashboard:
 ```yaml
 type: custom:electrical-panel-card
 title: Tableau électrique
+# Optional — overrides the language auto-detected from hass.locale.
+# Built-in: 'en' (default) and 'fr'. Falls back to English if unknown.
+language: fr
 sensors:
   total: { entity: sensor.envoy_current_power_consumption, label: Total }
   pv:    { entity: sensor.envoy_current_power_production,  label: ☀ PV, max_w: 8075 }

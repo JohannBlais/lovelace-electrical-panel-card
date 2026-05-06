@@ -12,6 +12,12 @@ import { customElement, property, state } from 'lit/decorators.js';
 import type { HomeAssistant, LovelaceCard, LovelaceCardConfig } from 'custom-card-helpers';
 
 import { CARD_TAG, CARD_VERSION } from './const.js';
+import {
+  format as formatI18n,
+  getDict,
+  pickLanguage,
+  type Translations,
+} from './translations/index.js';
 import type {
   Circuit,
   ElectricalPanelCardConfig,
@@ -174,6 +180,15 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     return null;
   }
 
+  // ── Helpers: i18n ─────────────────────────────────────────────────────────
+  private _t(): Translations {
+    const haLang =
+      (this.hass?.locale as { language?: string } | undefined)?.language ??
+      (this.hass as { language?: string } | undefined)?.language;
+    const lang = pickLanguage(this._config?.language ?? haLang);
+    return getDict(lang);
+  }
+
   private static _fmt(w: number | null): string {
     if (w === null) return '';
     const sign = w < 0 ? '−' : '';
@@ -184,7 +199,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   private _toggle(ev: Event, entity: string, criticalLabel?: string): void {
     ev.stopPropagation();
     if (!this.hass) return;
-    if (criticalLabel && !confirm(`Êtes-vous sûr de vouloir commuter « ${criticalLabel} » ?`)) {
+    if (
+      criticalLabel &&
+      !confirm(formatI18n(this._t().confirm.toggle, { name: criticalLabel }))
+    ) {
       return;
     }
     this.hass.callService('switch', 'toggle', { entity_id: entity });
@@ -295,6 +313,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const layout = this._computeLayout();
     const sensors = this._config.sensors ?? {};
     const floors = { ...DEFAULT_FLOORS, ...(this._config.floors ?? {}) };
+    const t = this._t();
     const phTapY1 = HEADER_H + 6;
     const phTapY2 = HEADER_H + 20;
     const phTapY3 = HEADER_H + 34;
@@ -373,7 +392,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
             <!-- Main totals (right column) -->
             <text class="label-secondary" x=${PWR_X - 55} y=${phTapY1 + 3}
-                  text-anchor="end" font-size="7.5">${sensors.total?.label ?? 'Total'}</text>
+                  text-anchor="end" font-size="7.5">${sensors.total?.label ?? t.card.total}</text>
             ${this._bubble({
               id: 'total',
               x: PWR_X,
@@ -382,7 +401,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               powerEntity: sensors.total?.entity,
             })}
             <text class="label-secondary" x=${PWR_X - 55} y=${phTapY2 + 3}
-                  text-anchor="end" font-size="7.5">${sensors.grid?.label ?? 'Réseau'}</text>
+                  text-anchor="end" font-size="7.5">${sensors.grid?.label ?? t.card.grid}</text>
             ${this._bubble({
               id: 'grid',
               x: PWR_X,
@@ -548,7 +567,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const GW = layout.groupWidth;
     const pvR1 = layout.pvYOff + GHDR;
     const pvR2 = pvR1 + ZH;
-    const title = pvLabel ?? 'Découplage 4P — Synergrid C10/11';
+    const t = this._t();
+    const title = pvLabel ?? t.pv.title_default;
 
     return svg`
       <circle class="pv-accent" cx=${PHASE_X.L3} cy=${pvMidY} r="3.5"/>
@@ -564,7 +584,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       <text class="pv-text" x=${ML + 30} y=${layout.pvYOff + 14}
             text-anchor="start" font-size="8" font-weight="bold">${title}</text>
       <text class="pv-text" x=${ML + 30} y=${layout.pvYOff + 27}
-            text-anchor="start" font-size="7.5">↑ Injection réseau</text>
+            text-anchor="start" font-size="7.5">${t.pv.injection}</text>
       ${this._bubble({
         id: 'pv',
         x: PWR_X,
@@ -576,12 +596,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       <text class="pv-icon" x=${ML + 6} y=${pvR1 + ZH / 2 + 3.5}
             text-anchor="start" font-size="12">☀</text>
       <text class="pv-text" x=${ML + 22} y=${pvR1 + ZH / 2 + 3.5}
-            text-anchor="start" font-size="8">Onduleurs PV</text>
+            text-anchor="start" font-size="8">${t.pv.inverters}</text>
       <rect class="pv-bg-row-alt" x=${ML} y=${pvR2} width=${GW} height=${ZH}/>
       <text class="pv-icon" x=${ML + 6} y=${pvR2 + ZH / 2 + 3.5}
             text-anchor="start" font-size="10">☀</text>
       <text class="pv-text" x=${ML + 22} y=${pvR2 + ZH / 2 + 3.5}
-            text-anchor="start" font-size="8">Panneaux PV</text>
+            text-anchor="start" font-size="8">${t.pv.panels}</text>
       <line class="pv-divider" x1=${ML} y1=${pvR2 + ZH} x2=${ML + GW} y2=${pvR2 + ZH}/>
     `;
   }

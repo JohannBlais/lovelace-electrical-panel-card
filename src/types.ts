@@ -57,6 +57,12 @@ export interface PvBlockConfig {
 export interface ElectricalPanelCardConfig extends LovelaceCardConfig {
   type: string;
   title?: string;
+  /**
+   * Optional language override. BCP 47 primary subtag (e.g. 'en', 'fr').
+   * When omitted, the card auto-detects from `hass.locale.language` and
+   * falls back to English.
+   */
+  language?: string;
   sensors?: Record<string, MainSensor>;
   floors?: Record<string, FloorStyle>;
   groups: Group[];
