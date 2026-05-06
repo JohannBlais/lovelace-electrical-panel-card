@@ -231,7 +231,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       x,
       y,
       anchor = 'end',
-      fill = '#718096',
+      fill = 'var(--secondary-text-color)',
       connX,
       switchEntity,
       criticalLabel,
@@ -250,13 +250,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     return svg`
       ${
         connX !== undefined
-          ? svg`<line data-ln-for=${id} x1=${connX} y1=${y - 4} x2=${x} y2=${y - 4}
-                       stroke="#cbd5e0" stroke-width="0.5" visibility="hidden"></line>`
+          ? svg`<line class="bubble-conn" data-ln-for=${id} x1=${connX} y1=${y - 4}
+                       x2=${x} y2=${y - 4} visibility="hidden"></line>`
           : nothing
       }
-      <rect data-bg-for=${id} x=${x - 40} y=${y - 12} width="42" height="15"
-            fill="white" stroke="#e2e8f0" stroke-width="0.7" rx="3"
-            visibility="hidden"></rect>
+      <rect class="bubble-bg" data-bg-for=${id} x=${x - 40} y=${y - 12} width="42"
+            height="15" rx="3" visibility="hidden"></rect>
       <text class="pwr-value" data-id=${id} x=${x} y=${y} text-anchor=${anchor}
             font-size="7.5" font-weight="bold" fill=${fill}>${text}</text>
       ${
@@ -357,8 +356,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             })}
 
             <!-- Main totals (right column) -->
-            <text x=${PWR_X - 55} y=${phTapY1 + 3} text-anchor="end"
-                  font-size="7.5" fill="#718096">${sensors.total?.label ?? 'Total'}</text>
+            <text class="label-secondary" x=${PWR_X - 55} y=${phTapY1 + 3}
+                  text-anchor="end" font-size="7.5">${sensors.total?.label ?? 'Total'}</text>
             ${this._bubble({
               id: 'total',
               x: PWR_X,
@@ -366,8 +365,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               fill: '#c53030',
               powerEntity: sensors.total?.entity,
             })}
-            <text x=${PWR_X - 55} y=${phTapY2 + 3} text-anchor="end"
-                  font-size="7.5" fill="#718096">${sensors.grid?.label ?? 'Réseau'}</text>
+            <text class="label-secondary" x=${PWR_X - 55} y=${phTapY2 + 3}
+                  text-anchor="end" font-size="7.5">${sensors.grid?.label ?? 'Réseau'}</text>
             ${this._bubble({
               id: 'grid',
               x: PWR_X,
@@ -503,9 +502,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           ${
             zone.room
               ? svg`
-                  <text x=${fc ? textX + BW + 4 : textX} y=${zoneY - 1}
+                  <text class="zone-room" x=${fc ? textX + BW + 4 : textX} y=${zoneY - 1}
                         text-anchor="start" dominant-baseline="central"
-                        font-size="8" fill="#4a5568">${zone.room}</text>
+                        font-size="8">${zone.room}</text>
                 `
               : nothing
           }
@@ -639,7 +638,24 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         display: block;
         width: 100%;
         height: auto;
-        font-family: var(--paper-font-body1_-_font-family, Arial, sans-serif);
+        font-family: var(
+          --ha-font-family-body,
+          var(--paper-font-body1_-_font-family, Arial, sans-serif)
+        );
+      }
+      /* Theme-aware structural elements */
+      .bubble-bg {
+        fill: var(--ha-card-background, var(--card-background-color, #fff));
+        stroke: var(--divider-color, #e2e8f0);
+        stroke-width: 0.7;
+      }
+      .bubble-conn {
+        stroke: var(--divider-color, #cbd5e0);
+        stroke-width: 0.5;
+      }
+      .label-secondary,
+      .zone-room {
+        fill: var(--secondary-text-color, #718096);
       }
     `;
   }
