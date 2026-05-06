@@ -1,0 +1,48 @@
+{
+  "name": "lovelace-electrical-panel-card",
+  "version": "0.1.0",
+  "description": "Custom Lovelace card for Home Assistant — interactive one-line electrical panel diagram with live power readings, smart-plug toggles, and per-circuit/per-zone breakdown.",
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "lovelace-custom-card",
+    "hacs",
+    "electrical",
+    "energy",
+    "custom-card"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JohannBlais/lovelace-electrical-panel-card.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JohannBlais/lovelace-electrical-panel-card/issues"
+  },
+  "homepage": "https://github.com/JohannBlais/lovelace-electrical-panel-card#readme",
+  "author": "Johann Blais",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "custom-card-helpers": "^1.9.0",
+    "lit": "^3.2.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.1",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "eslint": "^9.14.0",
+    "rollup": "^4.27.2",
+    "tslib": "^2.8.1",
+    "typescript": "^5.6.3"
+  }
+}
