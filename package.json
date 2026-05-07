@@ -1,6 +1,6 @@
 {
   "name": "lovelace-electrical-panel-card",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Custom Lovelace card for Home Assistant — interactive one-line electrical panel diagram with live power readings, smart-plug toggles, and per-circuit/per-zone breakdown.",
   "keywords": [
     "home-assistant",

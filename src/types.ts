@@ -49,6 +49,12 @@ export interface Zone {
   switch?: string;
   /** When true and `switch` is set, toggling shows a confirm dialog. */
   critical?: boolean;
+  /**
+   * Optional MDI icon override (e.g. `'mdi:solar-power'`). Takes precedence
+   * over `Circuit.icon` and the type default. Any string accepted by
+   * Home Assistant's `<ha-icon>` element works.
+   */
+  icon?: string;
 }
 
 export interface Circuit {
@@ -57,6 +63,12 @@ export interface Circuit {
   sensor?: string;
   switch?: string;
   zones?: Zone[];
+  /**
+   * Optional MDI icon override applied to all zones of this circuit
+   * (e.g. `'mdi:solar-power'` on a PV inverter circuit). Overridden per zone
+   * by `Zone.icon`. Falls back to the type default.
+   */
+  icon?: string;
   // ── Metadata (not rendered yet, kept for future tooltips / info dialogs)
   amp?: number;
   poles?: 2 | 4;

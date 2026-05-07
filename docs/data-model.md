@@ -160,11 +160,14 @@ circuits:
 | Field    | Type                                  | Required | Description |
 | -------- | ------------------------------------- | -------- | ----------- |
 | `id`     | string                                | yes      | Drawn inside the breaker box (e.g. `A`). Unique within a group. |
-| `type`   | `'socket'` \| `'light'` \| `'power'`  | yes      | Picks the icon shown next to each zone: 🔌 / 💡 / ⚙️ . |
+| `type`   | `'socket'` \| `'light'` \| `'power'`  | yes      | Picks the **default** icon for zones in this circuit (MDI: `mdi:power-socket-eu` / `mdi:lightbulb-outline` / `mdi:lightning-bolt`). |
+| `icon`   | string (MDI name)                     | no       | Overrides the type default for all zones of this circuit. Any string accepted by `<ha-icon>` works (e.g. `mdi:solar-power`, `mdi:fire`). |
 | `sensor` | string (entity ID)                    | no       | Per-circuit power. Bubble appears next to the breaker box. |
 | `switch` | string (entity ID)                    | no       | Adds an inline toggle on the circuit's bubble. |
 | `zones`  | [`Zone[]`](#zones)                    | no       | Branches off the circuit. Empty/missing = breaker box drawn alone, no zones. |
 | `amp` / `poles` / `mm2` / `cond` / `pts` / `n_pts` | various | no | _Metadata._ Reserved for future tooltips. |
+
+Icon resolution per zone: `Zone.icon` ⟶ `Circuit.icon` ⟶ default for `Circuit.type` ⟶ `mdi:help`.
 
 ## Zones
 
@@ -187,6 +190,7 @@ zones:
 | `sensor`   | string (entity)  | Per-zone power. Bubble to the right. |
 | `switch`   | string (entity)  | Inline toggle on the bubble. |
 | `critical` | boolean          | When `true` and `switch` is set, toggling shows a confirmation dialog using `room` as the load name. |
+| `icon`     | string (MDI name) | Overrides `Circuit.icon` and the type default for this single zone. |
 
 ## Modelling production sources
 

@@ -68,10 +68,12 @@ const PHASE_COLOR: Record<Phase, string> = {
   L3: 'var(--electrical-panel-phase-l3-color, #5A6474)',
 };
 
-const TYPE_ICON: Record<string, string> = {
-  socket: '🔌',
-  light: '💡',
-  power: '⚙️',
+// Default MDI icons by circuit type. Overridable per circuit (`Circuit.icon`)
+// or per zone (`Zone.icon`) — both take any `<ha-icon>` string.
+const TYPE_DEFAULT_ICON: Record<string, string> = {
+  socket: 'mdi:power-socket-eu',
+  light: 'mdi:lightbulb-outline',
+  power: 'mdi:lightning-bolt',
 };
 
 // No built-in floor presets — defining "some but not others" is confusing,
@@ -558,14 +560,17 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         const BW = 20;
         const BH = 12;
         const BR = 3;
-        const ICON_W = 14;
+        const ICON_SIZE = 12;
+        const ICON_GAP = 4;
         const fc = zone.floor
           ? floors[zone.floor] ?? { bg: '#a0aec0', fg: 'white' }
           : null;
         const pillX = ix0;
         const iconX = fc ? ix0 + BW + 4 : ix0;
-        const roomX = iconX + ICON_W;
+        const roomX = iconX + ICON_SIZE + ICON_GAP;
         const lineEnd = ix0;
+        const iconName =
+          zone.icon ?? c.icon ?? TYPE_DEFAULT_ICON[c.type] ?? 'mdi:help';
 
         return svg`
           <line x1=${cbCenterX} y1=${zoneY} x2=${lineEnd} y2=${zoneY}
@@ -581,9 +586,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                 `
               : nothing
           }
-          <text x=${iconX} y=${zoneY + 4} text-anchor="start" font-size="10">
-            ${TYPE_ICON[c.type] ?? ''}
-          </text>
+          <foreignObject x=${iconX} y=${zoneY - ICON_SIZE / 2}
+                         width=${ICON_SIZE} height=${ICON_SIZE}>
+            <ha-icon icon=${iconName} class="zone-icon"></ha-icon>
+          </foreignObject>
           ${
             zone.room
               ? svg`
@@ -704,6 +710,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
       .phase-label {
         fill: var(--primary-text-color);
+      }
+      .zone-icon {
+        --mdc-icon-size: 12px;
+        color: var(--secondary-text-color, #718096);
+        display: block;
+        width: 12px;
+        height: 12px;
       }
     `;
   }

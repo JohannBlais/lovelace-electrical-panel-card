@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.7.0] — MDI icons (per zone, per circuit, with type defaults)
+
+Zone icons are now Material Design icons rendered through Home Assistant's
+`<ha-icon>` element, instead of unicode emoji. They follow `--secondary-text-color`
+so they adapt to themes (emoji had inherent multi-colour rendering and looked
+out of place in dark mode). Override per circuit or per zone.
+
+### Added
+
+- `Circuit.icon?: string` — MDI icon applied to all zones of the circuit
+  (e.g. `icon: mdi:solar-power` on a PV inverter circuit).
+- `Zone.icon?: string` — overrides the circuit-level icon for a single zone.
+
+### Changed
+
+- Default icons by `Circuit.type` now resolve to MDI:
+  - `socket` → `mdi:power-socket-eu`
+  - `light`  → `mdi:lightbulb-outline`
+  - `power`  → `mdi:lightning-bolt`
+- Icons render at 12 px square in a `<foreignObject>` host inside the SVG.
+
+### Resolution order
+
+```
+zone.icon  →  circuit.icon  →  TYPE_DEFAULT_ICON[circuit.type]  →  mdi:help
+```
+
 ## [0.6.0] — No floor presets, zone layout swap, more vertical space
 
 ### Breaking
