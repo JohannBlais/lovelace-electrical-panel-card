@@ -20,3 +20,21 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+
+      # Render the example YAMLs through the freshly built bundle inside
+      # jsdom. Doubles as a sanity test (the script throws on any render
+      # error) and as drift detection (the commit fails if the regenerated
+      # SVGs no longer match the ones checked into the repo, forcing devs
+      # to refresh assets/ after layout / icon / wording changes).
+      - name: Generate previews
+        run: npm run generate-previews
+
+      - name: Verify previews are up to date
+        run: |
+          if ! git diff --quiet -- assets/; then
+            echo "::error::Preview SVGs are out of date. Run 'npm run generate-previews' locally and commit the updated assets/."
+            git diff --stat -- assets/
+            git diff -- assets/ | head -200
+            exit 1
+          fi
+          echo "Previews are up to date."

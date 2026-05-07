@@ -1,0 +1,10 @@
+# Normalize line endings across platforms so CI's drift check on
+# generated previews doesn't trip on Windows ↔ Linux CRLF/LF differences.
+* text=auto eol=lf
+*.svg text eol=lf
+*.mjs text eol=lf
+*.ts text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
