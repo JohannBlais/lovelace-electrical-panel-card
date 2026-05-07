@@ -167,11 +167,82 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   @state()
   private _dialog: { title: string; rows: Array<[string, string]> } | null = null;
 
+  // Caches keyed on the current `_config` reference. Cleared in setConfig().
+  private _layoutCache?: Layout;
+  private _entityCache?: string[];
+  // Per-bubble bbox memo keyed by data-id; skips getBBox + setAttribute calls
+  // when the displayed text hasn't changed since the last render.
+  private _bubbleTextCache: Map<string, string> = new Map();
+
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('hass')) {
       const darkMode = !!(this.hass?.themes as { darkMode?: boolean } | undefined)?.darkMode;
       if (this.dark !== darkMode) this.dark = darkMode;
     }
+  }
+
+  // Skip work when nothing the card cares about has changed. Lit triggers an
+  // update on every `hass` property change (which fires for every state in
+  // the system), but most of those are unrelated to this card's entities.
+  protected override shouldUpdate(changed: PropertyValues): boolean {
+    if (changed.has('_config') || changed.has('_dialog') || changed.has('dark')) {
+      return true;
+    }
+    if (changed.has('hass')) {
+      const oldHass = changed.get('hass') as HomeAssistant | undefined;
+      // First hass set — always render.
+      if (!oldHass || !this.hass) return true;
+      const entities = this._getEntityList();
+      for (const e of entities) {
+        if (oldHass.states[e]?.state !== this.hass.states[e]?.state) return true;
+        if (
+          oldHass.states[e]?.attributes?.unit_of_measurement !==
+          this.hass.states[e]?.attributes?.unit_of_measurement
+        ) {
+          return true;
+        }
+      }
+      // Theme mode flip is handled in willUpdate; if hass changed but no
+      // tracked entity moved and `dark` didn't flip, nothing to render.
+      return false;
+    }
+    return false;
+  }
+
+  /** Memoised layout computation. */
+  private _getLayout(): Layout {
+    if (!this._layoutCache) {
+      this._layoutCache = this._computeLayout();
+    }
+    return this._layoutCache;
+  }
+
+  /** Memoised list of every entity_id this card watches. */
+  private _getEntityList(): string[] {
+    if (this._entityCache) return this._entityCache;
+    const set = new Set<string>();
+    const cfg = this._config;
+    if (!cfg) {
+      this._entityCache = [];
+      return this._entityCache;
+    }
+    const s = cfg.sensors;
+    [s?.total?.entity, s?.grid?.entity, s?.phases?.l1?.entity, s?.phases?.l2?.entity, s?.phases?.l3?.entity]
+      .forEach((e) => e && set.add(e));
+    for (const g of cfg.groups) {
+      if (g.sensor) set.add(g.sensor);
+      if (g.switch) set.add(g.switch);
+      for (const c of g.circuits ?? []) {
+        if (c.sensor) set.add(c.sensor);
+        if (c.switch) set.add(c.switch);
+        for (const z of c.zones ?? []) {
+          if (z.sensor) set.add(z.sensor);
+          if (z.switch) set.add(z.switch);
+        }
+      }
+    }
+    this._entityCache = [...set];
+    return this._entityCache;
   }
 
   public setConfig(config: LovelaceCardConfig): void {
@@ -189,6 +260,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
     });
     this._config = cfg;
+    // Invalidate config-derived caches.
+    this._layoutCache = undefined;
+    this._entityCache = undefined;
+    this._bubbleTextCache.clear();
   }
 
   public getCardSize(): number {
@@ -444,7 +519,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // ── Render ────────────────────────────────────────────────────────────────
   protected override render(): TemplateResult {
     if (!this._config || !this.hass) return html``;
-    const layout = this._computeLayout();
+    const layout = this._getLayout();
     const sensors = this._config.sensors ?? {};
     const phases = sensors.phases ?? {};
     const floors = this._config.floors ?? {};
@@ -757,16 +832,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     `;
   }
 
-  // After each render, size each power-bubble background to match its text bbox.
+  // After each render, size each power-bubble background to match its text
+  // bbox. Bubbles whose text hasn't changed since the last pass are skipped
+  // — saves a pile of synchronous getBBox() / setAttribute calls when only
+  // the live values are updating (the common case).
   protected override updated(): void {
     if (!this.shadowRoot) return;
     const texts = this.shadowRoot.querySelectorAll<SVGTextElement>('text.pwr-value');
     texts.forEach((t) => {
       const id = t.dataset.id;
       if (!id) return;
+      const txt = (t.textContent ?? '').trim();
+      if (this._bubbleTextCache.get(id) === txt) return; // unchanged
+      this._bubbleTextCache.set(id, txt);
+
       const bg = this.shadowRoot!.querySelector<SVGRectElement>(`rect[data-bg-for="${id}"]`);
       const ln = this.shadowRoot!.querySelector<SVGLineElement>(`line[data-ln-for="${id}"]`);
-      const txt = (t.textContent ?? '').trim();
       if (!txt) {
         bg?.setAttribute('visibility', 'hidden');
         ln?.setAttribute('visibility', 'hidden');

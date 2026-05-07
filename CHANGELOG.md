@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.14.0] — Render skip + memoised layout / bubble bbox
+
+Three caches added to keep the card snappy on busy HA installs (where
+`hass` updates fire every time _any_ entity in the system changes
+state):
+
+- **`shouldUpdate` skip** — overrides Lit's default policy. When `hass`
+  is the only changed property, walks the list of entity IDs the card
+  watches and skips the render entirely if none of their states or
+  units have moved. Big win on panels with hundreds of unrelated
+  entities updating constantly.
+- **`_layoutCache`** — `_computeLayout()` runs once per `_config`,
+  not once per render.
+- **`_bubbleTextCache`** — bubble background `getBBox()` measurements
+  and the resulting `setAttribute()` calls are skipped when the
+  displayed text hasn't changed since the previous render. Saves the
+  cost of forcing a synchronous layout per bubble on every tick.
+
+All three caches are invalidated in `setConfig()` when the config is
+replaced.
+
+No schema or visual change.
+
 ## [0.13.0] — Saturation gauge under bubbles (`max_w`)
 
 The `max_w` field — declared on `Sensor` since v0.1 but never rendered —
