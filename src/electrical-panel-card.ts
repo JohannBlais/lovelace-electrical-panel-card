@@ -74,11 +74,14 @@ const TYPE_ICON: Record<string, string> = {
   power: '⚙️',
 };
 
+// Built-in floor pill defaults. Identifier convention follows HA-style floor
+// plans: LB = lower basement, L0 = ground floor, L1/L2 = upper floors.
+// Override or extend via the `floors:` map in the card config.
 const DEFAULT_FLOORS: Record<string, FloorStyle> = {
-  'E-1': { bg: '#718096', fg: 'white' },
-  E0: { bg: '#38a169', fg: 'white' },
-  E1: { bg: '#3182ce', fg: 'white' },
-  E2: { bg: '#d69e2e', fg: 'white' },
+  LB: { bg: '#718096', fg: 'white' },
+  L0: { bg: '#38a169', fg: 'white' },
+  L1: { bg: '#3182ce', fg: 'white' },
+  L2: { bg: '#d69e2e', fg: 'white' },
 };
 
 // Fallback palette used when a group has no explicit `accent`. Cycled by

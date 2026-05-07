@@ -65,7 +65,7 @@ groups:
         sensor: sensor.washing_machine_power
         switch: switch.washing_machine
         zones:
-          - { floor: E1, room: laundry }
+          - { floor: L1, room: laundry }
 
   - id: PV
     type: solar

@@ -61,13 +61,13 @@ PV / production is just a group — declare it under `groups[]` with `type: sola
 
 ```yaml
 floors:
-  E-1: { bg: '#718096', fg: 'white' }
-  E0:  { bg: '#38a169', fg: 'white' }
-  E1:  { bg: '#3182ce', fg: 'white' }
-  E2:  { bg: '#d69e2e', fg: 'white' }
+  LB: { bg: '#718096', fg: 'white' }   # lower basement
+  L0: { bg: '#38a169', fg: 'white' }   # ground floor
+  L1: { bg: '#3182ce', fg: 'white' }   # first floor
+  L2: { bg: '#d69e2e', fg: 'white' }   # second floor
 ```
 
-Map of identifier → pill style, used by `Zone.floor`. Built-in defaults cover `E-1`, `E0`, `E1`, `E2`.
+Map of identifier → pill style, used by `Zone.floor`. Built-in defaults cover `LB`, `L0`, `L1`, `L2` (HA floor-plan convention: Lower Basement, Level 0, Level 1, Level 2). Override via `floors:` to change colours or use a different identifier scheme.
 
 | Field | Type   | Required | Description |
 | ----- | ------ | -------- | ----------- |
@@ -152,7 +152,7 @@ circuits:
     sensor: sensor.washing_machine_power
     switch: switch.washing_machine
     zones:
-      - { floor: E1, room: laundry }
+      - { floor: L1, room: laundry }
 ```
 
 ### `Circuit`
@@ -170,8 +170,8 @@ circuits:
 
 ```yaml
 zones:
-  - { floor: E0, room: kitchen }                     # informational only
-  - floor: E0                                        # with live monitoring
+  - { floor: L0, room: kitchen }                     # informational only
+  - floor: L0                                        # with live monitoring
     room: dishwasher
     sensor: sensor.dishwasher_power
     switch: switch.dishwasher
@@ -298,7 +298,7 @@ groups:
       - id: A
         type: socket
         zones:
-          - { floor: E0, room: example }
+          - { floor: L0, room: example }
 ```
 
 ## Validation

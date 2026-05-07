@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.5.0] — Default floor identifiers renamed to L-convention
+
+The card's built-in floor pill defaults now follow the HA-style "level"
+convention used by floor plans: `LB` (lower basement) / `L0` (ground floor) /
+`L1` / `L2`. Replaces the previous `E-1` / `E0` / `E1` / `E2` defaults. Same
+colours.
+
+### Breaking
+
+- `DEFAULT_FLOORS` keys renamed: `E-1` → `LB`, `E0` → `L0`, `E1` → `L1`,
+  `E2` → `L2`. Existing zones referencing `E-1` / `E0` / `E1` / `E2` will fall
+  back to the generic grey pill (no built-in match) until they are renamed
+  in the YAML config or the previous identifiers are restored via the
+  `floors:` map:
+
+  ```yaml
+  floors:
+    E-1: { bg: '#718096', fg: 'white' }
+    E0:  { bg: '#38a169', fg: 'white' }
+    E1:  { bg: '#3182ce', fg: 'white' }
+    E2:  { bg: '#d69e2e', fg: 'white' }
+  ```
+
+### Migration
+
+In each `Zone.floor` reference, replace:
+
+| Old   | New |
+| ----- | --- |
+| `E-1` | `LB` |
+| `E0`  | `L0` |
+| `E1`  | `L1` |
+| `E2`  | `L2` |
+
 ## [0.4.0] — Group `type` discriminator, single renderer for loads and productions
 
 A simpler model: in the YAML, **everything is a group**. A group has a `type` that says whether it's a load (default) or a production source. Loads and productions render with the **same** logic — the existing distribution-style box with circuits and zones underneath. Production units (PV inverters, wind turbines, geothermal pumps, hydro generators) are expressed as **zones** of a circuit, which lets each unit carry its own `sensor`, `switch`, `room`, etc. through the existing zone mechanics — no PV-specific rendering needed.
