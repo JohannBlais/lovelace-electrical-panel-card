@@ -8,7 +8,9 @@ A Lovelace custom card that renders your electrical panel as an interactive **on
 
 If you've ever wished your HA dashboard could show the panel the way the electrician sees it, this is that.
 
-![Card preview](https://raw.githubusercontent.com/JohannBlais/lovelace-electrical-panel-card/main/assets/preview.svg)
+![Card preview](https://raw.githubusercontent.com/JohannBlais/lovelace-electrical-panel-card/main/assets/preview-04-three-phase-with-pv.svg)
+
+> The previews under [`assets/`](assets/) are generated from the YAML configs in [`examples/`](examples/) by `npm run generate-previews` — running the real card bundle inside jsdom with synthetic state values. They reflect the exact code paths the live card takes.
 
 ---
 

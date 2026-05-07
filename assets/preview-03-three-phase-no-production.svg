@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 758"><style>
+    .bubble-bg { fill: #ffffff; stroke: #e2e8f0; stroke-width: 0.7; }
+    .bubble-conn { stroke: #cbd5e0; stroke-width: 0.5; }
+    .label-secondary, .zone-room { fill: #718096; }
+    .phase-label { fill: #1a202c; }
+    .sat-track { fill: #e2e8f0; opacity: 0.5; }
+  </style>
+            <!-- Phase trunks -->
+            <line stroke-width="3" x1="24" y1="20" x2="24" y2="632" stroke="var(--electrical-panel-phase-l3-color, #5A6474)"></line>
+            <line stroke-width="3" x1="36" y1="20" x2="36" y2="632" stroke="var(--electrical-panel-phase-l2-color, #1A202C)"></line>
+            <line stroke-width="3" x1="48" y1="20" x2="48" y2="632" stroke="var(--electrical-panel-phase-l1-color, #8B4513)"></line>
+
+            <!-- Phase labels -->
+            <text class="phase-label" y="16" text-anchor="middle" font-size="7.5" font-weight="bold" x="24">L3</text>
+            <text class="phase-label" y="16" text-anchor="middle" font-size="7.5" font-weight="bold" x="36">L2</text>
+            <text class="phase-label" y="16" text-anchor="middle" font-size="7.5" font-weight="bold" x="48">L1</text>
+
+            <!-- Staggered phase taps + bubbles -->
+            <circle r="2" cx="48" cy="26" fill="var(--electrical-panel-phase-l1-color, #8B4513)"></circle>
+            <!--?lit$772456449$-->
+      <!--?lit$772456449$--><line class="bubble-conn" visibility="visible" data-ln-for="phase_l1" x1="48" y1="23.75" x2="124.375" y2="23.75"></line>
+      <rect class="bubble-bg" width="30.625" height="13.5" rx="3" visibility="visible" data-bg-for="phase_l1" x="124.375" y="17"></rect>
+      <text class="pwr-value" font-size="7.5" font-weight="bold" data-id="phase_l1" x="150" y="26" text-anchor="end" fill="var(--primary-text-color)"><!--?lit$772456449$-->868 W</text>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+    
+            <circle r="2" cx="36" cy="46" fill="var(--electrical-panel-phase-l2-color, #1A202C)"></circle>
+            <!--?lit$772456449$-->
+      <!--?lit$772456449$--><line class="bubble-conn" visibility="visible" data-ln-for="phase_l2" x1="36" y1="43.75" x2="159.375" y2="43.75"></line>
+      <rect class="bubble-bg" width="30.625" height="13.5" rx="3" visibility="visible" data-bg-for="phase_l2" x="159.375" y="37"></rect>
+      <text class="pwr-value" font-size="7.5" font-weight="bold" data-id="phase_l2" x="185" y="46" text-anchor="end" fill="var(--primary-text-color)"><!--?lit$772456449$-->701 W</text>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+    
+            <circle r="2" cx="24" cy="66" fill="var(--electrical-panel-phase-l3-color, #5A6474)"></circle>
+            <!--?lit$772456449$-->
+      <!--?lit$772456449$--><line class="bubble-conn" visibility="visible" data-ln-for="phase_l3" x1="24" y1="63.75" x2="194.375" y2="63.75"></line>
+      <rect class="bubble-bg" width="30.625" height="13.5" rx="3" visibility="visible" data-bg-for="phase_l3" x="194.375" y="57"></rect>
+      <text class="pwr-value" font-size="7.5" font-weight="bold" data-id="phase_l3" x="220" y="66" text-anchor="end" fill="var(--primary-text-color)"><!--?lit$772456449$-->990 W</text>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+    
+
+            <!-- Main totals (right column) -->
+            <text class="label-secondary" text-anchor="end" font-size="7.5" x="295" y="29"><!--?lit$772456449$-->Total</text>
+            <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+      <rect class="bubble-bg" width="34.75" height="13.5" rx="3" visibility="visible" data-bg-for="total" x="320.25" y="20"></rect>
+      <text class="pwr-value" font-size="7.5" font-weight="bold" data-id="total" x="350" y="29" text-anchor="end" fill="#c53030"><!--?lit$772456449$-->3.0 kW</text>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+    
+            <text class="label-secondary" text-anchor="end" font-size="7.5" x="295" y="49"><!--?lit$772456449$-->Grid</text>
+            <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+      <rect class="bubble-bg" width="34.75" height="13.5" rx="3" visibility="visible" data-bg-for="grid" x="320.25" y="40"></rect>
+      <text class="pwr-value" font-size="7.5" font-weight="bold" data-id="grid" x="350" y="49" text-anchor="end" fill="var(--secondary-text-color)"><!--?lit$772456449$-->1.3 kW</text>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+    
+
+            <!--?lit$772456449$--><!---->
+      <!--?lit$772456449$--><!----><circle r="3.5" cx="48" cy="104" fill="#3182ce"></circle><!---->
+      <!--?lit$772456449$--><line stroke-width="2" x1="48" y1="104" x2="70" y2="104" stroke="#3182ce"></line>
+
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->40 A · 30 mA · 2P · Cl. A · L1<!----></title>
+        <rect stroke-width="1.8" rx="2" x="70" y="92" width="24" height="24" fill="color-mix(in srgb, #3182ce 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#3182ce"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="82" y="108" fill="#3182ce"><!--?lit$772456449$-->D1</text>
+      </g>
+
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><line stroke-width="3" x1="82" y1="116" x2="82" y2="196" stroke="#3182ce"></line>
+
+      <!--?lit$772456449$--><!---->
+      <line stroke-width="3" x1="82" y1="132" x2="104" y2="132" stroke="#3182ce"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="142" x2="114" y2="175" stroke="#3182ce"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->16 A · 2P · 2.5 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="122" width="20" height="20" fill="color-mix(in srgb, #3182ce 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#3182ce"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="136" fill="#3182ce"><!--?lit$772456449$-->A</text>
+      </g>
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Office · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="153" x2="132" y2="153" stroke="#3182ce"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="146" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="152" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="147" width="12" height="12" viewBox="0 0 24 24"><path d="M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5C6.66,13.5 6,12.83 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5M4.22,2H19.78C21,2 22,3 22,4.22V19.78A2.22,2.22 0 0,1 19.78,22H4.22C3,22 2,21 2,19.78V4.22A2.22,2.22 0 0,1 4.22,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="152"><!--?lit$772456449$-->Office</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!----><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Living room · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="175" x2="132" y2="175" stroke="#3182ce"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="168" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="174" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="169" width="12" height="12" viewBox="0 0 24 24"><path d="M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5C6.66,13.5 6,12.83 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5M4.22,2H19.78C21,2 22,3 22,4.22V19.78A2.22,2.22 0 0,1 19.78,22H4.22C3,22 2,21 2,19.78V4.22A2.22,2.22 0 0,1 4.22,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="174"><!--?lit$772456449$-->Living room</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!----><!---->
+      <line stroke-width="3" x1="82" y1="196" x2="104" y2="196" stroke="#3182ce"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="206" x2="114" y2="239" stroke="#3182ce"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->10 A · 2P · 1.5 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="186" width="20" height="20" fill="color-mix(in srgb, #3182ce 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#3182ce"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="200" fill="#3182ce"><!--?lit$772456449$-->B</text>
+      </g>
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Office · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="217" x2="132" y2="217" stroke="#3182ce"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="210" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="216" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="211" width="12" height="12" viewBox="0 0 24 24"><path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,11.05 8.23,12.81 10,13.58V16H14V13.58C15.77,12.81 17,11.05 17,9A5,5 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="216"><!--?lit$772456449$-->Office</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!----><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Hallway · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="239" x2="132" y2="239" stroke="#3182ce"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="232" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="238" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="233" width="12" height="12" viewBox="0 0 24 24"><path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,11.05 8.23,12.81 10,13.58V16H14V13.58C15.77,12.81 17,11.05 17,9A5,5 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="238"><!--?lit$772456449$-->Hallway</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!---->
+    <!----><!---->
+      <!--?lit$772456449$--><!----><circle r="3.5" cx="36" cy="280" fill="#d69e2e"></circle><!---->
+      <!--?lit$772456449$--><line stroke-width="2" x1="36" y1="280" x2="70" y2="280" stroke="#d69e2e"></line>
+
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->40 A · 30 mA · 2P · Cl. A · L2<!----></title>
+        <rect stroke-width="1.8" rx="2" x="70" y="268" width="24" height="24" fill="color-mix(in srgb, #d69e2e 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#d69e2e"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="82" y="284" fill="#d69e2e"><!--?lit$772456449$-->D2</text>
+      </g>
+
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><line stroke-width="3" x1="82" y1="292" x2="82" y2="372" stroke="#d69e2e"></line>
+
+      <!--?lit$772456449$--><!---->
+      <line stroke-width="3" x1="82" y1="308" x2="104" y2="308" stroke="#d69e2e"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="318" x2="114" y2="351" stroke="#d69e2e"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->16 A · 2P · 2.5 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="298" width="20" height="20" fill="color-mix(in srgb, #d69e2e 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#d69e2e"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="312" fill="#d69e2e"><!--?lit$772456449$-->C</text>
+      </g>
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Kitchen · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="329" x2="132" y2="329" stroke="#d69e2e"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="322" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="328" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="323" width="12" height="12" viewBox="0 0 24 24"><path d="M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5C6.66,13.5 6,12.83 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5M4.22,2H19.78C21,2 22,3 22,4.22V19.78A2.22,2.22 0 0,1 19.78,22H4.22C3,22 2,21 2,19.78V4.22A2.22,2.22 0 0,1 4.22,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="328"><!--?lit$772456449$-->Kitchen</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!----><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Bedroom · L1<!----></title>
+            <line stroke-width="0.8" x1="114" y1="351" x2="132" y2="351" stroke="#d69e2e"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="344" width="20" height="12" fill="#3182ce" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="350" fill="white"><!--?lit$772456449$-->L1</text>
+                  
+            <svg x="156" y="345" width="12" height="12" viewBox="0 0 24 24"><path d="M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5C6.66,13.5 6,12.83 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5M4.22,2H19.78C21,2 22,3 22,4.22V19.78A2.22,2.22 0 0,1 19.78,22H4.22C3,22 2,21 2,19.78V4.22A2.22,2.22 0 0,1 4.22,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="350"><!--?lit$772456449$-->Bedroom</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!----><!---->
+      <line stroke-width="3" x1="82" y1="372" x2="104" y2="372" stroke="#d69e2e"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="382" x2="114" y2="415" stroke="#d69e2e"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->16 A · 2P · 2.5 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="362" width="20" height="20" fill="color-mix(in srgb, #d69e2e 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#d69e2e"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="376" fill="#d69e2e"><!--?lit$772456449$-->D</text>
+      </g>
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Bathroom · L1<!----></title>
+            <line stroke-width="0.8" x1="114" y1="393" x2="132" y2="393" stroke="#d69e2e"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="386" width="20" height="12" fill="#3182ce" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="392" fill="white"><!--?lit$772456449$-->L1</text>
+                  
+            <svg x="156" y="387" width="12" height="12" viewBox="0 0 24 24"><path d="M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5C6.66,13.5 6,12.83 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5M4.22,2H19.78C21,2 22,3 22,4.22V19.78A2.22,2.22 0 0,1 19.78,22H4.22C3,22 2,21 2,19.78V4.22A2.22,2.22 0 0,1 4.22,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="392"><!--?lit$772456449$-->Bathroom</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!----><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->WC · L1<!----></title>
+            <line stroke-width="0.8" x1="114" y1="415" x2="132" y2="415" stroke="#d69e2e"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="408" width="20" height="12" fill="#3182ce" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="414" fill="white"><!--?lit$772456449$-->L1</text>
+                  
+            <svg x="156" y="409" width="12" height="12" viewBox="0 0 24 24"><path d="M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5C6.66,13.5 6,12.83 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5M4.22,2H19.78C21,2 22,3 22,4.22V19.78A2.22,2.22 0 0,1 19.78,22H4.22C3,22 2,21 2,19.78V4.22A2.22,2.22 0 0,1 4.22,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="414"><!--?lit$772456449$-->WC</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!---->
+    <!----><!---->
+      <!--?lit$772456449$--><!----><circle r="3.5" cx="24" cy="456" fill="#38a169"></circle><!---->
+      <!--?lit$772456449$--><line stroke-width="2" x1="24" y1="456" x2="70" y2="456" stroke="#38a169"></line>
+
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->40 A · 30 mA · 2P · Cl. A · L3<!----></title>
+        <rect stroke-width="1.8" rx="2" x="70" y="444" width="24" height="24" fill="color-mix(in srgb, #38a169 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#38a169"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="82" y="460" fill="#38a169"><!--?lit$772456449$-->D3</text>
+      </g>
+
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><line stroke-width="3" x1="82" y1="468" x2="82" y2="570" stroke="#38a169"></line>
+
+      <!--?lit$772456449$--><!---->
+      <line stroke-width="3" x1="82" y1="484" x2="104" y2="484" stroke="#38a169"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="494" x2="114" y2="549" stroke="#38a169"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->10 A · 2P · 1.5 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="474" width="20" height="20" fill="color-mix(in srgb, #38a169 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#38a169"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="488" fill="#38a169"><!--?lit$772456449$-->E</text>
+      </g>
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Living room · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="505" x2="132" y2="505" stroke="#38a169"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="498" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="504" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="499" width="12" height="12" viewBox="0 0 24 24"><path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,11.05 8.23,12.81 10,13.58V16H14V13.58C15.77,12.81 17,11.05 17,9A5,5 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="504"><!--?lit$772456449$-->Living room</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!----><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Kitchen · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="527" x2="132" y2="527" stroke="#38a169"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="520" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="526" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="521" width="12" height="12" viewBox="0 0 24 24"><path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,11.05 8.23,12.81 10,13.58V16H14V13.58C15.77,12.81 17,11.05 17,9A5,5 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="526"><!--?lit$772456449$-->Kitchen</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!----><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Stairs · L1<!----></title>
+            <line stroke-width="0.8" x1="114" y1="549" x2="132" y2="549" stroke="#38a169"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="542" width="20" height="12" fill="#3182ce" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="548" fill="white"><!--?lit$772456449$-->L1</text>
+                  
+            <svg x="156" y="543" width="12" height="12" viewBox="0 0 24 24"><path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,11.05 8.23,12.81 10,13.58V16H14V13.58C15.77,12.81 17,11.05 17,9A5,5 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="548"><!--?lit$772456449$-->Stairs</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!----><!---->
+      <line stroke-width="3" x1="82" y1="570" x2="104" y2="570" stroke="#38a169"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="580" x2="114" y2="591" stroke="#38a169"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->16 A · 2P · 2.5 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="560" width="20" height="20" fill="color-mix(in srgb, #38a169 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#38a169"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="574" fill="#38a169"><!--?lit$772456449$-->F</text>
+      </g>
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Basement · LB<!----></title>
+            <line stroke-width="0.8" x1="114" y1="591" x2="132" y2="591" stroke="#38a169"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="584" width="20" height="12" fill="#718096" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="590" fill="white"><!--?lit$772456449$-->LB</text>
+                  
+            <svg x="156" y="585" width="12" height="12" viewBox="0 0 24 24"><path d="M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5C6.66,13.5 6,12.83 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5M4.22,2H19.78C21,2 22,3 22,4.22V19.78A2.22,2.22 0 0,1 19.78,22H4.22C3,22 2,21 2,19.78V4.22A2.22,2.22 0 0,1 4.22,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="590"><!--?lit$772456449$-->Basement</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!---->
+    <!----><!---->
+      <!--?lit$772456449$--><!----><circle r="3.5" cx="48" cy="632" fill="#805ad5"></circle><!----><!----><circle r="3.5" cx="36" cy="632" fill="#805ad5"></circle><!----><!----><circle r="3.5" cx="24" cy="632" fill="#805ad5"></circle><!---->
+      <!--?lit$772456449$--><line stroke-width="2" x1="24" y1="632" x2="70" y2="632" stroke="#805ad5"></line>
+
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->40 A · 30 mA · 4P · Cl. A · L1+L2+L3<!----></title>
+        <rect stroke-width="1.8" rx="2" x="70" y="620" width="24" height="24" fill="color-mix(in srgb, #805ad5 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#805ad5"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="82" y="636" fill="#805ad5"><!--?lit$772456449$-->D4</text>
+      </g>
+
+      <!--?lit$772456449$-->
+
+      <!--?lit$772456449$--><line stroke-width="3" x1="82" y1="644" x2="82" y2="702" stroke="#805ad5"></line>
+
+      <!--?lit$772456449$--><!---->
+      <line stroke-width="3" x1="82" y1="660" x2="104" y2="660" stroke="#805ad5"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="670" x2="114" y2="681" stroke="#805ad5"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->20 A · 4P · 6 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="650" width="20" height="20" fill="color-mix(in srgb, #805ad5 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#805ad5"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="664" fill="#805ad5"><!--?lit$772456449$-->HP</text>
+      </g>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$--><line class="bubble-conn" visibility="visible" data-ln-for="c-HP" x1="124" y1="660.75" x2="320.25" y2="660.75"></line>
+      <rect class="bubble-bg" width="34.75" height="13.5" rx="3" visibility="visible" data-bg-for="c-HP" x="320.25" y="654"></rect>
+      <text class="pwr-value" font-size="7.5" font-weight="bold" data-id="c-HP" x="350" y="663" text-anchor="end" fill="#805ad5"><!--?lit$772456449$-->1.9 kW</text>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+    
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Heat pump · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="681" x2="132" y2="681" stroke="#805ad5"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="674" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="680" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="675" width="12" height="12" viewBox="0 0 24 24"><path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M12.75 7.08C13.57 7.2 14.32 7.5 14.95 8L12.75 10.19V7.08M11.25 7.08V10.19L9.05 8C9.68 7.5 10.43 7.2 11.25 7.08M8 9.05L10.19 11.25H7.08C7.2 10.43 7.5 9.68 8 9.05M7.08 12.75H10.19L8 14.95C7.5 14.32 7.2 13.57 7.08 12.75M11.25 16.92C10.43 16.8 9.68 16.5 9.05 16L11.25 13.81V16.92M12 13C11.45 13 11 12.55 11 12S11.45 11 12 11 13 11.45 13 12 12.55 13 12 13M12.75 16.92V13.81L14.95 16C14.32 16.5 13.57 16.8 12.75 16.92M16 14.95L13.81 12.75H16.92C16.8 13.57 16.5 14.32 16 14.95M13.81 11.25L16 9.05C16.5 9.69 16.8 10.44 16.92 11.25H13.81Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="680"><!--?lit$772456449$-->Heat pump</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!----><!---->
+      <line stroke-width="3" x1="82" y1="702" x2="104" y2="702" stroke="#805ad5"></line>
+      <!--?lit$772456449$--><line stroke-width="1.5" x1="114" y1="712" x2="114" y2="723" stroke="#805ad5"></line>
+      <g class="meta-target">
+        <!--?lit$772456449$--><title><!---->20 A · 4P · 6 mm²<!----></title>
+        <rect stroke-width="1.8" rx="2" x="104" y="692" width="20" height="20" fill="color-mix(in srgb, #805ad5 18%, var(--ha-card-background, var(--card-background-color, white)))" stroke="#805ad5"></rect>
+        <text text-anchor="middle" font-size="9" font-weight="bold" x="114" y="706" fill="#805ad5"><!--?lit$772456449$-->CT</text>
+      </g>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$--><line class="bubble-conn" visibility="visible" data-ln-for="c-CT" x1="124" y1="702.75" x2="324.375" y2="702.75"></line>
+      <rect class="bubble-bg" width="30.625" height="13.5" rx="3" visibility="visible" data-bg-for="c-CT" x="324.375" y="696"></rect>
+      <text class="pwr-value" font-size="7.5" font-weight="bold" data-id="c-CT" x="350" y="705" text-anchor="end" fill="#805ad5"><!--?lit$772456449$-->994 W</text>
+      <!--?lit$772456449$-->
+      <!--?lit$772456449$-->
+    
+
+      <!--?lit$772456449$--><!---->
+          <g class="meta-target">
+            <!--?lit$772456449$--><title><!---->Induction cooktop · L0<!----></title>
+            <line stroke-width="0.8" x1="114" y1="723" x2="132" y2="723" stroke="#805ad5"></line>
+            <!--?lit$772456449$-->
+                    <rect x="132" y="716" width="20" height="12" fill="#38a169" rx="3"></rect>
+                    <text text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" x="142" y="722" fill="white"><!--?lit$772456449$-->L0</text>
+                  
+            <svg x="156" y="717" width="12" height="12" viewBox="0 0 24 24"><path d="M6,14H8L11,17H9L6,14M4,4H5V3A1,1 0 0,1 6,2H10A1,1 0 0,1 11,3V4H13V3A1,1 0 0,1 14,2H18A1,1 0 0,1 19,3V4H20A2,2 0 0,1 22,6V19A2,2 0 0,1 20,21V22H17V21H7V22H4V21A2,2 0 0,1 2,19V6A2,2 0 0,1 4,4M18,7A1,1 0 0,1 19,8A1,1 0 0,1 18,9A1,1 0 0,1 17,8A1,1 0 0,1 18,7M14,7A1,1 0 0,1 15,8A1,1 0 0,1 14,9A1,1 0 0,1 13,8A1,1 0 0,1 14,7M20,6H4V10H20V6M4,19H20V12H4V19M6,7A1,1 0 0,1 7,8A1,1 0 0,1 6,9A1,1 0 0,1 5,8A1,1 0 0,1 6,7M13,14H15L18,17H16L13,14Z" fill="var(--secondary-text-color, #718096)"></path></svg>
+            <!--?lit$772456449$-->
+                    <text class="zone-room" text-anchor="start" dominant-baseline="central" font-size="8" x="172" y="722"><!--?lit$772456449$-->Induction cooktop</text>
+                  
+            <!--?lit$772456449$-->
+          </g>
+        <!---->
+    <!---->
+    <!---->
+          </svg>
