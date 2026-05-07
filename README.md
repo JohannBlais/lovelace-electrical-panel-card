@@ -85,12 +85,20 @@ See [docs/data-model.md](docs/data-model.md) for the full schema, theming variab
 
 ```bash
 npm install
-npm run watch     # rebuild on changes → dist/electrical-panel-card.js
+npm run watch     # rebuild on changes → dist/ + Z:/www/electrical-panel-card/
 npm run typecheck
 npm run build     # production bundle (minified)
 ```
 
-To test inside Home Assistant, copy `dist/electrical-panel-card.js` into your HA `www/` directory and add it as a Lovelace resource (see Manual install above).
+The build mirrors the bundle into `<HA-config>/www/electrical-panel-card/` so changes land directly in Home Assistant. By default it expects the HA config dir at `Z:/www` (a Samba mount). Override:
+
+| Variable                | Effect                                                            |
+| ----------------------- | ----------------------------------------------------------------- |
+| `HA_WWW_DIR=/path/to/www` | Use that directory instead of `Z:/www`.                          |
+| `NO_HA_MIRROR=1`        | Skip the mirror entirely (build dist/ only). For contributors without an HA setup. |
+| `CI=true`               | Same as `NO_HA_MIRROR` — auto-set by GitHub Actions.             |
+
+If the target path doesn't exist and none of the opt-outs are set, the build **fails loudly** rather than silently leaving stale code in HA.
 
 ## Releasing
 

@@ -7,15 +7,31 @@ import terser from '@rollup/plugin-terser';
 
 const dev = process.env.ROLLUP_WATCH === 'true';
 
-// Optional dev mirror: drop the bundle into a dedicated subfolder under
-// Home Assistant's www/, mirroring the per-card layout used by HACS.
-// Set HA_WWW_DIR to override; defaults to Z:/www if that drive is mounted.
+// Dev mirror: drop the bundle into a dedicated subfolder under Home Assistant's
+// www/, mirroring the per-card layout HACS uses. Defaults to Z:/www (the
+// author's Samba mount); override via HA_WWW_DIR.
+//
+// We deliberately fail loudly when the path doesn't exist — a silent
+// dist-only build can let stale code linger in HA without anyone noticing.
+// Two opt-outs for environments that genuinely don't have an HA target:
+//   - CI=true               (GitHub Actions sets this automatically)
+//   - NO_HA_MIRROR=1        (explicit local opt-out for contributors)
+const isCI = !!process.env.CI;
+const skipMirror = isCI || !!process.env.NO_HA_MIRROR;
 const haWwwCandidate = process.env.HA_WWW_DIR ?? 'Z:/www';
-const haCardDir = existsSync(haWwwCandidate)
-  ? `${haWwwCandidate}/electrical-panel-card`
-  : null;
 
-if (haCardDir) {
+let haCardDir = null;
+if (!skipMirror) {
+  if (!existsSync(haWwwCandidate)) {
+    throw new Error(
+      `[rollup] HA mirror target "${haWwwCandidate}" not found.\n` +
+        `  - Mount it (default: Z:/www → //<HA>/config/www), or\n` +
+        `  - Set HA_WWW_DIR=<path> to point elsewhere, or\n` +
+        `  - Set NO_HA_MIRROR=1 to skip mirroring locally, or\n` +
+        `  - Set CI=true for CI builds (already auto-set by GitHub Actions).`,
+    );
+  }
+  haCardDir = `${haWwwCandidate}/electrical-panel-card`;
   // eslint-disable-next-line no-console
   console.log(`[rollup] mirroring bundle to ${haCardDir}/electrical-panel-card.js`);
 }
