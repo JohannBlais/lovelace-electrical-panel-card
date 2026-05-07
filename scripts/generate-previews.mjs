@@ -229,6 +229,34 @@ function mdiName(slug) {
 // the actual Roboto glyph outlines. The result renders identically in any
 // SVG viewer, with no font dependency. Class / opacity / fill attributes are
 // preserved so the existing inline stylesheet still applies.
+// SVG `dominant-baseline` lets `<text>` callers reposition the baseline
+// relative to the y attribute. opentype.js always treats y as the
+// alphabetic baseline, so we have to compensate ourselves — otherwise
+// labels that should be vertically centred next to icons (zone names,
+// floor pills) end up shifted upward by ~0.34 × fontSize.
+function baselineShiftFor(font, fontSize, dominantBaseline) {
+  if (!dominantBaseline) return 0;
+  const ascender = font.ascender; // positive font units, top of em
+  const descender = font.descender; // negative font units, below baseline
+  const upm = font.unitsPerEm;
+  const halfHeight = (ascender + descender) / 2 / upm;
+  switch (dominantBaseline) {
+    case 'central':
+    case 'middle':
+      // y currently marks the visual centre — shift baseline down so the
+      // glyph sits centred on y.
+      return halfHeight * fontSize;
+    case 'hanging':
+    case 'text-before-edge':
+      return (ascender / upm) * fontSize;
+    case 'ideographic':
+    case 'text-after-edge':
+      return (descender / upm) * fontSize;
+    default:
+      return 0;
+  }
+}
+
 function textToPaths(svgEl) {
   const texts = svgEl.querySelectorAll('text');
   for (const text of texts) {
@@ -240,13 +268,15 @@ function textToPaths(svgEl) {
     const fontSize = parseFloat(text.getAttribute('font-size') ?? '10');
     const fontWeight = text.getAttribute('font-weight');
     const anchor = text.getAttribute('text-anchor') ?? 'start';
+    const dominantBaseline = text.getAttribute('dominant-baseline');
     const x = parseFloat(text.getAttribute('x') ?? '0');
     const y = parseFloat(text.getAttribute('y') ?? '0');
     const font = fontFor(fontWeight);
     const advance = font.getAdvanceWidth(content, fontSize);
     const offsetX =
       anchor === 'end' ? -advance : anchor === 'middle' ? -advance / 2 : 0;
-    const path = font.getPath(content, x + offsetX, y, fontSize);
+    const offsetY = baselineShiftFor(font, fontSize, dominantBaseline);
+    const path = font.getPath(content, x + offsetX, y + offsetY, fontSize);
     const d = path.toPathData(1);
 
     const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
