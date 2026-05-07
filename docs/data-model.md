@@ -1,4 +1,4 @@
-# Data model (v0.2)
+# Data model (v0.3)
 
 Reference for the YAML configuration consumed by `custom:electrical-panel-card`.
 
@@ -94,7 +94,7 @@ A `Group` is a visual block on the diagram. The `kind` discriminator picks how i
 | Field      | Type                                 | Required | Description |
 | ---------- | ------------------------------------ | -------- | ----------- |
 | `id`       | string                               | yes      | Unique label drawn inside the box (e.g. `D1`). Must be unique across groups. |
-| `kind`     | `'distribution'` \| `'grid_coupling'` | no      | Visual style. Defaults to `'distribution'`. |
+| `kind`     | `'distribution'` \| `'grid_coupling'` \| `'pv_system'` | no | Visual style. Defaults to `'distribution'`. |
 | `phases`   | `('L1' \| 'L2' \| 'L3')[]`           | yes      | Phase trunks the group taps into. `[L1]` = single-phase. `[L1, L2, L3]` = three-phase. `[]` = no tap. |
 | `accent`   | string (CSS colour)                  | no       | Single colour; renderer derives `color` / `stroke` / a tinted `fill` from it. When omitted, an accent is picked from a fallback palette by group index. |
 | `color`    | string (CSS colour)                  | no       | Override for derived text colour. |
@@ -102,10 +102,12 @@ A `Group` is a visual block on the diagram. The `kind` discriminator picks how i
 | `stroke`   | string (CSS colour)                  | no       | Override for derived box stroke. |
 | `sensor`   | string (entity ID)                   | no       | Group-level live power. Renders a bubble next to the box. |
 | `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
-| `circuits` | [`Circuit[]`](#circuits)             | yes for `distribution` / ignored for `grid_coupling` | Circuits under this group. |
-| `label`    | string                               | no       | For `grid_coupling`: the header title (falls back to a localised default). For `distribution`: metadata. |
-| `subtitle` | string                               | no       | `grid_coupling` only — second line under the title. |
-| `rows`     | [`DetailRow[]`](#detail-rows-grid_coupling-only) | no | `grid_coupling` only — additional info rows under the header. |
+| `circuits` | [`Circuit[]`](#circuits)             | yes for `distribution` / ignored otherwise | Circuits under this group. |
+| `label`    | string                               | no       | For `grid_coupling` / `pv_system`: header title (falls back to a localised default). For `distribution`: metadata. |
+| `subtitle` | string                               | no       | `grid_coupling` / `pv_system` — second line under the title. |
+| `rows`     | [`DetailRow[]`](#detail-rows-grid_coupling-only) | no | `grid_coupling` only — free-form info rows under the header. |
+| `inverters` | [`PvInverter[]`](#pv-system-pv_system) | no | `pv_system` only — one row per identical inverter group. |
+| `panels`   | [`PvPanel[]`](#pv-system-pv_system)  | no | `pv_system` only — one row per identical panel group. |
 | `spec`     | string                               | no       | _Metadata._ Free-form spec text (e.g. `'30mA 40A 2P Cl.A'`). |
 
 ### Colour resolution
@@ -243,6 +245,7 @@ Translated strings:
 
 - `card.total`, `card.grid` — fallback labels for `sensors.total.label` / `sensors.grid.label`
 - `grid_coupling.title_default` — fallback for a `grid_coupling` group's `label`
+- `pv_system.title_default` — fallback for a `pv_system` group's `label` (en: "PV system", fr: "Production photovoltaïque")
 - `confirm.toggle` — confirmation dialog when toggling a `critical` zone
 
 To add a language, drop `de.ts` (etc.) next to `src/translations/en.ts` exporting a `Translations` object, then register it in `DICTS` in `src/translations/index.ts`.
@@ -255,20 +258,67 @@ Set `phases: [L1, L2, L3]` on a group. Three tap dots render on the trunks; the 
 
 ### `grid_coupling` group
 
-A wide horizontal block typically used to represent a PV / utility decoupling protection or a bidirectional grid meter. Ignores `circuits`; carries `label`, `subtitle`, and decorative `rows`. Renders with the group's `accent` colour throughout (taps, arrow indicator, header tint, row tints, divider).
+A wide horizontal block for generic bidirectional / decoupling use cases (battery storage, wind, generator interlock, utility decoupling protection). Ignores `circuits`; carries `label`, `subtitle`, and free-form `rows`. Renders with the group's `accent` colour throughout (taps, arrow indicator, header tint, row tints, divider).
+
+```yaml
+- id: BAT
+  kind: grid_coupling
+  phases: [L1, L2, L3]
+  accent: '#3182ce'
+  sensor: sensor.battery_power
+  label: Battery storage
+  subtitle: ↕ Charge / discharge
+  rows:
+    - { icon: 🔋, label: 10 kWh · LFP }
+```
+
+### PV system (`pv_system`)
+
+Specialised for solar systems. Visually identical to `grid_coupling` (wide block, accent, header), but `rows` is replaced by structured `panels` and `inverters` arrays so each entry can carry hardware spec and an optional live-power sensor.
 
 ```yaml
 - id: PV
-  kind: grid_coupling
+  kind: pv_system
   phases: [L1, L2, L3]
   accent: 'var(--energy-solar-color, #d97706)'
-  sensor: sensor.envoy_production
-  label: Découplage 4P — Synergrid C10/11
+  sensor: sensor.envoy_production       # overall production bubble in the header
   subtitle: ↑ Grid injection
-  rows:
-    - { icon: ☀, label: PV inverters }
-    - { icon: ☀, label: PV panels }
+  inverters:
+    - brand: Enphase
+      model: IQ7+
+      count: 19
+      sensor: sensor.envoy_total_inverter_power   # optional per-row bubble
+  panels:
+    - count: 19
+      power_wc: 425
+      brand: Trina                                # optional
+      model: TSM-DE15M(II)                        # optional
 ```
+
+#### `PvInverter`
+
+| Field    | Type   | Description |
+| -------- | ------ | ----------- |
+| `brand`  | string | Manufacturer (e.g. `Enphase`). |
+| `model`  | string | Model name (e.g. `IQ7+`). |
+| `count`  | number | Number of identical inverters in this entry. Renders `× count` when > 1. |
+| `power_w`| number | Nominal AC power per inverter in watts. _Metadata; not rendered yet._ |
+| `sensor` | string | Entity ID for instantaneous power. Renders a bubble at the right of the row. |
+
+Each `PvInverter` entry → one row, formatted as `[brand] [model] × [count]`.
+
+#### `PvPanel`
+
+| Field      | Type   | Description |
+| ---------- | ------ | ----------- |
+| `brand`    | string | Manufacturer. |
+| `model`    | string | Model name. |
+| `count`    | number | Number of identical panels in this entry. |
+| `power_wc` | number | Peak power per panel, in watt-crête. |
+
+Each `PvPanel` entry → one row, formatted as `[count] × [power_wc] Wc · [brand] [model]`.
+
+An empty `pv_system` (no inverters, no panels) is valid — renders just the header with the optional group `sensor`.
 
 ### Critical loads
 

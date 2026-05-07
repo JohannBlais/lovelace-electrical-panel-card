@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.3.0] — `pv_system` group kind
+
+PV systems now have their own first-class group kind with structured hardware metadata, instead of being expressed via `grid_coupling` + free-form `rows`.
+
+### Added
+
+- `kind: 'pv_system'` — visually identical to `grid_coupling` (wide accent block with phase taps and arrow) but ignores `rows` in favour of:
+  - `inverters: PvInverter[]` — `{ brand?, model?, count?, power_w?, sensor? }`. One row per entry; if `sensor` is set, a live-power bubble renders on the row.
+  - `panels: PvPanel[]` — `{ brand?, model?, count?, power_wc? }`. One row per entry, formatted as `count × power_wc Wc · brand model`.
+- `pv_system.title_default` translation key (en: "PV system", fr: "Production photovoltaïque").
+
+### Notes
+
+- `grid_coupling` remains for non-PV bidirectional / decoupling use cases (battery storage, wind, generic protection blocks).
+- An empty `pv_system` (no `inverters`, no `panels`) is valid — renders just the header with the optional group `sensor` bubble.
+
+### Migration
+
+```yaml
+# v0.2 — generic grid_coupling with free-form rows
+- id: PV
+  kind: grid_coupling
+  phases: [L1, L2, L3]
+  accent: 'var(--energy-solar-color, #d97706)'
+  sensor: sensor.envoy_production
+  label: Découplage 4P — Synergrid C10/11
+  subtitle: ↑ Injection réseau
+  rows:
+    - { icon: ☀, label: Onduleurs PV }
+    - { icon: ☀, label: Panneaux PV }
+
+# v0.3 — pv_system with hardware spec
+- id: PV
+  kind: pv_system
+  phases: [L1, L2, L3]
+  accent: 'var(--energy-solar-color, #d97706)'
+  sensor: sensor.envoy_production
+  subtitle: ↑ Injection réseau
+  inverters:
+    - { brand: Enphase, model: IQ7+, count: 19 }
+  panels:
+    - { count: 19, power_wc: 425 }
+```
+
 ## [0.2.0] — Schema generalisation
 
 This release reshapes the YAML schema so it describes _what is on the diagram_ rather than the user's specific Belgian residential electrical layout. There is **no backward compatibility** with v0.1 configs — see Migration below.

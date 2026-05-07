@@ -6,11 +6,15 @@ export type CircuitType = 'socket' | 'light' | 'power';
  * Visual style for a group on the diagram.
  *  - distribution: standard sub-distribution box (RCD-like) with circuits
  *    underneath. The default.
- *  - grid_coupling: wide horizontal block with phase taps and an arrow
- *    indicator. Used for things like a PV decoupling protection or a
- *    bidirectional grid meter. Has no circuits; can carry decorative rows.
+ *  - grid_coupling: generic wide horizontal block with phase taps and an
+ *    arrow indicator. Used for things like a bidirectional grid meter or a
+ *    decoupling protection that isn't a PV system. Carries free-form `rows`.
+ *  - pv_system: specialised for solar systems. Same wide-block visual, but
+ *    `rows` is replaced by structured `panels` and `inverters` arrays so
+ *    each entry can carry its hardware spec (brand, model, count, power)
+ *    and an inverter can declare its own live-power sensor.
  */
-export type GroupKind = 'distribution' | 'grid_coupling';
+export type GroupKind = 'distribution' | 'grid_coupling' | 'pv_system';
 
 export type Phase = 'L1' | 'L2' | 'L3';
 
@@ -69,6 +73,28 @@ export interface DetailRow {
   label: string;
 }
 
+/** PV panel description (one entry per identical group of panels). */
+export interface PvPanel {
+  brand?: string;
+  model?: string;
+  /** Number of identical panels in this entry. Defaults to 1 if omitted. */
+  count?: number;
+  /** Peak power per panel, in watt-crête. */
+  power_wc?: number;
+}
+
+/** PV inverter description (one entry per identical group of inverters). */
+export interface PvInverter {
+  brand?: string;
+  model?: string;
+  /** Number of identical inverters in this entry. Defaults to 1 if omitted. */
+  count?: number;
+  /** Nominal AC power per inverter, in watts. */
+  power_w?: number;
+  /** Optional entity ID for instantaneous power. Renders a bubble on the row. */
+  sensor?: string;
+}
+
 export interface Group {
   id: string;
   /** Defaults to `'distribution'` when omitted. */
@@ -103,10 +129,14 @@ export interface Group {
    * `kind: 'grid_coupling'`: header title (falls back to a localised default).
    */
   label?: string;
-  /** `grid_coupling` only — second-line text under the title. */
+  /** `grid_coupling` and `pv_system` — second-line text under the title. */
   subtitle?: string;
   /** `grid_coupling` only — additional info rows under the header. */
   rows?: DetailRow[];
+  /** `pv_system` only — one entry per identical group of inverters. */
+  inverters?: PvInverter[];
+  /** `pv_system` only — one entry per identical group of panels. */
+  panels?: PvPanel[];
   /** Metadata: free-form spec string (e.g. `'30mA 40A 2P Cl.A'`). */
   spec?: string;
 }
