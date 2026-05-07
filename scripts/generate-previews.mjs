@@ -13,6 +13,7 @@
 import { JSDOM } from 'jsdom';
 import { load as loadYaml } from 'js-yaml';
 import * as mdiIcons from '@mdi/js';
+import opentype from 'opentype.js';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -23,6 +24,27 @@ const examplesDir = resolve(root, 'examples');
 const assetsDir = resolve(root, 'assets');
 
 if (!existsSync(assetsDir)) mkdirSync(assetsDir, { recursive: true });
+
+// ─── Roboto fonts (parsed once) ───────────────────────────────────────────────
+// We convert every <text> in the rendered SVG into <path> data using the real
+// Roboto outlines. That guarantees the saved SVG renders identically across
+// any viewer (GitHub camo, librsvg, ImageMagick, mobile browsers) without
+// needing the Roboto webfont to be available — and matches what HA actually
+// shows in a live dashboard. Cost: ~30 KiB extra per SVG.
+function loadFont(rel) {
+  const buf = readFileSync(resolve(root, rel));
+  return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+}
+const robotoRegular = loadFont('node_modules/roboto-fontface/fonts/roboto/Roboto-Regular.woff');
+const robotoMedium = loadFont('node_modules/roboto-fontface/fonts/roboto/Roboto-Medium.woff');
+
+function fontFor(weight) {
+  const w = String(weight ?? '').toLowerCase();
+  if (w === 'bold' || w === '500' || w === '600' || w === '700' || w === 'bolder') {
+    return robotoMedium;
+  }
+  return robotoRegular;
+}
 
 // ─── jsdom setup ──────────────────────────────────────────────────────────────
 const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
@@ -66,9 +88,14 @@ function bboxStub() {
   if (tag === 'text') {
     const text = (this.textContent ?? '').trim();
     const fontSize = parseFloat(this.getAttribute('font-size') ?? '10');
+    const fontWeight = this.getAttribute('font-weight');
     const anchor = this.getAttribute('text-anchor') ?? 'start';
-    // ~0.55 × fontSize per character — a passable sans-serif approximation.
-    const width = text.length * fontSize * 0.55;
+    // Use real Roboto metrics so bubble background sizes (computed via
+    // getBBox in the card's updated() hook) match the glyphs we'll bake
+    // into <path> elements at the end. A naïve `length × 0.55` factor
+    // would leave bubbles slightly wider/narrower than the text inside.
+    const font = fontFor(fontWeight);
+    const width = font.getAdvanceWidth(text, fontSize);
     const height = fontSize * 1.0;
     const x = parseFloat(this.getAttribute('x') ?? '0');
     const y = parseFloat(this.getAttribute('y') ?? '0');
@@ -197,6 +224,43 @@ function mdiName(slug) {
   );
 }
 
+// ─── <text> → <path> conversion (bake Roboto outlines into the SVG) ──────────
+// Walks every <text> in the SVG and replaces it with a <path d="…"/> using
+// the actual Roboto glyph outlines. The result renders identically in any
+// SVG viewer, with no font dependency. Class / opacity / fill attributes are
+// preserved so the existing inline stylesheet still applies.
+function textToPaths(svgEl) {
+  const texts = svgEl.querySelectorAll('text');
+  for (const text of texts) {
+    const content = text.textContent ?? '';
+    if (!content.trim()) {
+      text.remove();
+      continue;
+    }
+    const fontSize = parseFloat(text.getAttribute('font-size') ?? '10');
+    const fontWeight = text.getAttribute('font-weight');
+    const anchor = text.getAttribute('text-anchor') ?? 'start';
+    const x = parseFloat(text.getAttribute('x') ?? '0');
+    const y = parseFloat(text.getAttribute('y') ?? '0');
+    const font = fontFor(fontWeight);
+    const advance = font.getAdvanceWidth(content, fontSize);
+    const offsetX =
+      anchor === 'end' ? -advance : anchor === 'middle' ? -advance / 2 : 0;
+    const path = font.getPath(content, x + offsetX, y, fontSize);
+    const d = path.toPathData(1);
+
+    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathEl.setAttribute('d', d);
+    // Preserve presentation attributes that the card might have set on the
+    // text. Anything covered by CSS classes carries over as-is.
+    for (const attr of ['class', 'fill', 'fill-opacity', 'opacity', 'stroke', 'stroke-width']) {
+      const v = text.getAttribute(attr);
+      if (v != null) pathEl.setAttribute(attr, v);
+    }
+    text.replaceWith(pathEl);
+  }
+}
+
 function replaceHaIcons(svgEl) {
   const fos = svgEl.querySelectorAll('foreignObject');
   for (const fo of fos) {
@@ -247,17 +311,17 @@ async function renderExample(yamlPath) {
   }
   // Inline the MDI icon paths so the SVG renders standalone (without HA).
   replaceHaIcons(svg);
+  // Bake every <text> into <path> outlines using the real Roboto font. This
+  // removes the dependency on the Roboto webfont being available wherever
+  // the SVG ends up displayed (GitHub camo, librsvg, ImageMagick, mobile
+  // browsers) — what you see is exactly what HA shows in a live dashboard.
+  textToPaths(svg);
   // Inline a minimal stylesheet so themes aren't required for the static
   // SVG to look right outside Home Assistant. Mirrors the card's CSS for
-  // the elements that survive in the saved markup, and forces a font-family
-  // chain that lands on Roboto (HA's default) when available, or a
-  // close-enough system sans-serif everywhere else.
+  // the elements that survive in the saved markup. No font-family rule
+  // needed: text has been baked into <path> outlines.
   const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
   style.textContent = `
-    svg {
-      font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont,
-        'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    }
     .bubble-bg { fill: #ffffff; stroke: #e2e8f0; stroke-width: 0.7; }
     .bubble-conn { stroke: #cbd5e0; stroke-width: 0.5; }
     .label-secondary, .zone-room { fill: #718096; }
