@@ -103,7 +103,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
 | `label`    | string                               | no       | _Metadata._ Reserved for future tooltips. |
-| `spec`     | string                               | no       | _Metadata._ Free-form spec text. |
+| `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (2 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
 
 ### Group types
 

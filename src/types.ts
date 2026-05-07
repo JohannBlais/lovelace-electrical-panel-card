@@ -117,8 +117,17 @@ export interface Group {
   circuits?: Circuit[];
   /** Optional metadata (reserved for future tooltips). */
   label?: string;
-  /** Metadata: free-form spec string (e.g. `'30mA 40A 2P Cl.A'`). */
-  spec?: string;
+  // ── RCD / main breaker metadata (not rendered yet, kept for future
+  //    tooltips / info dialogs). Replaces the previous free-form `spec`
+  //    string with structured fields.
+  /** RCD rating in amperes (e.g. 40 for a 40 A breaker). */
+  amp?: number;
+  /** RCD sensitivity in milliamperes (e.g. 30 for "30 mA"). */
+  mA?: number;
+  /** RCD pole count (2 for single-phase, 4 for three-phase). */
+  poles?: 2 | 4;
+  /** RCD class per IEC 60755 (typically `'A'`, `'AC'`, `'B'`, `'F'`). */
+  class?: string;
 }
 
 export interface ElectricalPanelCardConfig extends LovelaceCardConfig {

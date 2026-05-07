@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.10.0] — Structured RCD metadata at group level
+
+Replaces the free-form `Group.spec` string with structured fields, mirroring
+how `Circuit` already exposes its breaker characteristics (`amp`, `poles`,
+`mm2`, `cond`, `pts`, `n_pts`).
+
+### Added on `Group`
+
+- `amp?: number` — RCD rating (e.g. `40`)
+- `mA?: number` — sensitivity in milliamperes (e.g. `30`)
+- `poles?: 2 | 4` — pole count
+- `class?: string` — IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`)
+
+### Breaking
+
+- Removed `Group.spec`. Use the structured fields above instead. Configs
+  that set `spec:` will now have it ignored (silently — unknown YAML keys
+  are not validated). To migrate:
+  ```yaml
+  # before
+  spec: '30mA 40A 2P Cl.A'
+  # after
+  amp: 40
+  mA: 30
+  poles: 2
+  class: A
+  ```
+
+Metadata-only fields (not rendered), so no visual change.
+
 ## [0.9.0] — `Circuit.mm2` is now a number
 
 Wire cross-section values are inherently numeric. The previous `string` type
