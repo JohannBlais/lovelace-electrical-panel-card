@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.7.1] — Fix MDI icon clipping inside foreignObject
+
+`<ha-icon>` defaults to `display: inline-flex` with `vertical-align: middle`,
+which positioned the icon slightly below the geometric centre of its
+`<foreignObject>` host. The bottom half of the icon was getting clipped by
+the foreignObject's default `overflow: hidden`. Wrapped the ha-icon in a
+flex div (in HTML namespace) that centres the icon precisely, plus
+`overflow: visible` on the foreignObject as belt-and-suspenders.
+
 ## [0.7.0] — MDI icons (per zone, per circuit, with type defaults)
 
 Zone icons are now Material Design icons rendered through Home Assistant's

@@ -587,8 +587,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               : nothing
           }
           <foreignObject x=${iconX} y=${zoneY - ICON_SIZE / 2}
-                         width=${ICON_SIZE} height=${ICON_SIZE}>
-            <ha-icon icon=${iconName} class="zone-icon"></ha-icon>
+                         width=${ICON_SIZE} height=${ICON_SIZE}
+                         style="overflow: visible">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="zone-icon-wrap">
+              <ha-icon icon=${iconName} class="zone-icon"></ha-icon>
+            </div>
           </foreignObject>
           ${
             zone.room
@@ -711,12 +714,21 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       .phase-label {
         fill: var(--primary-text-color);
       }
+      /* Flex wrapper centres the ha-icon precisely inside its <foreignObject>
+         host. Without it, ha-icon's default inline-flex + vertical-align:middle
+         puts the icon below the geometric centre and the foreignObject's clip
+         rect chops the bottom half. */
+      .zone-icon-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 12px;
+        height: 12px;
+        line-height: 0;
+      }
       .zone-icon {
         --mdc-icon-size: 12px;
         color: var(--secondary-text-color, #718096);
-        display: block;
-        width: 12px;
-        height: 12px;
       }
     `;
   }
