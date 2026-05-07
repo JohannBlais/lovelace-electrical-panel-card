@@ -67,7 +67,7 @@ floors:
   L2: { bg: '#d69e2e', fg: 'white' }   # second floor
 ```
 
-Map of identifier → pill style, used by `Zone.floor`. Built-in defaults cover `LB`, `L0`, `L1`, `L2` (HA floor-plan convention: Lower Basement, Level 0, Level 1, Level 2). Override via `floors:` to change colours or use a different identifier scheme.
+Map of identifier → pill style, used by `Zone.floor`. **No built-in defaults** — the right identifier scheme depends on your installation, so the card ships empty. The map above is the recommended L-convention (matches HA floor-plans: Lower Basement, Level 0, etc.); copy it into your config and adjust as needed. Zones referencing a key not in this map fall back to a neutral grey pill.
 
 | Field | Type   | Required | Description |
 | ----- | ------ | -------- | ----------- |

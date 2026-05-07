@@ -54,6 +54,13 @@ sensors:
     l1: { entity: sensor.envoy_current_power_consumption_l1 }
     l2: { entity: sensor.envoy_current_power_consumption_l2 }
     l3: { entity: sensor.envoy_current_power_consumption_l3 }
+floors:
+  # Recommended L-convention (matches HA floor-plans). Copy into your
+  # config and tweak — the card ships with no built-in floor presets.
+  LB: { bg: '#718096', fg: white }   # lower basement
+  L0: { bg: '#38a169', fg: white }   # ground floor
+  L1: { bg: '#3182ce', fg: white }   # first floor
+  L2: { bg: '#d69e2e', fg: white }   # second floor
 groups:
   - id: D1
     phases: [L1]

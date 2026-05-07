@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.6.0] — No floor presets, zone layout swap, more vertical space
+
+### Breaking
+
+- **Removed `DEFAULT_FLOORS`.** The card no longer ships with any built-in
+  floor identifiers. Defining "some but not others" is confusing and
+  installation-specific. Configure floors explicitly via `config.floors`;
+  the README and docs/data-model.md show the recommended L-convention map
+  (LB / L0 / L1 / L2). Zones referencing a floor key not in `config.floors`
+  fall back to a neutral grey pill (unchanged behaviour for unknown keys).
+
+### Changed
+
+- **Zone layout swap.** Zone rendering order is now
+  `connector → floor pill → type icon → room` (was
+  `connector → type icon → floor pill → room`). The connector line stops at
+  the start of the zone content so it no longer crosses the type icon.
+- **More vertical space at the top of the card.** Staggered phase taps
+  spread by 20 px between adjacent levels (was 14 px) so the right-column
+  "Total" / "Grid" bubbles are visually separated. `PH_TAP_ZONE` increased
+  to 54 px (was 42).
+
+### Migration
+
+If you were relying on the built-in `LB` / `L0` / `L1` / `L2` presets, copy
+them into your card config:
+
+```yaml
+floors:
+  LB: { bg: '#718096', fg: white }
+  L0: { bg: '#38a169', fg: white }
+  L1: { bg: '#3182ce', fg: white }
+  L2: { bg: '#d69e2e', fg: white }
+```
+
 ## [0.5.0] — Default floor identifiers renamed to L-convention
 
 The card's built-in floor pill defaults now follow the HA-style "level"

@@ -57,7 +57,7 @@ const PWR_X = 350;
 const CB_SQ = 20;
 const CB_X = ML + SQ + 10;
 const CB_RIGHT = CB_X + CB_SQ;
-const PH_TAP_ZONE = 42;
+const PH_TAP_ZONE = 54; // staggered phase taps fit in here (offsets 6/26/46)
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
 // Phase wire colours — IEC 60446. Exposed as CSS custom properties so themes
@@ -74,15 +74,10 @@ const TYPE_ICON: Record<string, string> = {
   power: '⚙️',
 };
 
-// Built-in floor pill defaults. Identifier convention follows HA-style floor
-// plans: LB = lower basement, L0 = ground floor, L1/L2 = upper floors.
-// Override or extend via the `floors:` map in the card config.
-const DEFAULT_FLOORS: Record<string, FloorStyle> = {
-  LB: { bg: '#718096', fg: 'white' },
-  L0: { bg: '#38a169', fg: 'white' },
-  L1: { bg: '#3182ce', fg: 'white' },
-  L2: { bg: '#d69e2e', fg: 'white' },
-};
+// No built-in floor presets — defining "some but not others" is confusing,
+// and the right identifier scheme depends on the user's installation. Sample
+// floor maps live in the README and docs/data-model.md. Zones referencing a
+// floor key not in `config.floors` fall back to a neutral grey pill.
 
 // Fallback palette used when a group has no explicit `accent`. Cycled by
 // group index so adjacent groups get distinct colours by default.
@@ -352,11 +347,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const layout = this._computeLayout();
     const sensors = this._config.sensors ?? {};
     const phases = sensors.phases ?? {};
-    const floors = { ...DEFAULT_FLOORS, ...(this._config.floors ?? {}) };
+    const floors = this._config.floors ?? {};
     const t = this._t();
+    // 20 px between staggered taps so the right-column "Total" / "Grid"
+    // bubbles don't visually butt up against each other.
     const phTapY1 = HEADER_H + 6;
-    const phTapY2 = HEADER_H + 20;
-    const phTapY3 = HEADER_H + 34;
+    const phTapY2 = HEADER_H + 26;
+    const phTapY3 = HEADER_H + 46;
 
     return html`
       <ha-card .header=${this._config.title ?? ''}>
@@ -553,37 +550,44 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
       ${zones.map((zone, j) => {
         const zoneY = cl.startY + CB_SQ + j * ZH + ZH / 2;
+        // Layout from left to right (zone content):
+        //   [connector line] → [floor pill (optional)] → [type icon] → [room]
+        // The connector stops at the start of the zone content so the line
+        // never crosses the icon or room text.
         const ix0 = CB_RIGHT + 8;
         const BW = 20;
         const BH = 12;
         const BR = 3;
-        const lineEnd = ix0 + 16;
-        const textX = ix0 + 16;
+        const ICON_W = 14;
         const fc = zone.floor
           ? floors[zone.floor] ?? { bg: '#a0aec0', fg: 'white' }
           : null;
+        const pillX = ix0;
+        const iconX = fc ? ix0 + BW + 4 : ix0;
+        const roomX = iconX + ICON_W;
+        const lineEnd = ix0;
 
         return svg`
           <line x1=${cbCenterX} y1=${zoneY} x2=${lineEnd} y2=${zoneY}
                 stroke=${colors.stroke} stroke-width="0.8"/>
-          <text x=${ix0} y=${zoneY + 4} text-anchor="start" font-size="10">
-            ${TYPE_ICON[c.type] ?? ''}
-          </text>
           ${
             fc
               ? svg`
-                  <rect x=${textX} y=${zoneY - BH / 2 - 1} width=${BW} height=${BH}
+                  <rect x=${pillX} y=${zoneY - BH / 2 - 1} width=${BW} height=${BH}
                         fill=${fc.bg} rx=${BR}/>
-                  <text x=${textX + BW / 2} y=${zoneY - 1} text-anchor="middle"
+                  <text x=${pillX + BW / 2} y=${zoneY - 1} text-anchor="middle"
                         dominant-baseline="central" font-size="7" font-weight="bold"
                         fill=${fc.fg}>${zone.floor}</text>
                 `
               : nothing
           }
+          <text x=${iconX} y=${zoneY + 4} text-anchor="start" font-size="10">
+            ${TYPE_ICON[c.type] ?? ''}
+          </text>
           ${
             zone.room
               ? svg`
-                  <text class="zone-room" x=${fc ? textX + BW + 4 : textX} y=${zoneY - 1}
+                  <text class="zone-room" x=${roomX} y=${zoneY - 1}
                         text-anchor="start" dominant-baseline="central"
                         font-size="8">${zone.room}</text>
                 `
