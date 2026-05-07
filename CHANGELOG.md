@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.11.0] — Metadata tooltips on hover
+
+The `Group` and `Circuit` metadata fields finally have a visible role.
+Hovering a group's RCD box or a circuit's breaker box surfaces the
+technical specs as a native browser tooltip (long-press on touch devices).
+
+Generated from the structured fields with a compact technical notation:
+
+- **RCD** (group): `40 A · 30 mA · 2P · Cl. A · L3`
+- **Breaker** (circuit): `16 A · 2P · 2.5 mm² · 3 cond. · 1 (dedicated)`
+
+Implementation: each box is wrapped in an SVG `<g>` with a `<title>`
+child. No styling, no CSS, no extra DOM — leverages the browser's native
+tooltip behaviour. Title text is omitted when no relevant metadata is
+configured (so empty groups don't get phantom tooltips).
+
+A future release may upgrade to a richer HA-styled popup on click.
+
 ## [0.10.0] — Structured RCD metadata at group level
 
 Replaces the free-form `Group.spec` string with structured fields, mirroring

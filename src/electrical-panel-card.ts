@@ -113,6 +113,31 @@ function resolveColors(g: Group, idx: number): ResolvedColors {
   };
 }
 
+// ─── Tooltip helpers ──────────────────────────────────────────────────────────
+// Compact technical-spec strings rendered inside SVG <title> elements. Browsers
+// show them as native tooltips on hover (and on long-press on touch devices).
+function groupTooltip(g: Group): string {
+  const parts: string[] = [];
+  if (g.label) parts.push(g.label);
+  if (g.amp !== undefined) parts.push(`${g.amp} A`);
+  if (g.mA !== undefined) parts.push(`${g.mA} mA`);
+  if (g.poles !== undefined) parts.push(`${g.poles}P`);
+  if (g.class) parts.push(`Cl. ${g.class}`);
+  if (g.phases?.length) parts.push(g.phases.join('+'));
+  return parts.join(' · ');
+}
+
+function circuitTooltip(c: Circuit): string {
+  const parts: string[] = [];
+  if (c.amp !== undefined) parts.push(`${c.amp} A`);
+  if (c.poles !== undefined) parts.push(`${c.poles}P`);
+  if (c.mm2 !== undefined) parts.push(`${c.mm2} mm²`);
+  if (c.cond !== undefined) parts.push(`${c.cond} cond.`);
+  if (c.pts) parts.push(c.pts);
+  else if (c.n_pts !== undefined) parts.push(`${c.n_pts} pts`);
+  return parts.join(' · ');
+}
+
 interface CircuitLayout {
   startY: number;
   height: number;
@@ -482,10 +507,16 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       ${taps}
       ${tapLine}
 
-      <rect x=${ML} y=${midY - SQ / 2} width=${SQ} height=${SQ}
-            fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
-      <text x=${ML + SQ / 2} y=${midY + 4} text-anchor="middle"
-            font-size="9" font-weight="bold" fill=${colors.color}>${g.id}</text>
+      <g>
+        ${(() => {
+          const tt = groupTooltip(g);
+          return tt ? svg`<title>${tt}</title>` : nothing;
+        })()}
+        <rect x=${ML} y=${midY - SQ / 2} width=${SQ} height=${SQ}
+              fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
+        <text x=${ML + SQ / 2} y=${midY + 4} text-anchor="middle"
+              font-size="9" font-weight="bold" fill=${colors.color}>${g.id}</text>
+      </g>
 
       ${
         g.sensor
@@ -532,10 +563,16 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                       stroke=${colors.stroke} stroke-width="1.5"/>`
           : nothing
       }
-      <rect x=${CB_X} y=${cl.startY} width=${CB_SQ} height=${CB_SQ}
-            fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
-      <text x=${CB_X + CB_SQ / 2} y=${cl.startY + CB_SQ / 2 + 4} text-anchor="middle"
-            font-size="9" font-weight="bold" fill=${colors.color}>${c.id}</text>
+      <g>
+        ${(() => {
+          const tt = circuitTooltip(c);
+          return tt ? svg`<title>${tt}</title>` : nothing;
+        })()}
+        <rect x=${CB_X} y=${cl.startY} width=${CB_SQ} height=${CB_SQ}
+              fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
+        <text x=${CB_X + CB_SQ / 2} y=${cl.startY + CB_SQ / 2 + 4} text-anchor="middle"
+              font-size="9" font-weight="bold" fill=${colors.color}>${c.id}</text>
+      </g>
       ${
         c.sensor
           ? this._bubble({
