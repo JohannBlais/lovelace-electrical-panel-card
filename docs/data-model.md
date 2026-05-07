@@ -1,10 +1,10 @@
-# Data model (v0.3)
+# Data model (v0.4)
 
 Reference for the YAML configuration consumed by `custom:electrical-panel-card`.
 
-The schema describes _what is on the diagram_ — groups, circuits, zones — not the electrical-installation semantics. A "group" is just a visual block on the panel, whether it represents an RCD, a sub-distribution board, or a grid-coupling protection. Anything installation-specific (breaker amperage, conductor cross-section, IEC phase mapping) is optional metadata.
+The schema describes _what is on the diagram_. **Everything is a group.** A group has a `type` that says whether it's a load (default) or a production source (`solar`, `wind`, `geothermal`, `hydro`). Loads and productions render with the same one-line-diagram visual; production units like PV inverters or wind turbines are expressed as **zones** of a circuit, which lets each unit carry its own sensor through the standard zone mechanics.
 
-> v0.2 is **not** backward-compatible with v0.1. See [CHANGELOG](../CHANGELOG.md) for migration steps.
+> v0.4 is **not** backward-compatible with earlier versions. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
 
 ## Top-level config
 
@@ -25,8 +25,8 @@ groups:             # required — at least one
 | `type`     | `'custom:electrical-panel-card'`            | yes      | Lovelace card type. |
 | `title`    | string                                      | no       | Optional `<ha-card>` header. Omit for no header. |
 | `language` | `'en'` \| `'fr'` (BCP 47 primary subtag)    | no       | Language override. Falls back to `hass.locale.language`, then English. |
-| `sensors`  | [`MainSensors`](#main-sensors)              | no       | Top-of-card live readings (total, grid, per-phase totals). |
-| `floors`   | `Record<string, FloorStyle>`                | no       | Floor pill styles, see [Floors](#floors). |
+| `sensors`  | [`MainSensors`](#main-sensors)              | no       | Top-of-card live readings. |
+| `floors`   | `Record<string, FloorStyle>`                | no       | Floor pill styles. |
 | `groups`   | [`Group[]`](#groups)                        | **yes**  | One entry per visual group. At least one required. |
 
 ## Main sensors
@@ -47,14 +47,14 @@ sensors:
 | `grid`   | `Sensor`        | Top-right "Grid" bubble (positive = import). |
 | `phases` | `PhaseSensors`  | Per-phase L1/L2/L3 bubbles attached to the trunk. |
 
-PV / production is **not** a top-level sensor anymore — declare it as a `grid_coupling` group (see below).
+PV / production is just a group — declare it under `groups[]` with `type: solar` (or `wind`, etc.).
 
 ### `Sensor`
 
 | Field    | Type   | Required | Description |
 | -------- | ------ | -------- | ----------- |
 | `entity` | string | yes      | HA entity ID. State is parsed as a number; if `unit_of_measurement` is `kW` the value is normalised to W. |
-| `label`  | string | no       | Override for the rendered label (where applicable). |
+| `label`  | string | no       | Override for the rendered label. |
 | `max_w`  | number | no       | _Metadata._ Peak rated power. Not rendered. |
 
 ## Floors
@@ -67,23 +67,22 @@ floors:
   E2:  { bg: '#d69e2e', fg: 'white' }
 ```
 
-`floors` is a map of identifier → pill style, used by `Zone.floor`. Built-in defaults cover `E-1`, `E0`, `E1`, `E2` — override or add entries with the same shape.
-
-### `FloorStyle`
+Map of identifier → pill style, used by `Zone.floor`. Built-in defaults cover `E-1`, `E0`, `E1`, `E2`.
 
 | Field | Type   | Required | Description |
 | ----- | ------ | -------- | ----------- |
-| `bg`  | string | yes      | Pill background. |
+| `bg`  | string | yes      | Pill background colour. |
 | `fg`  | string | yes      | Pill text colour. |
 
 ## Groups
 
-A `Group` is a visual block on the diagram. The `kind` discriminator picks how it is drawn.
+A `Group` is a visual block. The `type` discriminator is informational and groups are visually identical regardless of type — same RCD-like box, same circuits, same zones underneath.
 
 ```yaml
 - id: D1
-  phases: [L3]            # one tap on L3
-  accent: '#38a169'       # single colour; renderer derives fill / stroke / text
+  type: distribution      # default — can be omitted
+  phases: [L3]
+  accent: '#38a169'
   sensor: sensor.emporia_d1_power
   circuits:
     - ...
@@ -93,44 +92,46 @@ A `Group` is a visual block on the diagram. The `kind` discriminator picks how i
 
 | Field      | Type                                 | Required | Description |
 | ---------- | ------------------------------------ | -------- | ----------- |
-| `id`       | string                               | yes      | Unique label drawn inside the box (e.g. `D1`). Must be unique across groups. |
-| `kind`     | `'distribution'` \| `'grid_coupling'` \| `'pv_system'` | no | Visual style. Defaults to `'distribution'`. |
-| `phases`   | `('L1' \| 'L2' \| 'L3')[]`           | yes      | Phase trunks the group taps into. `[L1]` = single-phase. `[L1, L2, L3]` = three-phase. `[]` = no tap. |
+| `id`       | string                               | yes      | Unique label drawn inside the box (e.g. `D1`). |
+| `type`     | `'distribution'` \| `'solar'` \| `'wind'` \| `'geothermal'` \| `'hydro'` | no | Defaults to `'distribution'`. Loads vs production. Visual is identical; the discriminator is for documentation, future tooling, and theming hooks. |
+| `phases`   | `('L1' \| 'L2' \| 'L3')[]`           | yes      | Phase trunks the group taps into. `[L1]` = single-phase; `[L1, L2, L3]` = three-phase; `[]` = no tap. |
 | `accent`   | string (CSS colour)                  | no       | Single colour; renderer derives `color` / `stroke` / a tinted `fill` from it. When omitted, an accent is picked from a fallback palette by group index. |
 | `color`    | string (CSS colour)                  | no       | Override for derived text colour. |
 | `fill`     | string (CSS colour)                  | no       | Override for derived box fill. |
 | `stroke`   | string (CSS colour)                  | no       | Override for derived box stroke. |
 | `sensor`   | string (entity ID)                   | no       | Group-level live power. Renders a bubble next to the box. |
 | `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
-| `circuits` | [`Circuit[]`](#circuits)             | yes for `distribution` / ignored otherwise | Circuits under this group. |
-| `label`    | string                               | no       | For `grid_coupling` / `pv_system`: header title (falls back to a localised default). For `distribution`: metadata. |
-| `subtitle` | string                               | no       | `grid_coupling` / `pv_system` — second line under the title. |
-| `rows`     | [`DetailRow[]`](#detail-rows-grid_coupling-only) | no | `grid_coupling` only — free-form info rows under the header. |
-| `inverters` | [`PvInverter[]`](#pv-system-pv_system) | no | `pv_system` only — one row per identical inverter group. |
-| `panels`   | [`PvPanel[]`](#pv-system-pv_system)  | no | `pv_system` only — one row per identical panel group. |
-| `spec`     | string                               | no       | _Metadata._ Free-form spec text (e.g. `'30mA 40A 2P Cl.A'`). |
+| `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
+| `label`    | string                               | no       | _Metadata._ Reserved for future tooltips. |
+| `spec`     | string                               | no       | _Metadata._ Free-form spec text. |
+
+### Group types
+
+| `type`         | Use for                                           |
+| -------------- | ------------------------------------------------- |
+| `distribution` | Default. Sub-distribution boards, RCDs, breaker groups, anything that distributes power to loads. |
+| `solar`        | Photovoltaic production. Inverters become zones (each with its own `sensor`). |
+| `wind`         | Wind production. Each turbine = one zone. |
+| `geothermal`   | Geothermal production. |
+| `hydro`        | Hydroelectric production. |
+
+The renderer is identical for all types; the discriminator is informational. Pick a meaningful `accent` to differentiate visually (e.g. `var(--energy-solar-color, #d97706)` for solar).
 
 ### Colour resolution
 
-Specify `accent` and let the renderer derive the rest, or specify `color` / `fill` / `stroke` for exact control.
-
 ```ts
-// Defaults applied per group
 color  = group.color  ?? group.accent ?? FALLBACK_PALETTE[idx % palette.length]
 stroke = group.stroke ?? group.accent ?? <same fallback>
 fill   = group.fill   ?? color-mix(in srgb, accent 18%, var(--ha-card-background))
 ```
 
-The `color-mix()` fallback for `fill` adapts to the active theme — light themes get a lightly-tinted box, dark themes get an accent-tinted darker box.
-
-You can also set `accent` to a CSS variable so the colour follows the theme:
+The `color-mix()` fallback for `fill` adapts to the active theme. `accent` itself can be a CSS variable so the colour follows the theme:
 
 ```yaml
 accent: 'var(--energy-solar-color, #ff9800)'
 ```
 
-The HA fallback palette (cycled by group index when no accent is set) is:
-`#3182ce`, `#38a169`, `#d69e2e`, `#e53e3e`, `#805ad5`, `#319795`, `#dd6b20`, `#5a67d8`.
+Fallback palette (cycled by group index when no accent is set): `#3182ce`, `#38a169`, `#d69e2e`, `#e53e3e`, `#805ad5`, `#319795`, `#dd6b20`, `#5a67d8`.
 
 ### Phases array
 
@@ -140,7 +141,7 @@ The HA fallback palette (cycled by group index when no accent is set) is:
 | `[L2]` / `[L3]` | Single-phase on the indicated phase.     |
 | `[L1, L2, L3]`  | Three-phase. Renderer draws three taps. |
 | `[L1, L2]`      | Two-phase. Two taps. (Rare in EU but supported.) |
-| `[]`            | No phase tap. Group floats — useful for grouping logical things visually without a wire.|
+| `[]`            | No phase tap. Group floats. |
 
 ## Circuits
 
@@ -158,17 +159,12 @@ circuits:
 
 | Field    | Type                                  | Required | Description |
 | -------- | ------------------------------------- | -------- | ----------- |
-| `id`     | string                                | yes      | Drawn inside the breaker box (e.g. `A`). Unique within a group; ideally globally unique to avoid `data-id` collisions in the live-update DOM logic. |
-| `type`   | `'socket'` \| `'light'` \| `'power'`  | yes      | Picks the icon: 🔌 / 💡 / ⚙️ . |
-| `sensor` | string (entity ID)                    | no       | Per-circuit power. Bubble appears to the right of the breaker box. |
+| `id`     | string                                | yes      | Drawn inside the breaker box (e.g. `A`). Unique within a group. |
+| `type`   | `'socket'` \| `'light'` \| `'power'`  | yes      | Picks the icon shown next to each zone: 🔌 / 💡 / ⚙️ . |
+| `sensor` | string (entity ID)                    | no       | Per-circuit power. Bubble appears next to the breaker box. |
 | `switch` | string (entity ID)                    | no       | Adds an inline toggle on the circuit's bubble. |
-| `zones`  | [`Zone[]`](#zones)                    | no       | Branches off the circuit. **Empty/missing** = breaker box drawn alone, no zones. To force one empty zone, pass `zones: [{}]`. |
-| `amp`    | number                                | no       | _Metadata._ |
-| `poles`  | `2` \| `4`                            | no       | _Metadata._ |
-| `mm2`    | string                                | no       | _Metadata._ Wire cross-section. |
-| `cond`   | number                                | no       | _Metadata._ |
-| `pts`    | string                                | no       | _Metadata._ Free text (e.g. `'≥6 pts'`). |
-| `n_pts`  | number                                | no       | _Metadata._ |
+| `zones`  | [`Zone[]`](#zones)                    | no       | Branches off the circuit. Empty/missing = breaker box drawn alone, no zones. |
+| `amp` / `poles` / `mm2` / `cond` / `pts` / `n_pts` | various | no | _Metadata._ Reserved for future tooltips. |
 
 ## Zones
 
@@ -186,51 +182,78 @@ zones:
 
 | Field      | Type             | Description |
 | ---------- | ---------------- | ----------- |
-| `floor`    | string           | Key into `floors` (or one of the built-in defaults). Renders as a coloured pill. |
+| `floor`    | string           | Key into `floors`. Renders as a coloured pill. |
 | `room`     | string           | Free-text label drawn next to the pill. |
 | `sensor`   | string (entity)  | Per-zone power. Bubble to the right. |
 | `switch`   | string (entity)  | Inline toggle on the bubble. |
 | `critical` | boolean          | When `true` and `switch` is set, toggling shows a confirmation dialog using `room` as the load name. |
 
-## Detail rows (`grid_coupling` only)
+## Modelling production sources
+
+Each production unit (PV inverter, wind turbine, geothermal pump, hydro generator) is a **zone** under a circuit of a production-typed group. This reuses the existing zone mechanics — sensor, switch, floor, room, critical — without any production-specific schema.
+
+### PV example
 
 ```yaml
-rows:
-  - { icon: ☀, label: PV inverters }
-  - { icon: ☀, label: PV panels }
+- id: PV
+  type: solar
+  phases: [L1, L2, L3]
+  accent: 'var(--energy-solar-color, #d97706)'
+  sensor: sensor.envoy_total_production    # group-level total
+  circuits:
+    - id: INV
+      type: power
+      zones:
+        - { room: "IQ7+ #1",  sensor: sensor.envoy_microinverter_1_power }
+        - { room: "IQ7+ #2",  sensor: sensor.envoy_microinverter_2_power }
+        - { room: "IQ7+ #3",  sensor: sensor.envoy_microinverter_3_power }
+        # ... one zone per microinverter
 ```
 
-### `DetailRow`
+Each microinverter renders as a zone row with its `room` label and a power bubble fed by its individual sensor. The group-level `sensor` (envoy total) shows in the box-side bubble.
 
-| Field   | Type   | Description                                            |
-| ------- | ------ | ------------------------------------------------------ |
-| `icon`  | string | Optional emoji / character drawn at the row's left.   |
-| `label` | string | Row text.                                              |
+### Other production types
 
-Rows alternate background tints for visual rhythm.
+```yaml
+# Wind
+- id: WIND
+  type: wind
+  phases: [L1, L2, L3]
+  accent: '#319795'
+  circuits:
+    - id: TURB
+      type: power
+      zones:
+        - { room: "Turbine #1", sensor: sensor.turbine_1_power }
+        - { room: "Turbine #2", sensor: sensor.turbine_2_power }
+
+# Hydro
+- id: HYD
+  type: hydro
+  phases: [L1, L2, L3]
+  accent: '#3182ce'
+  sensor: sensor.hydro_total
+```
 
 ## Theming
 
-The card exposes CSS custom properties so themes can override visual choices. Set them in your HA `themes.yaml`:
+CSS custom properties exposed by the card:
 
 | Variable                              | Default (light)                | Used by |
 | ------------------------------------- | ------------------------------ | ------- |
 | `--electrical-panel-phase-l1-color`   | `#8B4513`                      | L1 trunk + tap dots |
 | `--electrical-panel-phase-l2-color`   | `#1A202C`                      | L2 trunk + tap dots |
 | `--electrical-panel-phase-l3-color`   | `#5A6474`                      | L3 trunk + tap dots |
-| `--energy-solar-color`                | `#ff9800` (HA standard)        | Use as `accent` on a `grid_coupling` group for solar. |
 
 Standard HA variables drive the chrome:
 
 - `--primary-text-color` → labels, all bubble values
 - `--secondary-text-color` → "Total" / "Grid" labels, room names
-- `--ha-card-background`, `--card-background-color` → bubble fills, accent-tinted box fills
+- `--ha-card-background`, `--card-background-color` → bubble fills
 - `--divider-color` → bubble borders, connector lines
 - `--ha-font-family-body` → SVG font
 
-Phase **wire** colours follow IEC 60446 in both themes — they represent physical cables. Phase **labels** and bubble values use `--primary-text-color` so they stay readable.
-
-In dark mode (detected via `hass.themes.darkMode`), bubble values for `data-id^="g-"` and `data-id^="c-"` get a `filter: brightness(1.55) saturate(0.85)` so user-configured dark accent colours stay legible.
+Phase **wire** colours follow IEC 60446 in both themes. Phase **labels** and bubble values use `--primary-text-color` so they stay readable. In dark mode (detected via `hass.themes.darkMode`), bubble values for `data-id^="g-"` and `data-id^="c-"` get a `filter: brightness(1.55) saturate(0.85)` so user-configured dark accent colours stay legible.
 
 ## Internationalisation
 
@@ -243,82 +266,14 @@ Built-in dictionaries: `en` (default), `fr`. Detection chain:
 
 Translated strings:
 
-- `card.total`, `card.grid` — fallback labels for `sensors.total.label` / `sensors.grid.label`
-- `grid_coupling.title_default` — fallback for a `grid_coupling` group's `label`
-- `pv_system.title_default` — fallback for a `pv_system` group's `label` (en: "PV system", fr: "Production photovoltaïque")
-- `confirm.toggle` — confirmation dialog when toggling a `critical` zone
-
-To add a language, drop `de.ts` (etc.) next to `src/translations/en.ts` exporting a `Translations` object, then register it in `DICTS` in `src/translations/index.ts`.
+- `card.total`, `card.grid` — fallback labels for the top-right bubbles.
+- `confirm.toggle` — confirmation dialog when toggling a `critical` zone.
 
 ## Special concepts
 
 ### Three-phase circuits
 
-Set `phases: [L1, L2, L3]` on a group. Three tap dots render on the trunks; the horizontal feed line starts at the leftmost phase X coordinate. Used for heat pumps, induction cooktops, EV chargers, etc.
-
-### `grid_coupling` group
-
-A wide horizontal block for generic bidirectional / decoupling use cases (battery storage, wind, generator interlock, utility decoupling protection). Ignores `circuits`; carries `label`, `subtitle`, and free-form `rows`. Renders with the group's `accent` colour throughout (taps, arrow indicator, header tint, row tints, divider).
-
-```yaml
-- id: BAT
-  kind: grid_coupling
-  phases: [L1, L2, L3]
-  accent: '#3182ce'
-  sensor: sensor.battery_power
-  label: Battery storage
-  subtitle: ↕ Charge / discharge
-  rows:
-    - { icon: 🔋, label: 10 kWh · LFP }
-```
-
-### PV system (`pv_system`)
-
-Specialised for solar systems. Visually identical to `grid_coupling` (wide block, accent, header), but `rows` is replaced by structured `panels` and `inverters` arrays so each entry can carry hardware spec and an optional live-power sensor.
-
-```yaml
-- id: PV
-  kind: pv_system
-  phases: [L1, L2, L3]
-  accent: 'var(--energy-solar-color, #d97706)'
-  sensor: sensor.envoy_production       # overall production bubble in the header
-  subtitle: ↑ Grid injection
-  inverters:
-    - brand: Enphase
-      model: IQ7+
-      count: 19
-      sensor: sensor.envoy_total_inverter_power   # optional per-row bubble
-  panels:
-    - count: 19
-      power_wc: 425
-      brand: Trina                                # optional
-      model: TSM-DE15M(II)                        # optional
-```
-
-#### `PvInverter`
-
-| Field    | Type   | Description |
-| -------- | ------ | ----------- |
-| `brand`  | string | Manufacturer (e.g. `Enphase`). |
-| `model`  | string | Model name (e.g. `IQ7+`). |
-| `count`  | number | Number of identical inverters in this entry. Renders `× count` when > 1. |
-| `power_w`| number | Nominal AC power per inverter in watts. _Metadata; not rendered yet._ |
-| `sensor` | string | Entity ID for instantaneous power. Renders a bubble at the right of the row. |
-
-Each `PvInverter` entry → one row, formatted as `[brand] [model] × [count]`.
-
-#### `PvPanel`
-
-| Field      | Type   | Description |
-| ---------- | ------ | ----------- |
-| `brand`    | string | Manufacturer. |
-| `model`    | string | Model name. |
-| `count`    | number | Number of identical panels in this entry. |
-| `power_wc` | number | Peak power per panel, in watt-crête. |
-
-Each `PvPanel` entry → one row, formatted as `[count] × [power_wc] Wc · [brand] [model]`.
-
-An empty `pv_system` (no inverters, no panels) is valid — renders just the header with the optional group `sensor`.
+Set `phases: [L1, L2, L3]` on a group. Three tap dots render on the trunks; the horizontal feed line starts at the leftmost phase X coordinate.
 
 ### Critical loads
 
@@ -326,7 +281,7 @@ An empty `pv_system` (no inverters, no panels) is valid — renders just the hea
 
 ### Smart-plug toggles
 
-Any element (group / circuit / zone) with both `sensor` and `switch` shows a small toggle inside its power bubble. Clicking calls `switch.toggle` on the entity. State is read from `hass.states[switch].state` (`'on'` → green knob right; `'off'` → grey knob left).
+Any element (group / circuit / zone) with both `sensor` and `switch` shows a small toggle inside its power bubble. Clicking calls `switch.toggle` on the entity.
 
 ## Live-update mechanism (internal)
 
@@ -352,6 +307,5 @@ groups:
 
 - `groups` is a non-empty array.
 - Each group has an `id` and a `phases` array.
-- For `kind: 'distribution'` (or default), `circuits` is non-empty.
 
 Anything else is accepted as-is. Unknown fields are ignored without warnings.

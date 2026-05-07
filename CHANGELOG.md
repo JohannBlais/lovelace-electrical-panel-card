@@ -6,6 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.4.0] — Group `type` discriminator, single renderer for loads and productions
+
+A simpler model: in the YAML, **everything is a group**. A group has a `type` that says whether it's a load (default) or a production source. Loads and productions render with the **same** logic — the existing distribution-style box with circuits and zones underneath. Production units (PV inverters, wind turbines, geothermal pumps, hydro generators) are expressed as **zones** of a circuit, which lets each unit carry its own `sensor`, `switch`, `room`, etc. through the existing zone mechanics — no PV-specific rendering needed.
+
+### Breaking — schema
+
+- `Group.kind: 'distribution' | 'grid_coupling' | 'pv_system'` → `Group.type: 'distribution' | 'solar' | 'wind' | 'geothermal' | 'hydro'`. Default is `'distribution'` (load).
+- Removed: `Group.rows`, `Group.subtitle`, `Group.panels`, `Group.inverters` — those were `grid_coupling`/`pv_system` specifics. Express PV inverters as zones of a circuit instead.
+- Removed types: `PvPanel`, `PvInverter`, `DetailRow`. They no longer appear in the public API.
+
+### Breaking — i18n keys
+
+- Removed: `grid_coupling.title_default`, `pv_system.title_default`. There is no longer any kind-specific localised default.
+
+### Removed code
+
+- `_renderGridCoupling`, `_renderPvSystem` rendering methods.
+- `tint`, `formatInverterText`, `formatPanelText` helpers.
+
+### Notes
+
+- Production groups visually look identical to load groups. Use a clear `accent` (e.g. `var(--energy-solar-color, #d97706)` for solar) to distinguish them at a glance.
+- `Group.circuits` is now optional. A group may render as just a box + tap line (no sub-bus, no internal structure) — useful for a minimal production declaration with just a total sensor.
+
+### Migration
+
+```yaml
+# Before (v0.3) — pv_system kind with structured panels / inverters
+- id: PV
+  kind: pv_system
+  phases: [L1, L2, L3]
+  accent: 'var(--energy-solar-color, #d97706)'
+  sensor: sensor.envoy_production
+  subtitle: ↑ Grid injection
+  inverters:
+    - { brand: Enphase, model: IQ7+, count: 19, sensor: sensor.envoy_inverter_total }
+  panels:
+    - { count: 19, power_wc: 425 }
+
+# After (v0.4) — type: solar, inverters as zones of a "production" circuit
+- id: PV
+  type: solar
+  phases: [L1, L2, L3]
+  accent: 'var(--energy-solar-color, #d97706)'
+  sensor: sensor.envoy_production
+  circuits:
+    - id: INV
+      type: power                                  # circuit-level icon
+      zones:
+        - { room: "IQ7+ #1",  sensor: sensor.envoy_microinverter_1_power }
+        - { room: "IQ7+ #2",  sensor: sensor.envoy_microinverter_2_power }
+        # ... × 19
+```
+
+Each microinverter gets its own zone row with its own bubble. Same mechanics as any zone.
+
 ## [0.3.0] — `pv_system` group kind
 
 PV systems now have their own first-class group kind with structured hardware metadata, instead of being expressed via `grid_coupling` + free-form `rows`.

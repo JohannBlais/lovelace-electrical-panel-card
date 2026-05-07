@@ -11,7 +11,7 @@ Custom Lovelace card for Home Assistant — interactive one-line electrical pane
 - Live power on phases (L1/L2/L3), groups, circuits and individual zones
 - Toggle smart plugs straight from the diagram, with confirmation for critical loads
 - Floor + room labelling per zone
-- Generic `kind` discriminator: `distribution` for sub-distribution boards, `grid_coupling` for bidirectional / decoupling blocks (battery, wind, …), `pv_system` for solar with structured panels / inverters metadata
+- One model for everything: each group has a `type` (`distribution` for loads — the default — or `solar` / `wind` / `geothermal` / `hydro` for productions). Loads and productions render the same way; production units (PV inverters, turbines, …) are expressed as zones with their own `sensor`.
 - Single `accent` colour per group — the renderer derives `color` / `fill` / `stroke` via `color-mix()`. Override individually for exact control.
 - Phase array (`phases: [L1]`, `[L1, L2, L3]`, …) — single, three- or any combination
 - 100 % YAML configuration; pure SVG, no iframe, no token, no polling — uses the standard `hass` object
@@ -68,15 +68,17 @@ groups:
           - { floor: E1, room: laundry }
 
   - id: PV
-    kind: pv_system
+    type: solar
     phases: [L1, L2, L3]
     accent: 'var(--energy-solar-color, #d97706)'
     sensor: sensor.envoy_current_power_production
-    subtitle: ↑ Grid injection
-    inverters:
-      - { brand: Enphase, model: IQ7+, count: 19 }
-    panels:
-      - { count: 19, power_wc: 425 }
+    circuits:
+      - id: INV
+        type: power
+        zones:
+          - { room: "IQ7+ #1", sensor: sensor.envoy_microinverter_1_power }
+          - { room: "IQ7+ #2", sensor: sensor.envoy_microinverter_2_power }
+          # ... one zone per microinverter
 ```
 
 See [docs/data-model.md](docs/data-model.md) for the full schema, theming variables, and special concepts (three-phase loads, critical-toggle confirmation, internationalisation).

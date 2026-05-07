@@ -24,8 +24,6 @@ import type {
   FloorStyle,
   Group,
   Phase,
-  PvInverter,
-  PvPanel,
 } from './types.js';
 
 /* eslint-disable no-console */
@@ -62,9 +60,8 @@ const CB_RIGHT = CB_X + CB_SQ;
 const PH_TAP_ZONE = 42;
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
-// Phase wire colours — IEC 60446 cable colours, kept consistent across themes.
-// Exposed as CSS custom properties so themes can override if a user really
-// wants to (rare).
+// Phase wire colours — IEC 60446. Exposed as CSS custom properties so themes
+// can override if a user really wants to (rare).
 const PHASE_COLOR: Record<Phase, string> = {
   L1: 'var(--electrical-panel-phase-l1-color, #8B4513)',
   L2: 'var(--electrical-panel-phase-l2-color, #1A202C)',
@@ -116,35 +113,6 @@ function resolveColors(g: Group, idx: number): ResolvedColors {
   };
 }
 
-// Subtle accent-tinted background for grid_coupling / pv_system rows.
-function tint(accent: string, pct: number): string {
-  return `color-mix(in srgb, ${accent} ${pct}%, var(--ha-card-background, var(--card-background-color, transparent)))`;
-}
-
-// pv_system row text formatters. The hardware spec is the structured input
-// (brand / model / count / power_*), the visible row is a single line.
-function formatInverterText(inv: PvInverter): string {
-  const parts: string[] = [];
-  const brandModel = [inv.brand, inv.model].filter(Boolean).join(' ');
-  if (brandModel) parts.push(brandModel);
-  if (inv.count !== undefined && inv.count > 1) parts.push(`× ${inv.count}`);
-  return parts.join(' ');
-}
-
-function formatPanelText(p: PvPanel): string {
-  const parts: string[] = [];
-  if (p.count !== undefined && p.power_wc !== undefined) {
-    parts.push(`${p.count} × ${p.power_wc} Wc`);
-  } else if (p.count !== undefined) {
-    parts.push(`× ${p.count}`);
-  } else if (p.power_wc !== undefined) {
-    parts.push(`${p.power_wc} Wc`);
-  }
-  const brandModel = [p.brand, p.model].filter(Boolean).join(' ');
-  if (brandModel) parts.push(brandModel);
-  return parts.join(' · ');
-}
-
 interface CircuitLayout {
   startY: number;
   height: number;
@@ -191,34 +159,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           `groups[${i}] "${g.id}": \`phases\` must be an array (use [] for none)`,
         );
       }
-      const kind = g.kind ?? 'distribution';
-      if (kind === 'distribution' && (!Array.isArray(g.circuits) || g.circuits.length === 0)) {
-        throw new Error(
-          `groups[${i}] "${g.id}" (kind=distribution): \`circuits\` is required and must be non-empty`,
-        );
-      }
     });
     this._config = cfg;
   }
 
   public getCardSize(): number {
     if (!this._config) return 1;
-    let rows = 0;
-    for (const g of this._config.groups) {
-      const kind = g.kind ?? 'distribution';
-      if (kind === 'grid_coupling') {
-        rows += 1 + (g.rows?.length ?? 0);
-      } else if (kind === 'pv_system') {
-        rows += 1 + (g.inverters?.length ?? 0) + (g.panels?.length ?? 0);
-      } else {
-        rows +=
-          1 +
-          (g.circuits ?? []).reduce(
-            (n, c) => n + Math.max(1, c.zones?.length ?? 0),
-            0,
-          );
-      }
-    }
+    const rows = this._config.groups.reduce(
+      (acc, g) =>
+        acc +
+        1 +
+        (g.circuits ?? []).reduce(
+          (n, c) => n + Math.max(1, c.zones?.length ?? 0),
+          0,
+        ),
+      0,
+    );
     return Math.max(3, Math.ceil(rows / 4));
   }
 
@@ -299,35 +255,21 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     for (const g of groups) {
       yCur += GPAD;
       const yOff = yCur;
-      const kind = g.kind ?? 'distribution';
       const circuits = new Map<string, CircuitLayout>();
-      let groupHeight: number;
-
-      if (kind === 'grid_coupling') {
-        const numRows = g.rows?.length ?? 0;
-        groupHeight = GHDR + numRows * ZH;
-      } else if (kind === 'pv_system') {
-        const inv = g.inverters?.length ?? 0;
-        const pan = g.panels?.length ?? 0;
-        groupHeight = GHDR + (inv + pan) * ZH;
-      } else {
-        let localY = yOff + GHDR;
-        for (const c of g.circuits ?? []) {
-          const zonesCount = Math.max(1, c.zones?.length ?? 0);
-          const height = CB_SQ + zonesCount * ZH;
-          circuits.set(c.id, { startY: localY, height, zones: zonesCount });
-          localY += height;
-        }
-        groupHeight =
-          GHDR +
-          (g.circuits ?? []).reduce((s, c) => {
-            const z = Math.max(1, c.zones?.length ?? 0);
-            return s + CB_SQ + z * ZH;
-          }, 0);
+      let localY = yOff + GHDR;
+      for (const c of g.circuits ?? []) {
+        const zonesCount = Math.max(1, c.zones?.length ?? 0);
+        const height = CB_SQ + zonesCount * ZH;
+        circuits.set(c.id, { startY: localY, height, zones: zonesCount });
+        localY += height;
       }
-
+      const groupHeight =
+        GHDR +
+        (g.circuits ?? []).reduce((s, c) => {
+          const z = Math.max(1, c.zones?.length ?? 0);
+          return s + CB_SQ + z * ZH;
+        }, 0);
       byGroup.set(g.id, { yOff, height: groupHeight, circuits });
-      // Phase trunks must reach the lowest tap point (group's mid header).
       phLineEnd = Math.max(phLineEnd, yOff + GHDR / 2);
       yCur += groupHeight;
     }
@@ -487,10 +429,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
             ${this._config.groups.map((g, idx) => {
               const colors = resolveColors(g, idx);
-              const kind = g.kind ?? 'distribution';
-              if (kind === 'grid_coupling') return this._renderGridCoupling(g, colors, layout);
-              if (kind === 'pv_system') return this._renderPvSystem(g, colors, layout);
-              return this._renderDistributionGroup(g, colors, layout, floors);
+              return this._renderGroup(g, colors, layout, floors);
             })}
           </svg>
         </div>
@@ -498,8 +437,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     `;
   }
 
-  // ── Render: distribution group ────────────────────────────────────────────
-  private _renderDistributionGroup(
+  // ── Group rendering ───────────────────────────────────────────────────────
+  // Same renderer for all group types (distribution, solar, wind, geothermal,
+  // hydro, …). The discriminator on `Group.type` is informational; the visual
+  // is identical so production groups appear with the same RCD-like box +
+  // circuits + zones structure as load groups. For PV systems, each inverter
+  // is naturally expressed as a zone (zones already carry their own sensor).
+  private _renderGroup(
     g: Group,
     colors: ResolvedColors,
     layout: Layout,
@@ -509,9 +453,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const midY = gl.yOff + GHDR / 2;
     const subX = ML + SQ / 2;
     const circuits = g.circuits ?? [];
-    const lastC = circuits[circuits.length - 1];
-    const lastCl = gl.circuits.get(lastC.id)!;
-    const lastCircMid = lastCl.startY + CB_SQ / 2;
 
     const phases = g.phases;
     const taps = phases.map(
@@ -524,6 +465,16 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         ? svg`<line x1=${leftmostX} y1=${midY} x2=${ML} y2=${midY}
                     stroke=${colors.stroke} stroke-width="2"/>`
         : nothing;
+
+    // Sub-bus only when there is at least one circuit.
+    let subBus: unknown = nothing;
+    if (circuits.length > 0) {
+      const lastC = circuits[circuits.length - 1];
+      const lastCl = gl.circuits.get(lastC.id)!;
+      const lastCircMid = lastCl.startY + CB_SQ / 2;
+      subBus = svg`<line x1=${subX} y1=${midY + SQ / 2} x2=${subX} y2=${lastCircMid}
+                          stroke=${colors.stroke} stroke-width="3"/>`;
+    }
 
     return svg`
       ${taps}
@@ -548,8 +499,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           : nothing
       }
 
-      <line x1=${subX} y1=${midY + SQ / 2} x2=${subX} y2=${lastCircMid}
-            stroke=${colors.stroke} stroke-width="3"/>
+      ${subBus}
 
       ${circuits.map((c) => this._renderCircuit(colors, c, gl, floors))}
     `;
@@ -652,207 +602,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           }
         `;
       })}
-    `;
-  }
-
-  // ── Render: grid_coupling group ───────────────────────────────────────────
-  private _renderGridCoupling(g: Group, colors: ResolvedColors, layout: Layout): unknown {
-    const gl = layout.byGroup.get(g.id)!;
-    const midY = gl.yOff + GHDR / 2;
-    const GW = layout.groupWidth;
-    const t = this._t();
-    const title = g.label ?? t.grid_coupling.title_default;
-    const subtitle = g.subtitle;
-    const rows = g.rows ?? [];
-    const phases = g.phases;
-
-    const taps = phases.map(
-      (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.accent}/>`,
-    );
-    const leftmostX =
-      phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
-    const tapLine =
-      phases.length > 0
-        ? svg`<line x1=${leftmostX} y1=${midY} x2=${ML} y2=${midY}
-                    stroke=${colors.accent} stroke-width="2"/>`
-        : nothing;
-    // Decorative arrow indicator (kept for visual consistency with the
-    // original PV block); only drawn when we have at least three phases.
-    const arrow =
-      phases.length >= 3
-        ? svg`<polygon
-                points="${leftmostX - 5},${midY + 14} ${leftmostX},${midY + 2} ${leftmostX + 5},${midY + 14}"
-                fill=${colors.accent}/>`
-        : nothing;
-
-    return svg`
-      ${taps}
-      ${tapLine}
-      ${arrow}
-
-      <rect x=${ML} y=${gl.yOff} width=${GW} height=${GHDR}
-            fill=${tint(colors.accent, 15)} stroke=${colors.accent}
-            stroke-width="1.8" rx="5"/>
-      <text x=${ML + 14} y=${gl.yOff + GHDR / 2 + 5} text-anchor="middle"
-            font-size="14" fill=${colors.accent}>⚡</text>
-      <text x=${ML + 30} y=${gl.yOff + (subtitle ? 14 : 22)} text-anchor="start"
-            font-size="8" font-weight="bold"
-            fill="var(--primary-text-color)">${title}</text>
-      ${
-        subtitle
-          ? svg`<text x=${ML + 30} y=${gl.yOff + 27} text-anchor="start"
-                      font-size="7.5" fill="var(--primary-text-color)">${subtitle}</text>`
-          : nothing
-      }
-      ${
-        g.sensor
-          ? this._bubble({
-              id: `g-${g.id}`,
-              x: PWR_X,
-              y: gl.yOff + GHDR / 2 + 5,
-              fill: 'var(--primary-text-color)',
-              powerEntity: g.sensor,
-            })
-          : nothing
-      }
-      ${rows.map((row, i) => {
-        const rowY = gl.yOff + GHDR + i * ZH;
-        const tintPct = i % 2 === 0 ? 10 : 5;
-        return svg`
-          <rect x=${ML} y=${rowY} width=${GW} height=${ZH}
-                fill=${tint(colors.accent, tintPct)} stroke=${colors.accent}
-                stroke-width="0.5"/>
-          ${
-            row.icon
-              ? svg`<text x=${ML + 6} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
-                          font-size="12" fill=${colors.accent}>${row.icon}</text>`
-              : nothing
-          }
-          <text x=${ML + 22} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
-                font-size="8" fill="var(--primary-text-color)">${row.label}</text>
-        `;
-      })}
-      ${
-        rows.length > 0
-          ? svg`<line x1=${ML} y1=${gl.yOff + GHDR + rows.length * ZH}
-                      x2=${ML + GW} y2=${gl.yOff + GHDR + rows.length * ZH}
-                      stroke=${colors.accent} stroke-width="1"/>`
-          : nothing
-      }
-    `;
-  }
-
-  // ── Render: pv_system group ───────────────────────────────────────────────
-  private _renderPvSystem(g: Group, colors: ResolvedColors, layout: Layout): unknown {
-    const gl = layout.byGroup.get(g.id)!;
-    const midY = gl.yOff + GHDR / 2;
-    const GW = layout.groupWidth;
-    const t = this._t();
-    const title = g.label ?? t.pv_system.title_default;
-    const subtitle = g.subtitle;
-    const inverters = g.inverters ?? [];
-    const panels = g.panels ?? [];
-    const phases = g.phases;
-    const totalRows = inverters.length + panels.length;
-
-    const taps = phases.map(
-      (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.accent}/>`,
-    );
-    const leftmostX =
-      phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
-    const tapLine =
-      phases.length > 0
-        ? svg`<line x1=${leftmostX} y1=${midY} x2=${ML} y2=${midY}
-                    stroke=${colors.accent} stroke-width="2"/>`
-        : nothing;
-    const arrow =
-      phases.length >= 3
-        ? svg`<polygon
-                points="${leftmostX - 5},${midY + 14} ${leftmostX},${midY + 2} ${leftmostX + 5},${midY + 14}"
-                fill=${colors.accent}/>`
-        : nothing;
-
-    const inverterRows = inverters.map((inv, i) => {
-      const rowY = gl.yOff + GHDR + i * ZH;
-      const tintPct = i % 2 === 0 ? 10 : 5;
-      const text = formatInverterText(inv);
-      return svg`
-        <rect x=${ML} y=${rowY} width=${GW} height=${ZH}
-              fill=${tint(colors.accent, tintPct)} stroke=${colors.accent}
-              stroke-width="0.5"/>
-        <text x=${ML + 6} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
-              font-size="12" fill=${colors.accent}>⚡</text>
-        <text x=${ML + 22} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
-              font-size="8" fill="var(--primary-text-color)">${text}</text>
-        ${
-          inv.sensor
-            ? this._bubble({
-                id: `inv-${g.id}-${i}`,
-                x: PWR_X,
-                y: rowY + ZH / 2 + 2,
-                fill: 'var(--primary-text-color)',
-                powerEntity: inv.sensor,
-              })
-            : nothing
-        }
-      `;
-    });
-
-    const panelRows = panels.map((p, i) => {
-      const rowIdx = inverters.length + i;
-      const rowY = gl.yOff + GHDR + rowIdx * ZH;
-      const tintPct = rowIdx % 2 === 0 ? 10 : 5;
-      const text = formatPanelText(p);
-      return svg`
-        <rect x=${ML} y=${rowY} width=${GW} height=${ZH}
-              fill=${tint(colors.accent, tintPct)} stroke=${colors.accent}
-              stroke-width="0.5"/>
-        <text x=${ML + 6} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
-              font-size="12" fill=${colors.accent}>☀</text>
-        <text x=${ML + 22} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
-              font-size="8" fill="var(--primary-text-color)">${text}</text>
-      `;
-    });
-
-    return svg`
-      ${taps}
-      ${tapLine}
-      ${arrow}
-
-      <rect x=${ML} y=${gl.yOff} width=${GW} height=${GHDR}
-            fill=${tint(colors.accent, 15)} stroke=${colors.accent}
-            stroke-width="1.8" rx="5"/>
-      <text x=${ML + 14} y=${gl.yOff + GHDR / 2 + 5} text-anchor="middle"
-            font-size="14" fill=${colors.accent}>⚡</text>
-      <text x=${ML + 30} y=${gl.yOff + (subtitle ? 14 : 22)} text-anchor="start"
-            font-size="8" font-weight="bold"
-            fill="var(--primary-text-color)">${title}</text>
-      ${
-        subtitle
-          ? svg`<text x=${ML + 30} y=${gl.yOff + 27} text-anchor="start"
-                      font-size="7.5" fill="var(--primary-text-color)">${subtitle}</text>`
-          : nothing
-      }
-      ${
-        g.sensor
-          ? this._bubble({
-              id: `g-${g.id}`,
-              x: PWR_X,
-              y: gl.yOff + GHDR / 2 + 5,
-              fill: 'var(--primary-text-color)',
-              powerEntity: g.sensor,
-            })
-          : nothing
-      }
-      ${inverterRows}
-      ${panelRows}
-      ${
-        totalRows > 0
-          ? svg`<line x1=${ML} y1=${gl.yOff + GHDR + totalRows * ZH}
-                      x2=${ML + GW} y2=${gl.yOff + GHDR + totalRows * ZH}
-                      stroke=${colors.accent} stroke-width="1"/>`
-          : nothing
-      }
     `;
   }
 

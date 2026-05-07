@@ -3,18 +3,17 @@ import type { LovelaceCardConfig } from 'custom-card-helpers';
 export type CircuitType = 'socket' | 'light' | 'power';
 
 /**
- * Visual style for a group on the diagram.
- *  - distribution: standard sub-distribution box (RCD-like) with circuits
- *    underneath. The default.
- *  - grid_coupling: generic wide horizontal block with phase taps and an
- *    arrow indicator. Used for things like a bidirectional grid meter or a
- *    decoupling protection that isn't a PV system. Carries free-form `rows`.
- *  - pv_system: specialised for solar systems. Same wide-block visual, but
- *    `rows` is replaced by structured `panels` and `inverters` arrays so
- *    each entry can carry its hardware spec (brand, model, count, power)
- *    and an inverter can declare its own live-power sensor.
+ * What the group represents — load (default) or one of several production
+ * sources. The renderer is identical across all types; the discriminator is
+ * informational, drives default styling (e.g. solar accent), and lets
+ * documentation and future tooling reason about the panel topology.
  */
-export type GroupKind = 'distribution' | 'grid_coupling' | 'pv_system';
+export type GroupType =
+  | 'distribution' // load — sub-distribution board / RCD / breaker group (default)
+  | 'solar' // production: photovoltaic
+  | 'wind' // production: wind turbine
+  | 'geothermal' // production: geothermal
+  | 'hydro'; // production: hydro
 
 export type Phase = 'L1' | 'L2' | 'L3';
 
@@ -67,38 +66,10 @@ export interface Circuit {
   n_pts?: number;
 }
 
-/** Decorative info row inside a `grid_coupling` group. */
-export interface DetailRow {
-  icon?: string;
-  label: string;
-}
-
-/** PV panel description (one entry per identical group of panels). */
-export interface PvPanel {
-  brand?: string;
-  model?: string;
-  /** Number of identical panels in this entry. Defaults to 1 if omitted. */
-  count?: number;
-  /** Peak power per panel, in watt-crête. */
-  power_wc?: number;
-}
-
-/** PV inverter description (one entry per identical group of inverters). */
-export interface PvInverter {
-  brand?: string;
-  model?: string;
-  /** Number of identical inverters in this entry. Defaults to 1 if omitted. */
-  count?: number;
-  /** Nominal AC power per inverter, in watts. */
-  power_w?: number;
-  /** Optional entity ID for instantaneous power. Renders a bubble on the row. */
-  sensor?: string;
-}
-
 export interface Group {
   id: string;
   /** Defaults to `'distribution'` when omitted. */
-  kind?: GroupKind;
+  type?: GroupType;
   /**
    * Phase trunks the group taps into.
    * - `[L1]` (or `[L2]`, `[L3]`): single-phase
@@ -110,7 +81,7 @@ export interface Group {
    * Single colour. The renderer derives:
    *  - `color` (text)   → accent
    *  - `stroke`         → accent
-   *  - `fill`           → 20% accent mixed with the card background
+   *  - `fill`           → 18% accent mixed with the card background
    * Override any of those individually below if you want exact control.
    * When omitted, a colour is picked from a fallback palette by group index.
    */
@@ -122,21 +93,17 @@ export interface Group {
   sensor?: string;
   /** Group-level toggle. Adds an inline switch to the bubble. */
   switch?: string;
-  /** Required for `kind: 'distribution'`; ignored for `'grid_coupling'`. */
-  circuits?: Circuit[];
   /**
-   * `kind: 'distribution'`: optional metadata (reserved for tooltips).
-   * `kind: 'grid_coupling'`: header title (falls back to a localised default).
+   * Circuits / branches under this group. Optional — a group may render
+   * with just its box and group-level bubble if it has no internal
+   * structure. For load groups (`type: 'distribution'`), the convention is
+   * still one circuit per breaker. For production groups, each circuit can
+   * group similar production units (e.g. a single circuit holding 19
+   * inverter zones).
    */
+  circuits?: Circuit[];
+  /** Optional metadata (reserved for future tooltips). */
   label?: string;
-  /** `grid_coupling` and `pv_system` — second-line text under the title. */
-  subtitle?: string;
-  /** `grid_coupling` only — additional info rows under the header. */
-  rows?: DetailRow[];
-  /** `pv_system` only — one entry per identical group of inverters. */
-  inverters?: PvInverter[];
-  /** `pv_system` only — one entry per identical group of panels. */
-  panels?: PvPanel[];
   /** Metadata: free-form spec string (e.g. `'30mA 40A 2P Cl.A'`). */
   spec?: string;
 }
