@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.17.2] — Fix permanently-hidden bubble backgrounds on stable values
+
+### Bug fix
+
+Power-bubble backgrounds and connector lines for entities whose value
+never changes (e.g. a smart plug stuck at `0 W`) were rendering as
+naked text without their pill-shaped background. The cache used to
+skip redundant `getBBox()` calls in `updated()` was being written
+*before* the sizing actually succeeded — so when the initial render
+landed with a zero-width bbox (card painted in a hidden HA tab,
+foreignObject hydration race), the bg stayed at `visibility: hidden`
+and `shouldUpdate()` then short-circuited every subsequent render
+with the same text, leaving it that way forever.
+
+Fix:
+
+- The cache is now only written *after* a successful sizing — failed
+  attempts retry on the next render automatically.
+- A `requestAnimationFrame` retry covers the case where no entity
+  update is coming to trigger another `updated()` cycle.
+- Sizing logic was extracted into `_sizeBubble(t)` so the rAF retry
+  doesn't have to walk the whole text list again.
+
+Also bumps the `CARD_VERSION` constant in `src/const.ts` (the v0.17.1
+release shipped with a stale `0.17.0` console banner).
+
 ## [0.17.1] — Faithful preview SVGs + CI sanity test
 
 No functional change to the card itself — this release ships an

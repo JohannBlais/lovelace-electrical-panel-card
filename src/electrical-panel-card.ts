@@ -919,46 +919,67 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   protected override updated(): void {
     if (!this.shadowRoot) return;
     const texts = this.shadowRoot.querySelectorAll<SVGTextElement>('text.pwr-value');
-    texts.forEach((t) => {
-      const id = t.dataset.id;
-      if (!id) return;
-      const txt = (t.textContent ?? '').trim();
-      if (this._bubbleTextCache.get(id) === txt) return; // unchanged
-      this._bubbleTextCache.set(id, txt);
+    texts.forEach((t) => this._sizeBubble(t));
+  }
 
-      const bg = this.shadowRoot!.querySelector<SVGRectElement>(`rect[data-bg-for="${id}"]`);
-      const ln = this.shadowRoot!.querySelector<SVGLineElement>(`line[data-ln-for="${id}"]`);
-      if (!txt) {
-        bg?.setAttribute('visibility', 'hidden');
-        ln?.setAttribute('visibility', 'hidden');
-        return;
-      }
-      let bbox: DOMRect;
-      try {
-        bbox = t.getBBox();
-      } catch {
-        return;
-      }
-      if (bbox.width === 0) return;
-      const px = 5;
-      const py = 3;
-      const hasToggle = !!this.shadowRoot!.querySelector(`rect[data-toggle-for="${id}"]`);
-      const extraW = hasToggle ? 20 : 0;
-      if (bg) {
-        bg.setAttribute('x', String(bbox.x - px));
-        bg.setAttribute('y', String(bbox.y - py));
-        bg.setAttribute('width', String(bbox.width + 2 * px + extraW));
-        bg.setAttribute('height', String(bbox.height + 2 * py));
-        bg.setAttribute('visibility', 'visible');
-      }
-      if (ln) {
-        const cy = bbox.y + bbox.height / 2;
-        ln.setAttribute('x2', String(bbox.x - px));
-        ln.setAttribute('y1', String(cy));
-        ln.setAttribute('y2', String(cy));
-        ln.setAttribute('visibility', 'visible');
-      }
-    });
+  // Size one bubble's background + connector line to fit its text. Pulled
+  // out of `updated()` so we can re-invoke it from a rAF retry when the
+  // initial getBBox() comes up empty (card painted while in a hidden tab,
+  // foreignObject hydration race, …).
+  //
+  // Critical: the text-cache is only written *after* a successful sizing.
+  // If the bbox came up zero we leave the cache untouched so the next
+  // updated() — or our own rAF retry — gets another shot. Caching too
+  // early here is what previously left bubbles whose entity stayed at the
+  // same value (e.g. "0 W") permanently `visibility: hidden`, because
+  // shouldUpdate() then skipped every subsequent render.
+  private _sizeBubble(t: SVGTextElement): void {
+    const id = t.dataset.id;
+    if (!id || !this.shadowRoot) return;
+    const txt = (t.textContent ?? '').trim();
+    if (this._bubbleTextCache.get(id) === txt) return; // unchanged
+
+    const bg = this.shadowRoot.querySelector<SVGRectElement>(`rect[data-bg-for="${id}"]`);
+    const ln = this.shadowRoot.querySelector<SVGLineElement>(`line[data-ln-for="${id}"]`);
+    if (!txt) {
+      bg?.setAttribute('visibility', 'hidden');
+      ln?.setAttribute('visibility', 'hidden');
+      this._bubbleTextCache.set(id, txt);
+      return;
+    }
+    let bbox: DOMRect;
+    try {
+      bbox = t.getBBox();
+    } catch {
+      return; // transient DOM state; retry on next render
+    }
+    if (bbox.width === 0) {
+      // Text exists but layout isn't computed yet. Schedule one rAF retry
+      // — covers the case where the card paints inside a hidden HA tab,
+      // and the entity then never updates so updated() wouldn't fire again.
+      requestAnimationFrame(() => this._sizeBubble(t));
+      return;
+    }
+    const px = 5;
+    const py = 3;
+    const hasToggle = !!this.shadowRoot.querySelector(`rect[data-toggle-for="${id}"]`);
+    const extraW = hasToggle ? 20 : 0;
+    if (bg) {
+      bg.setAttribute('x', String(bbox.x - px));
+      bg.setAttribute('y', String(bbox.y - py));
+      bg.setAttribute('width', String(bbox.width + 2 * px + extraW));
+      bg.setAttribute('height', String(bbox.height + 2 * py));
+      bg.setAttribute('visibility', 'visible');
+    }
+    if (ln) {
+      const cy = bbox.y + bbox.height / 2;
+      ln.setAttribute('x2', String(bbox.x - px));
+      ln.setAttribute('y1', String(cy));
+      ln.setAttribute('y2', String(cy));
+      ln.setAttribute('visibility', 'visible');
+    }
+    // Only cache after a successful sizing — failed attempts retry above.
+    this._bubbleTextCache.set(id, txt);
   }
 
   public static override get styles(): CSSResultGroup {
