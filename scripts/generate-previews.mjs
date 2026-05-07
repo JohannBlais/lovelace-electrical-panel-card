@@ -249,9 +249,15 @@ async function renderExample(yamlPath) {
   replaceHaIcons(svg);
   // Inline a minimal stylesheet so themes aren't required for the static
   // SVG to look right outside Home Assistant. Mirrors the card's CSS for
-  // the elements that survive in the saved markup.
+  // the elements that survive in the saved markup, and forces a font-family
+  // chain that lands on Roboto (HA's default) when available, or a
+  // close-enough system sans-serif everywhere else.
   const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
   style.textContent = `
+    svg {
+      font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont,
+        'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    }
     .bubble-bg { fill: #ffffff; stroke: #e2e8f0; stroke-width: 0.7; }
     .bubble-conn { stroke: #cbd5e0; stroke-width: 0.5; }
     .label-secondary, .zone-room { fill: #718096; }
