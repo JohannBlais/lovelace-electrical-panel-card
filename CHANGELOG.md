@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.17.1] — Faithful preview SVGs + CI sanity test
+
+No functional change to the card itself — this release ships an
+overhaul of the preview pipeline and wires it into CI so render
+regressions are caught before they land on `main`.
+
+### Previews
+
+- **Generated from the real card** — `npm run generate-previews` runs
+  the bundled card inside jsdom against synthetic state values
+  derived from the YAML examples, then extracts the rendered SVG.
+  Same layout maths, same icon resolution, same saturation gauge as
+  a live HA dashboard.
+- **Roboto baked in** — every `<text>` element is converted to
+  `<path>` outlines via `opentype.js` against the actual Roboto
+  Regular / Medium glyphs. The previews now render identically in
+  any SVG viewer (GitHub camo, librsvg, ImageMagick, mobile
+  browsers) without needing the Roboto webfont to be available.
+- **Correct vertical alignment** — applies the
+  `dominant-baseline="central"` offset from the font's real
+  ascender/descender metrics so zone labels and floor pills sit
+  centred against their icons.
+- **Deterministic output** — Lit's per-build part-marker comments
+  (`<!--?lit$NNNNNN$-->`) are stripped before save so consecutive
+  builds produce byte-identical SVGs.
+
+### CI
+
+- The `Generate previews` step runs after build. The script throws
+  on any render error.
+- A follow-up `Verify previews are up to date` step fails the job if
+  the regenerated SVGs no longer match what's checked into `assets/`,
+  forcing previews to be refreshed alongside any layout / icon /
+  wording change.
+- `.gitattributes` pins text files to LF so the drift check doesn't
+  flap on Windows ↔ Linux CRLF differences.
+
+### README
+
+- New **Previews** section between *Development* and *Releasing*
+  describing the pipeline.
+
 ## [0.17.0] — Visual editor (`getConfigElement`)
 
 The card now ships a visual editor so it shows up properly in HA's
