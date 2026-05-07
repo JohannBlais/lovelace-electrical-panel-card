@@ -27,6 +27,8 @@ export const nb: Translations = {
       cross_section: 'Tverrsnitt',
       conductors: 'Ledere',
       points: 'Punkter',
+      floor: 'Etasje',
+      critical: 'Kritisk',
     },
   },
 };

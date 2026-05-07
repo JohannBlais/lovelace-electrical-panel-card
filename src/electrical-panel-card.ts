@@ -29,6 +29,7 @@ import type {
   FloorStyle,
   Group,
   Phase,
+  Zone,
 } from './types.js';
 
 /* eslint-disable no-console */
@@ -140,6 +141,14 @@ function circuitTooltip(c: Circuit): string {
   if (c.cond !== undefined) parts.push(`${c.cond} cond.`);
   if (c.pts) parts.push(c.pts);
   else if (c.n_pts !== undefined) parts.push(`${c.n_pts} pts`);
+  return parts.join(' · ');
+}
+
+function zoneTooltip(z: Zone): string {
+  const parts: string[] = [];
+  if (z.room) parts.push(z.room);
+  if (z.floor) parts.push(z.floor);
+  if (z.critical) parts.push('✓ critical');
   return parts.join(' · ');
 }
 
@@ -368,6 +377,25 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       title: formatI18n(t.dialog.group_title, { id: g.id }),
       rows,
       entity: g.sensor,
+    };
+  }
+
+  private _openZoneDialog(ev: Event, zone: Zone, c: Circuit): void {
+    ev.stopPropagation();
+    const t = this._t();
+    const f = t.dialog.fields;
+    const rows: Array<[string, string]> = [];
+    if (zone.floor) rows.push([f.floor, zone.floor]);
+    rows.push([f.type, c.type]);
+    if (zone.sensor) {
+      const v = ElectricalPanelCard._fmt(this._power(zone.sensor));
+      rows.push([f.power, v || '—']);
+    }
+    if (zone.critical) rows.push([f.critical, '✓']);
+    this._dialog = {
+      title: zone.room ?? '—',
+      rows,
+      entity: zone.sensor ?? zone.switch,
     };
   }
 
@@ -823,50 +851,54 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         const iconName =
           zone.icon ?? c.icon ?? TYPE_DEFAULT_ICON[c.type] ?? 'mdi:help';
 
+        const zTooltip = zoneTooltip(zone);
         return svg`
-          <line x1=${cbCenterX} y1=${zoneY} x2=${lineEnd} y2=${zoneY}
-                stroke=${colors.stroke} stroke-width="0.8"/>
-          ${
-            fc
-              ? svg`
-                  <rect x=${pillX} y=${zoneY - BH / 2 - 1} width=${BW} height=${BH}
-                        fill=${fc.bg} rx=${BR}/>
-                  <text x=${pillX + BW / 2} y=${zoneY - 1} text-anchor="middle"
-                        dominant-baseline="central" font-size="7" font-weight="bold"
-                        fill=${fc.fg}>${zone.floor}</text>
-                `
-              : nothing
-          }
-          <foreignObject x=${iconX} y=${zoneY - ICON_SIZE / 2}
-                         width=${ICON_SIZE} height=${ICON_SIZE}
-                         style="overflow: visible">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="zone-icon-wrap">
-              <ha-icon icon=${iconName} class="zone-icon"></ha-icon>
-            </div>
-          </foreignObject>
-          ${
-            zone.room
-              ? svg`
-                  <text class="zone-room" x=${roomX} y=${zoneY - 1}
-                        text-anchor="start" dominant-baseline="central"
-                        font-size="8">${zone.room}</text>
-                `
-              : nothing
-          }
-          ${
-            zone.sensor
-              ? this._bubble({
-                  id: `z-${c.id}-${j}`,
-                  x: PWR_X,
-                  y: zoneY + 3,
-                  fill: 'var(--primary-text-color)',
-                  connX: 270,
-                  switchEntity: zone.switch,
-                  criticalLabel: zone.critical ? zone.room : undefined,
-                  powerEntity: zone.sensor,
-                })
-              : nothing
-          }
+          <g class="meta-target" @click=${(ev: Event) => this._openZoneDialog(ev, zone, c)}>
+            ${zTooltip ? svg`<title>${zTooltip}</title>` : nothing}
+            <line x1=${cbCenterX} y1=${zoneY} x2=${lineEnd} y2=${zoneY}
+                  stroke=${colors.stroke} stroke-width="0.8"/>
+            ${
+              fc
+                ? svg`
+                    <rect x=${pillX} y=${zoneY - BH / 2 - 1} width=${BW} height=${BH}
+                          fill=${fc.bg} rx=${BR}/>
+                    <text x=${pillX + BW / 2} y=${zoneY - 1} text-anchor="middle"
+                          dominant-baseline="central" font-size="7" font-weight="bold"
+                          fill=${fc.fg}>${zone.floor}</text>
+                  `
+                : nothing
+            }
+            <foreignObject x=${iconX} y=${zoneY - ICON_SIZE / 2}
+                           width=${ICON_SIZE} height=${ICON_SIZE}
+                           style="overflow: visible">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="zone-icon-wrap">
+                <ha-icon icon=${iconName} class="zone-icon"></ha-icon>
+              </div>
+            </foreignObject>
+            ${
+              zone.room
+                ? svg`
+                    <text class="zone-room" x=${roomX} y=${zoneY - 1}
+                          text-anchor="start" dominant-baseline="central"
+                          font-size="8">${zone.room}</text>
+                  `
+                : nothing
+            }
+            ${
+              zone.sensor
+                ? this._bubble({
+                    id: `z-${c.id}-${j}`,
+                    x: PWR_X,
+                    y: zoneY + 3,
+                    fill: 'var(--primary-text-color)',
+                    connX: 270,
+                    switchEntity: zone.switch,
+                    criticalLabel: zone.critical ? zone.room : undefined,
+                    powerEntity: zone.sensor,
+                  })
+                : nothing
+            }
+          </g>
         `;
       })}
     `;

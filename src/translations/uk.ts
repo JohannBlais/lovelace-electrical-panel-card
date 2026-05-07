@@ -26,6 +26,8 @@ export const uk: Translations = {
       cross_section: 'Переріз',
       conductors: 'Жили',
       points: 'Точки',
+      floor: 'Поверх',
+      critical: 'Критичне',
     },
   },
 };

@@ -26,6 +26,8 @@ export const cs: Translations = {
       cross_section: 'Průřez',
       conductors: 'Vodiče',
       points: 'Body',
+      floor: 'Podlaží',
+      critical: 'Kritický',
     },
   },
 };

@@ -26,6 +26,8 @@ export const it: Translations = {
       cross_section: 'Sezione',
       conductors: 'Conduttori',
       points: 'Punti',
+      floor: 'Piano',
+      critical: 'Critico',
     },
   },
 };

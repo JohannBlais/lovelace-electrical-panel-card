@@ -26,6 +26,8 @@ export const nl: Translations = {
       cross_section: 'Doorsnede',
       conductors: 'Geleiders',
       points: 'Punten',
+      floor: 'Verdieping',
+      critical: 'Kritiek',
     },
   },
 };

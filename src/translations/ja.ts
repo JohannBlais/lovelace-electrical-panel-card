@@ -26,6 +26,8 @@ export const ja: Translations = {
       cross_section: '断面積',
       conductors: '導体',
       points: 'ポイント',
+      floor: '階',
+      critical: '重要',
     },
   },
 };

@@ -26,6 +26,8 @@ export const de: Translations = {
       cross_section: 'Querschnitt',
       conductors: 'Leiter',
       points: 'Punkte',
+      floor: 'Etage',
+      critical: 'Kritisch',
     },
   },
 };

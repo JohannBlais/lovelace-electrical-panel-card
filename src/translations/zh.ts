@@ -30,6 +30,8 @@ export const zh: Translations = {
       cross_section: '截面',
       conductors: '导体',
       points: '点数',
+      floor: '楼层',
+      critical: '关键',
     },
   },
 };

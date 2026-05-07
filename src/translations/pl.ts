@@ -26,6 +26,8 @@ export const pl: Translations = {
       cross_section: 'Przekrój',
       conductors: 'Przewody',
       points: 'Punkty',
+      floor: 'Piętro',
+      critical: 'Krytyczny',
     },
   },
 };

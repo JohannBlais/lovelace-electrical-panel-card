@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.16.0] — Per-zone tooltip + dialog
+
+Zones get the same hover tooltip / click dialog treatment as RCDs and
+breakers. Click anywhere on a zone row (floor pill, type icon, room
+text, or power bubble — except the toggle, which still toggles) opens a
+dialog with the zone's details and a "More info" button drilling into
+the zone's `sensor:` (or `switch:` if no sensor).
+
+### Added
+
+- Hover tooltip on zone rows: `Room · Floor [· ✓ critical]`.
+- Click handler on zone rows opening the metadata dialog with rows for
+  Floor, Type, Power (live) and Critical (when set).
+- New translation keys: `dialog.fields.floor` and `dialog.fields.critical`
+  in all 18 languages (e.g. en `Floor` / `Critical`, fr `Étage` /
+  `Critique`, de `Etage` / `Kritisch`, …).
+
+### Behaviour
+
+- Zone dialog title is `zone.room ?? '—'` (em dash when no room set).
+- The "More info" entity defaults to `zone.sensor`, falls back to
+  `zone.switch` when only a switch is configured.
+- Toggling a smart-plug from the bubble still calls `switch.toggle`
+  thanks to the existing `stopPropagation` on the toggle hit area —
+  the click never reaches the zone-level handler.
+
 ## [0.15.0] — Dialog polish: "More info" button + tighter layout
 
 The metadata dialog opened from a click on an RCD or breaker box gets a

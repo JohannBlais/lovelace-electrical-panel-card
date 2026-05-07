@@ -26,6 +26,8 @@ export const da: Translations = {
       cross_section: 'Tværsnit',
       conductors: 'Ledere',
       points: 'Punkter',
+      floor: 'Etage',
+      critical: 'Kritisk',
     },
   },
 };

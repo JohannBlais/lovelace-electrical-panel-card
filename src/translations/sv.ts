@@ -26,6 +26,8 @@ export const sv: Translations = {
       cross_section: 'Tvärsnitt',
       conductors: 'Ledare',
       points: 'Punkter',
+      floor: 'Våning',
+      critical: 'Kritisk',
     },
   },
 };

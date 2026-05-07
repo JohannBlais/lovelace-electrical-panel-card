@@ -26,6 +26,8 @@ export const en = {
       cross_section: 'Cross-section',
       conductors: 'Conductors',
       points: 'Points',
+      floor: 'Floor',
+      critical: 'Critical',
     },
   },
 };

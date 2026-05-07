@@ -26,6 +26,8 @@ export const ko: Translations = {
       cross_section: '단면적',
       conductors: '도체',
       points: '포인트',
+      floor: '층',
+      critical: '중요',
     },
   },
 };

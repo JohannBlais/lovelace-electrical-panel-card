@@ -26,6 +26,8 @@ export const fi: Translations = {
       cross_section: 'Poikkipinta',
       conductors: 'Johtimet',
       points: 'Pisteet',
+      floor: 'Kerros',
+      critical: 'Kriittinen',
     },
   },
 };
