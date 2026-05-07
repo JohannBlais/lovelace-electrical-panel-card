@@ -72,7 +72,8 @@ export interface Circuit {
   // ── Metadata (not rendered yet, kept for future tooltips / info dialogs)
   amp?: number;
   poles?: 2 | 4;
-  mm2?: string;
+  /** Wire cross-section in mm². Numeric (e.g. `2.5`, `1.5`, `6`) or omitted. */
+  mm2?: number;
   cond?: number;
   pts?: string;
   n_pts?: number;

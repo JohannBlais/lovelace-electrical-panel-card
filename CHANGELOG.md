@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.9.0] — `Circuit.mm2` is now a number
+
+Wire cross-section values are inherently numeric. The previous `string` type
+forced quoting in YAML (`mm2: '2.5'`) which read as awkward and didn't match
+the other numeric fields (`amp`, `cond`, `n_pts`).
+
+### Breaking
+
+- `Circuit.mm2: string` → `Circuit.mm2: number`. YAML configs need to drop
+  the quotes around mm² values:
+  ```yaml
+  # before
+  mm2: '2.5'
+  # after
+  mm2: 2.5
+  ```
+
+This is a metadata-only field (not rendered), so the change has no visual
+effect on existing dashboards.
+
 ## [0.8.0] — 16 additional languages
 
 Built-in translations expanded from `en` / `fr` to 18 languages, covering
