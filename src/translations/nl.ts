@@ -12,6 +12,8 @@ export const nl: Translations = {
     group_title: 'Aardlekschakelaar {id}',
     circuit_title: 'Circuit {id}',
     close: 'Sluiten',
+    more_info: 'Meer info',
+
     fields: {
       label: 'Label',
       type: 'Type',

@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.15.0] — Dialog polish: "More info" button + tighter layout
+
+The metadata dialog opened from a click on an RCD or breaker box gets a
+secondary action that opens HA's standard `more-info` dialog for the
+backing entity. Lets users drill into history charts, related entities,
+and entity settings without leaving the panel context.
+
+### Added
+
+- **"More info" button** in the dialog footer (slot=`secondaryAction`),
+  shown when the group / circuit has a `sensor:` entity. Clicking
+  closes our dialog and fires `hass-more-info` on the backing entity.
+- New `dialog.more_info` translation key (e.g. en `'More info'`,
+  fr `'Plus d'infos'`, de `'Mehr Info'`, ja `'詳細情報'`, …) — added to
+  all 18 built-in languages.
+
+### Changed
+
+- Metadata table CSS: 8 px padding, subtle row dividers via
+  `border-top: 1px solid var(--divider-color)`, `min-width: 280px` on
+  the table so even the shortest rows render with consistent width.
+
+### Bundle
+
+35 KB minified (+~1 KB for the action button + i18n strings).
+
 ## [0.14.0] — Render skip + memoised layout / bubble bbox
 
 Three caches added to keep the card snappy on busy HA installs (where

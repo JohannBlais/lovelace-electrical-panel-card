@@ -12,6 +12,8 @@ export const it: Translations = {
     group_title: 'Differenziale {id}',
     circuit_title: 'Circuito {id}',
     close: 'Chiudi',
+    more_info: 'Altre info',
+
     fields: {
       label: 'Etichetta',
       type: 'Tipo',

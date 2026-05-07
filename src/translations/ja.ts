@@ -12,6 +12,8 @@ export const ja: Translations = {
     group_title: '漏電遮断器 {id}',
     circuit_title: '回路 {id}',
     close: '閉じる',
+    more_info: '詳細情報',
+
     fields: {
       label: 'ラベル',
       type: 'タイプ',

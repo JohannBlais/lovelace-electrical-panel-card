@@ -12,6 +12,8 @@ export const da: Translations = {
     group_title: 'HFI-relæ {id}',
     circuit_title: 'Kreds {id}',
     close: 'Luk',
+    more_info: 'Mere info',
+
     fields: {
       label: 'Etiket',
       type: 'Type',

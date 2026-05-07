@@ -12,6 +12,8 @@ export const ko: Translations = {
     group_title: '누전차단기 {id}',
     circuit_title: '회로 {id}',
     close: '닫기',
+    more_info: '자세히',
+
     fields: {
       label: '라벨',
       type: '유형',

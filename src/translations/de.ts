@@ -12,6 +12,8 @@ export const de: Translations = {
     group_title: 'FI-Schalter {id}',
     circuit_title: 'Stromkreis {id}',
     close: 'Schließen',
+    more_info: 'Mehr Info',
+
     fields: {
       label: 'Bezeichnung',
       type: 'Typ',

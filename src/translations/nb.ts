@@ -13,6 +13,8 @@ export const nb: Translations = {
     group_title: 'Jordfeilbryter {id}',
     circuit_title: 'Krets {id}',
     close: 'Lukk',
+    more_info: 'Mer info',
+
     fields: {
       label: 'Etikett',
       type: 'Type',

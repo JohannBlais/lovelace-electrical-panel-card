@@ -12,6 +12,8 @@ export const sv: Translations = {
     group_title: 'Jordfelsbrytare {id}',
     circuit_title: 'Krets {id}',
     close: 'Stäng',
+    more_info: 'Mer info',
+
     fields: {
       label: 'Etikett',
       type: 'Typ',

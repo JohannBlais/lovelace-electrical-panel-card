@@ -12,6 +12,8 @@ export const pl: Translations = {
     group_title: 'Różnicówka {id}',
     circuit_title: 'Obwód {id}',
     close: 'Zamknij',
+    more_info: 'Więcej info',
+
     fields: {
       label: 'Etykieta',
       type: 'Typ',

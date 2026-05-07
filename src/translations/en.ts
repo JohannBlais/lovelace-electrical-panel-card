@@ -12,6 +12,8 @@ export const en = {
     group_title: 'RCD {id}',
     circuit_title: 'Circuit {id}',
     close: 'Close',
+    more_info: 'More info',
+
     fields: {
       label: 'Label',
       type: 'Type',

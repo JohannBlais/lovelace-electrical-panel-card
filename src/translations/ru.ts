@@ -12,6 +12,8 @@ export const ru: Translations = {
     group_title: 'УЗО {id}',
     circuit_title: 'Цепь {id}',
     close: 'Закрыть',
+    more_info: 'Подробнее',
+
     fields: {
       label: 'Метка',
       type: 'Тип',

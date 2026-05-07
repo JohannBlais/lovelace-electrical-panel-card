@@ -16,6 +16,8 @@ export const zh: Translations = {
     group_title: '漏电保护器 {id}',
     circuit_title: '回路 {id}',
     close: '关闭',
+    more_info: '更多信息',
+
     fields: {
       label: '标签',
       type: '类型',

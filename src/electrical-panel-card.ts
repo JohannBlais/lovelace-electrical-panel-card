@@ -9,7 +9,12 @@ import {
   type TemplateResult,
 } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import type { HomeAssistant, LovelaceCard, LovelaceCardConfig } from 'custom-card-helpers';
+import {
+  fireEvent,
+  type HomeAssistant,
+  type LovelaceCard,
+  type LovelaceCardConfig,
+} from 'custom-card-helpers';
 
 import { CARD_TAG, CARD_VERSION } from './const.js';
 import {
@@ -165,7 +170,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   @state() private _config?: ElectricalPanelCardConfig;
 
   @state()
-  private _dialog: { title: string; rows: Array<[string, string]> } | null = null;
+  private _dialog: {
+    title: string;
+    rows: Array<[string, string]>;
+    /** When set, the dialog shows a "More info" button opening HA's
+        native more-info dialog for this entity. */
+    entity?: string;
+  } | null = null;
 
   // Caches keyed on the current `_config` reference. Cleared in setConfig().
   private _layoutCache?: Layout;
@@ -353,7 +364,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       const v = ElectricalPanelCard._fmt(this._power(g.sensor));
       rows.push([f.power, v || '—']);
     }
-    this._dialog = { title: formatI18n(t.dialog.group_title, { id: g.id }), rows };
+    this._dialog = {
+      title: formatI18n(t.dialog.group_title, { id: g.id }),
+      rows,
+      entity: g.sensor,
+    };
   }
 
   private _openCircuitDialog(ev: Event, c: Circuit): void {
@@ -372,11 +387,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       const v = ElectricalPanelCard._fmt(this._power(c.sensor));
       rows.push([f.power, v || '—']);
     }
-    this._dialog = { title: formatI18n(t.dialog.circuit_title, { id: c.id }), rows };
+    this._dialog = {
+      title: formatI18n(t.dialog.circuit_title, { id: c.id }),
+      rows,
+      entity: c.sensor,
+    };
   }
 
   private _closeDialog(): void {
     this._dialog = null;
+  }
+
+  private _openMoreInfo(): void {
+    const entity = this._dialog?.entity;
+    if (!entity) return;
+    this._closeDialog();
+    fireEvent(this, 'hass-more-info', { entityId: entity });
   }
 
   private _toggle(ev: Event, entity: string, criticalLabel?: string): void {
@@ -632,7 +658,21 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             ([k, v]) => html`<tr><th>${k}</th><td>${v}</td></tr>`,
           )}
         </table>
-        <mwc-button slot="primaryAction" dialogAction="close">${t.dialog.close}</mwc-button>
+        ${
+          d.entity
+            ? html`
+                <mwc-button
+                  slot="secondaryAction"
+                  @click=${() => this._openMoreInfo()}
+                >
+                  ${t.dialog.more_info}
+                </mwc-button>
+              `
+            : nothing
+        }
+        <mwc-button slot="primaryAction" dialogAction="close">
+          ${t.dialog.close}
+        </mwc-button>
       </ha-dialog>
     `;
   }
@@ -953,17 +993,23 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       .meta-table {
         width: 100%;
         border-collapse: collapse;
+        min-width: 280px;
+      }
+      .meta-table tr + tr th,
+      .meta-table tr + tr td {
+        border-top: 1px solid var(--divider-color);
       }
       .meta-table th,
       .meta-table td {
         text-align: left;
-        padding: 4px 12px 4px 0;
+        padding: 8px 16px 8px 0;
         font-size: 14px;
+        font-weight: 400;
       }
       .meta-table th {
         color: var(--secondary-text-color);
-        font-weight: 400;
         white-space: nowrap;
+        width: 1%;
       }
       .meta-table td {
         color: var(--primary-text-color);

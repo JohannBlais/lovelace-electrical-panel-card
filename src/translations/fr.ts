@@ -12,6 +12,8 @@ export const fr: Translations = {
     group_title: 'Différentiel {id}',
     circuit_title: 'Circuit {id}',
     close: 'Fermer',
+    more_info: 'Plus d\'infos',
+
     fields: {
       label: 'Label',
       type: 'Type',

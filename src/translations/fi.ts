@@ -12,6 +12,8 @@ export const fi: Translations = {
     group_title: 'Vikavirtasuoja {id}',
     circuit_title: 'Piiri {id}',
     close: 'Sulje',
+    more_info: 'Lisätietoja',
+
     fields: {
       label: 'Nimike',
       type: 'Tyyppi',

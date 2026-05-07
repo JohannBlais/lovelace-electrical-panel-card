@@ -12,6 +12,8 @@ export const cs: Translations = {
     group_title: 'Proudový chránič {id}',
     circuit_title: 'Obvod {id}',
     close: 'Zavřít',
+    more_info: 'Více info',
+
     fields: {
       label: 'Označení',
       type: 'Typ',

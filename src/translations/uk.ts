@@ -12,6 +12,8 @@ export const uk: Translations = {
     group_title: 'ПЗВ {id}',
     circuit_title: 'Коло {id}',
     close: 'Закрити',
+    more_info: 'Докладніше',
+
     fields: {
       label: 'Мітка',
       type: 'Тип',
