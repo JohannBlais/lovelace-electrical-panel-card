@@ -2,13 +2,9 @@ export const en = {
   card: {
     total: 'Total',
     grid: 'Grid',
-    pv: '☀ PV',
   },
-  pv: {
-    title_default: 'PV / Grid coupling',
-    injection: '↑ Grid injection',
-    inverters: 'PV inverters',
-    panels: 'PV panels',
+  grid_coupling: {
+    title_default: 'Grid coupling',
   },
   confirm: {
     // {name} is replaced with the zone label at runtime.

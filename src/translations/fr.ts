@@ -4,13 +4,9 @@ export const fr: Translations = {
   card: {
     total: 'Total',
     grid: 'Réseau',
-    pv: '☀ PV',
   },
-  pv: {
-    title_default: 'Couplage PV / Réseau',
-    injection: '↑ Injection réseau',
-    inverters: 'Onduleurs PV',
-    panels: 'Panneaux PV',
+  grid_coupling: {
+    title_default: 'Couplage réseau',
   },
   confirm: {
     toggle: 'Êtes-vous sûr de vouloir commuter « {name} » ?',

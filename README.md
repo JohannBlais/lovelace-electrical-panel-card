@@ -6,16 +6,15 @@
 
 Custom Lovelace card for Home Assistant — interactive one-line electrical panel diagram with live power readings, smart-plug toggles, and per-circuit / per-zone breakdown. Configured entirely from YAML.
 
-> **Status:** early development. The diagram renderer arrives in Phase 2; the current build is a minimal scaffold that validates the configuration.
+## Features
 
-## Features (target)
-
-- Live power on phases (L1/L2/L3), RCDs, circuits and individual loads
-- Toggle smart plugs straight from the diagram (with confirmation for critical loads)
+- Live power on phases (L1/L2/L3), groups, circuits and individual zones
+- Toggle smart plugs straight from the diagram, with confirmation for critical loads
 - Floor + room labelling per zone
-- Three-phase loads, PV / grid injection block
-- 100 % YAML configuration — adapt it to any panel layout
-- Pure SVG, no iframe, no token, no polling — uses the standard `hass` object
+- Generic `kind` discriminator: `distribution` for sub-distribution boards, `grid_coupling` for PV / utility decoupling protection blocks
+- Single `accent` colour per group — the renderer derives `color` / `fill` / `stroke` via `color-mix()`. Override individually for exact control.
+- Phase array (`phases: [L1]`, `[L1, L2, L3]`, …) — single, three- or any combination
+- 100 % YAML configuration; pure SVG, no iframe, no token, no polling — uses the standard `hass` object
 - Light / dark theme aware (cable colours stay IEC 60446; texts adapt)
 - English (default) and French built-in; auto-detected from `hass.locale.language`
 
@@ -44,31 +43,40 @@ Add the card to a dashboard:
 
 ```yaml
 type: custom:electrical-panel-card
-title: Tableau électrique
+title: Electrical panel
 # Optional — overrides the language auto-detected from hass.locale.
 # Built-in: 'en' (default) and 'fr'. Falls back to English if unknown.
-language: fr
+# language: fr
 sensors:
-  total: { entity: sensor.envoy_current_power_consumption, label: Total }
-  pv:    { entity: sensor.envoy_current_power_production,  label: ☀ PV, max_w: 8075 }
-floors:
-  E0: { bg: '#38a169', fg: white }
-  E1: { bg: '#3182ce', fg: white }
+  total: { entity: sensor.envoy_current_power_consumption }
+  grid:  { entity: sensor.envoy_current_net_power_consumption }
+  phases:
+    l1: { entity: sensor.envoy_current_power_consumption_l1 }
+    l2: { entity: sensor.envoy_current_power_consumption_l2 }
+    l3: { entity: sensor.envoy_current_power_consumption_l3 }
 groups:
   - id: D1
-    phase: L1
-    color: '#2c5282'
-    fill:  '#bee3f8'
-    stroke: '#3182ce'
+    phases: [L1]
+    accent: '#3182ce'         # single colour, renderer derives the rest
     sensor: sensor.emporia_d1_power
     circuits:
       - id: A
-        amp: 16
         type: socket
         sensor: sensor.washing_machine_power
         switch: switch.washing_machine
         zones:
           - { floor: E1, room: laundry }
+
+  - id: PV
+    kind: grid_coupling
+    phases: [L1, L2, L3]
+    accent: 'var(--energy-solar-color, #d97706)'
+    sensor: sensor.envoy_current_power_production
+    label: PV / Grid coupling
+    subtitle: ↑ Grid injection
+    rows:
+      - { icon: ☀, label: Inverters }
+      - { icon: ☀, label: Panels }
 ```
 
 See [docs/data-model.md](docs/data-model.md) for the full schema, theming variables, and special concepts (three-phase loads, critical-toggle confirmation, internationalisation).

@@ -23,6 +23,7 @@ import type {
   ElectricalPanelCardConfig,
   FloorStyle,
   Group,
+  Phase,
 } from './types.js';
 
 /* eslint-disable no-console */
@@ -44,7 +45,7 @@ console.info(
   documentationURL: 'https://github.com/JohannBlais/lovelace-electrical-panel-card',
 });
 
-// ─── Visual constants (preserved from the original SVG schema) ────────────────
+// ─── Visual constants ─────────────────────────────────────────────────────────
 const SVG_W = 440;
 const ML = 70;
 const GPAD = 12;
@@ -57,12 +58,12 @@ const CB_SQ = 20;
 const CB_X = ML + SQ + 10;
 const CB_RIGHT = CB_X + CB_SQ;
 const PH_TAP_ZONE = 42;
-const PV_HEIGHT = GHDR + 2 * ZH;
 
-const PHASE_X: Record<'L1' | 'L2' | 'L3', number> = { L3: 24, L2: 36, L1: 48 };
-// Phase colours resolved at render time via CSS custom properties so they can
-// adapt to light/dark themes (or be overridden in a HA theme YAML).
-const PHASE_COLOR: Record<'L1' | 'L2' | 'L3', string> = {
+const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
+// Phase wire colours — IEC 60446 cable colours, kept consistent across themes.
+// Exposed as CSS custom properties so themes can override if a user really
+// wants to (rare).
+const PHASE_COLOR: Record<Phase, string> = {
   L1: 'var(--electrical-panel-phase-l1-color, #8B4513)',
   L2: 'var(--electrical-panel-phase-l2-color, #1A202C)',
   L3: 'var(--electrical-panel-phase-l3-color, #5A6474)',
@@ -81,6 +82,43 @@ const DEFAULT_FLOORS: Record<string, FloorStyle> = {
   E2: { bg: '#d69e2e', fg: 'white' },
 };
 
+// Fallback palette used when a group has no explicit `accent`. Cycled by
+// group index so adjacent groups get distinct colours by default.
+const FALLBACK_PALETTE = [
+  '#3182ce',
+  '#38a169',
+  '#d69e2e',
+  '#e53e3e',
+  '#805ad5',
+  '#319795',
+  '#dd6b20',
+  '#5a67d8',
+];
+
+interface ResolvedColors {
+  accent: string;
+  color: string;
+  fill: string;
+  stroke: string;
+}
+
+function resolveColors(g: Group, idx: number): ResolvedColors {
+  const accent = g.accent ?? FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
+  return {
+    accent,
+    color: g.color ?? accent,
+    stroke: g.stroke ?? accent,
+    fill:
+      g.fill ??
+      `color-mix(in srgb, ${accent} 18%, var(--ha-card-background, var(--card-background-color, white)))`,
+  };
+}
+
+// Subtle accent-tinted background for grid_coupling rows.
+function tint(accent: string, pct: number): string {
+  return `color-mix(in srgb, ${accent} ${pct}%, var(--ha-card-background, var(--card-background-color, transparent)))`;
+}
+
 interface CircuitLayout {
   startY: number;
   height: number;
@@ -94,7 +132,6 @@ interface GroupLayout {
 interface Layout {
   svgW: number;
   svgH: number;
-  pvYOff: number;
   phLineEnd: number;
   groupWidth: number;
   byGroup: Map<string, GroupLayout>;
@@ -104,9 +141,6 @@ interface Layout {
 export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
-  // Reflected so :host([dark]) can swap CSS variables. Driven by
-  // hass.themes.darkMode (the authoritative HA signal), which beats the
-  // @media (prefers-color-scheme: dark) fallback when they disagree.
   @property({ type: Boolean, reflect: true }) public dark = false;
 
   @state() private _config?: ElectricalPanelCardConfig;
@@ -124,18 +158,39 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     if (!Array.isArray(cfg.groups) || cfg.groups.length === 0) {
       throw new Error('`groups` is required and must contain at least one group');
     }
+    cfg.groups.forEach((g, i) => {
+      if (!g.id) throw new Error(`groups[${i}]: \`id\` is required`);
+      if (!Array.isArray(g.phases)) {
+        throw new Error(
+          `groups[${i}] "${g.id}": \`phases\` must be an array (use [] for none)`,
+        );
+      }
+      const kind = g.kind ?? 'distribution';
+      if (kind === 'distribution' && (!Array.isArray(g.circuits) || g.circuits.length === 0)) {
+        throw new Error(
+          `groups[${i}] "${g.id}" (kind=distribution): \`circuits\` is required and must be non-empty`,
+        );
+      }
+    });
     this._config = cfg;
   }
 
   public getCardSize(): number {
     if (!this._config) return 1;
-    const rows = this._config.groups.reduce(
-      (acc, g) =>
-        acc +
-        1 +
-        g.circuits.reduce((n, c) => n + Math.max(1, c.zones?.length ?? 0), 0),
-      0,
-    );
+    let rows = 0;
+    for (const g of this._config.groups) {
+      const kind = g.kind ?? 'distribution';
+      if (kind === 'grid_coupling') {
+        rows += 1 + (g.rows?.length ?? 0);
+      } else {
+        rows +=
+          1 +
+          (g.circuits ?? []).reduce(
+            (n, c) => n + Math.max(1, c.zones?.length ?? 0),
+            0,
+          );
+      }
+    }
     return Math.max(3, Math.ceil(rows / 4));
   }
 
@@ -145,10 +200,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       groups: [
         {
           id: 'D1',
-          phase: 'L1',
-          color: '#2c5282',
-          fill: '#bee3f8',
-          stroke: '#3182ce',
+          phases: ['L1'],
+          accent: '#3182ce',
           circuits: [
             {
               id: 'A',
@@ -208,40 +261,49 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     this.hass.callService('switch', 'toggle', { entity_id: entity });
   }
 
-  // ── Layout (port of original yOff / circStartY algorithm) ─────────────────
+  // ── Layout ────────────────────────────────────────────────────────────────
   private _computeLayout(): Layout {
     const groups = this._config!.groups;
     const byGroup = new Map<string, GroupLayout>();
     let yCur = HEADER_H + PH_TAP_ZONE;
+    let phLineEnd = HEADER_H + PH_TAP_ZONE;
 
     for (const g of groups) {
       yCur += GPAD;
       const yOff = yCur;
-      let localY = yOff + GHDR;
+      const kind = g.kind ?? 'distribution';
       const circuits = new Map<string, CircuitLayout>();
-      for (const c of g.circuits) {
-        const zones = Math.max(1, c.zones?.length ?? 0);
-        const height = CB_SQ + zones * ZH;
-        circuits.set(c.id, { startY: localY, height, zones });
-        localY += height;
+      let groupHeight: number;
+
+      if (kind === 'grid_coupling') {
+        const numRows = g.rows?.length ?? 0;
+        groupHeight = GHDR + numRows * ZH;
+      } else {
+        let localY = yOff + GHDR;
+        for (const c of g.circuits ?? []) {
+          const zonesCount = Math.max(1, c.zones?.length ?? 0);
+          const height = CB_SQ + zonesCount * ZH;
+          circuits.set(c.id, { startY: localY, height, zones: zonesCount });
+          localY += height;
+        }
+        groupHeight =
+          GHDR +
+          (g.circuits ?? []).reduce((s, c) => {
+            const z = Math.max(1, c.zones?.length ?? 0);
+            return s + CB_SQ + z * ZH;
+          }, 0);
       }
-      const groupHeight =
-        GHDR +
-        g.circuits.reduce((s, c) => {
-          const z = Math.max(1, c.zones?.length ?? 0);
-          return s + CB_SQ + z * ZH;
-        }, 0);
+
       byGroup.set(g.id, { yOff, height: groupHeight, circuits });
+      // Phase trunks must reach the lowest tap point (group's mid header).
+      phLineEnd = Math.max(phLineEnd, yOff + GHDR / 2);
       yCur += groupHeight;
     }
 
-    const pvYOff = yCur + GPAD;
-    const svgH = pvYOff + PV_HEIGHT + 24;
     return {
       svgW: SVG_W,
-      svgH,
-      pvYOff,
-      phLineEnd: pvYOff + GHDR / 2,
+      svgH: yCur + 24,
+      phLineEnd,
       groupWidth: SVG_W - ML - 4,
       byGroup,
     };
@@ -312,6 +374,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     if (!this._config || !this.hass) return html``;
     const layout = this._computeLayout();
     const sensors = this._config.sensors ?? {};
+    const phases = sensors.phases ?? {};
     const floors = { ...DEFAULT_FLOORS, ...(this._config.floors ?? {}) };
     const t = this._t();
     const phTapY1 = HEADER_H + 6;
@@ -327,32 +390,14 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             xmlns="http://www.w3.org/2000/svg"
           >
             <!-- Phase trunks -->
-            <line
-              x1=${PHASE_X.L3}
-              y1=${HEADER_H}
-              x2=${PHASE_X.L3}
-              y2=${layout.phLineEnd}
-              stroke=${PHASE_COLOR.L3}
-              stroke-width="3"
-            />
-            <line
-              x1=${PHASE_X.L2}
-              y1=${HEADER_H}
-              x2=${PHASE_X.L2}
-              y2=${layout.phLineEnd}
-              stroke=${PHASE_COLOR.L2}
-              stroke-width="3"
-            />
-            <line
-              x1=${PHASE_X.L1}
-              y1=${HEADER_H}
-              x2=${PHASE_X.L1}
-              y2=${layout.phLineEnd}
-              stroke=${PHASE_COLOR.L1}
-              stroke-width="3"
-            />
+            <line x1=${PHASE_X.L3} y1=${HEADER_H} x2=${PHASE_X.L3} y2=${layout.phLineEnd}
+                  stroke=${PHASE_COLOR.L3} stroke-width="3"/>
+            <line x1=${PHASE_X.L2} y1=${HEADER_H} x2=${PHASE_X.L2} y2=${layout.phLineEnd}
+                  stroke=${PHASE_COLOR.L2} stroke-width="3"/>
+            <line x1=${PHASE_X.L1} y1=${HEADER_H} x2=${PHASE_X.L1} y2=${layout.phLineEnd}
+                  stroke=${PHASE_COLOR.L1} stroke-width="3"/>
 
-            <!-- Phase labels (text uses theme color, not cable color) -->
+            <!-- Phase labels -->
             <text class="phase-label" x=${PHASE_X.L3} y="16" text-anchor="middle"
                   font-size="7.5" font-weight="bold">L3</text>
             <text class="phase-label" x=${PHASE_X.L2} y="16" text-anchor="middle"
@@ -360,8 +405,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             <text class="phase-label" x=${PHASE_X.L1} y="16" text-anchor="middle"
                   font-size="7.5" font-weight="bold">L1</text>
 
-            <!-- Staggered phase taps + bubbles. Tap dot uses cable colour;
-                 bubble value text uses theme colour for readability. -->
+            <!-- Staggered phase taps + bubbles -->
             <circle cx=${PHASE_X.L1} cy=${phTapY1} r="2" fill=${PHASE_COLOR.L1}/>
             ${this._bubble({
               id: 'phase_l1',
@@ -369,7 +413,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               y: phTapY1,
               fill: 'var(--primary-text-color)',
               connX: PHASE_X.L1,
-              powerEntity: sensors.phase_l1?.entity,
+              powerEntity: phases.l1?.entity,
             })}
             <circle cx=${PHASE_X.L2} cy=${phTapY2} r="2" fill=${PHASE_COLOR.L2}/>
             ${this._bubble({
@@ -378,7 +422,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               y: phTapY2,
               fill: 'var(--primary-text-color)',
               connX: PHASE_X.L2,
-              powerEntity: sensors.phase_l2?.entity,
+              powerEntity: phases.l2?.entity,
             })}
             <circle cx=${PHASE_X.L3} cy=${phTapY3} r="2" fill=${PHASE_COLOR.L3}/>
             ${this._bubble({
@@ -387,7 +431,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               y: phTapY3,
               fill: 'var(--primary-text-color)',
               connX: PHASE_X.L3,
-              powerEntity: sensors.phase_l3?.entity,
+              powerEntity: phases.l3?.entity,
             })}
 
             <!-- Main totals (right column) -->
@@ -409,43 +453,54 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               powerEntity: sensors.grid?.entity,
             })}
 
-            ${this._config.groups.map((g) => this._renderGroup(g, layout, floors))}
-            ${this._renderPv(layout, sensors.pv?.entity, sensors.pv?.label)}
+            ${this._config.groups.map((g, idx) => {
+              const colors = resolveColors(g, idx);
+              const kind = g.kind ?? 'distribution';
+              return kind === 'grid_coupling'
+                ? this._renderGridCoupling(g, colors, layout)
+                : this._renderDistributionGroup(g, colors, layout, floors);
+            })}
           </svg>
         </div>
       </ha-card>
     `;
   }
 
-  private _renderGroup(g: Group, layout: Layout, floors: Record<string, FloorStyle>): unknown {
+  // ── Render: distribution group ────────────────────────────────────────────
+  private _renderDistributionGroup(
+    g: Group,
+    colors: ResolvedColors,
+    layout: Layout,
+    floors: Record<string, FloorStyle>,
+  ): unknown {
     const gl = layout.byGroup.get(g.id)!;
     const midY = gl.yOff + GHDR / 2;
     const subX = ML + SQ / 2;
-    const lastC = g.circuits[g.circuits.length - 1];
+    const circuits = g.circuits ?? [];
+    const lastC = circuits[circuits.length - 1];
     const lastCl = gl.circuits.get(lastC.id)!;
     const lastCircMid = lastCl.startY + CB_SQ / 2;
 
+    const phases = g.phases;
+    const taps = phases.map(
+      (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.stroke}/>`,
+    );
+    const leftmostX =
+      phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
+    const tapLine =
+      phases.length > 0
+        ? svg`<line x1=${leftmostX} y1=${midY} x2=${ML} y2=${midY}
+                    stroke=${colors.stroke} stroke-width="2"/>`
+        : nothing;
+
     return svg`
-      ${
-        g.phase === '3P'
-          ? svg`
-              <circle cx=${PHASE_X.L3} cy=${midY} r="3.5" fill=${g.stroke}/>
-              <circle cx=${PHASE_X.L2} cy=${midY} r="3.5" fill=${g.stroke}/>
-              <circle cx=${PHASE_X.L1} cy=${midY} r="3.5" fill=${g.stroke}/>
-              <line x1=${PHASE_X.L3} y1=${midY} x2=${ML} y2=${midY}
-                    stroke=${g.stroke} stroke-width="2"/>
-            `
-          : svg`
-              <circle cx=${PHASE_X[g.phase]} cy=${midY} r="3.5" fill=${g.stroke}/>
-              <line x1=${PHASE_X[g.phase]} y1=${midY} x2=${ML} y2=${midY}
-                    stroke=${g.stroke} stroke-width="2"/>
-            `
-      }
+      ${taps}
+      ${tapLine}
 
       <rect x=${ML} y=${midY - SQ / 2} width=${SQ} height=${SQ}
-            fill=${g.fill} stroke=${g.stroke} stroke-width="1.8" rx="2"/>
+            fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
       <text x=${ML + SQ / 2} y=${midY + 4} text-anchor="middle"
-            font-size="9" font-weight="bold" fill=${g.color}>${g.id}</text>
+            font-size="9" font-weight="bold" fill=${colors.color}>${g.id}</text>
 
       ${
         g.sensor
@@ -453,7 +508,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               id: `g-${g.id}`,
               x: PWR_X,
               y: midY + 3,
-              fill: g.color,
+              fill: colors.color,
               connX: ML + SQ,
               switchEntity: g.switch,
               powerEntity: g.sensor,
@@ -462,42 +517,48 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
 
       <line x1=${subX} y1=${midY + SQ / 2} x2=${subX} y2=${lastCircMid}
-            stroke=${g.stroke} stroke-width="3"/>
+            stroke=${colors.stroke} stroke-width="3"/>
 
-      ${g.circuits.map((c) => this._renderCircuit(g, c, gl, floors))}
+      ${circuits.map((c) => this._renderCircuit(colors, c, gl, floors))}
     `;
   }
 
   private _renderCircuit(
-    g: Group,
+    colors: ResolvedColors,
     c: Circuit,
     gl: GroupLayout,
     floors: Record<string, FloorStyle>,
   ): unknown {
     const cl = gl.circuits.get(c.id)!;
     const cbMidY = cl.startY + CB_SQ / 2;
-    const lastZoneY = cl.startY + CB_SQ + (cl.zones - 1) * ZH + ZH / 2;
     const cbCenterX = CB_X + CB_SQ / 2;
     const subX = ML + SQ / 2;
-    const zones =
-      c.zones && c.zones.length > 0 ? c.zones : [{ floor: undefined, room: undefined }];
+    const zones = c.zones ?? [];
+    const hasZones = zones.length > 0;
+    const lastZoneY = hasZones
+      ? cl.startY + CB_SQ + (zones.length - 1) * ZH + ZH / 2
+      : 0;
 
     return svg`
       <line x1=${subX} y1=${cbMidY} x2=${CB_X} y2=${cbMidY}
-            stroke=${g.stroke} stroke-width="3"/>
-      <line x1=${cbCenterX} y1=${cl.startY + CB_SQ} x2=${cbCenterX} y2=${lastZoneY}
-            stroke=${g.stroke} stroke-width="1.5"/>
+            stroke=${colors.stroke} stroke-width="3"/>
+      ${
+        hasZones
+          ? svg`<line x1=${cbCenterX} y1=${cl.startY + CB_SQ} x2=${cbCenterX} y2=${lastZoneY}
+                      stroke=${colors.stroke} stroke-width="1.5"/>`
+          : nothing
+      }
       <rect x=${CB_X} y=${cl.startY} width=${CB_SQ} height=${CB_SQ}
-            fill=${g.fill} stroke=${g.stroke} stroke-width="1.8" rx="2"/>
+            fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
       <text x=${CB_X + CB_SQ / 2} y=${cl.startY + CB_SQ / 2 + 4} text-anchor="middle"
-            font-size="9" font-weight="bold" fill=${g.color}>${c.id}</text>
+            font-size="9" font-weight="bold" fill=${colors.color}>${c.id}</text>
       ${
         c.sensor
           ? this._bubble({
               id: `c-${c.id}`,
               x: PWR_X,
               y: cbMidY + 3,
-              fill: g.color,
+              fill: colors.color,
               connX: CB_RIGHT,
               switchEntity: c.switch,
               powerEntity: c.sensor,
@@ -519,7 +580,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
         return svg`
           <line x1=${cbCenterX} y1=${zoneY} x2=${lineEnd} y2=${zoneY}
-                stroke=${g.stroke} stroke-width="0.8"/>
+                stroke=${colors.stroke} stroke-width="0.8"/>
           <text x=${ix0} y=${zoneY + 4} text-anchor="start" font-size="10">
             ${TYPE_ICON[c.type] ?? ''}
           </text>
@@ -562,52 +623,94 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     `;
   }
 
-  private _renderPv(layout: Layout, pvEntity?: string, pvLabel?: string): unknown {
-    const pvMidY = layout.pvYOff + GHDR / 2;
+  // ── Render: grid_coupling group ───────────────────────────────────────────
+  private _renderGridCoupling(g: Group, colors: ResolvedColors, layout: Layout): unknown {
+    const gl = layout.byGroup.get(g.id)!;
+    const midY = gl.yOff + GHDR / 2;
     const GW = layout.groupWidth;
-    const pvR1 = layout.pvYOff + GHDR;
-    const pvR2 = pvR1 + ZH;
     const t = this._t();
-    const title = pvLabel ?? t.pv.title_default;
+    const title = g.label ?? t.grid_coupling.title_default;
+    const subtitle = g.subtitle;
+    const rows = g.rows ?? [];
+    const phases = g.phases;
+
+    const taps = phases.map(
+      (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.accent}/>`,
+    );
+    const leftmostX =
+      phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
+    const tapLine =
+      phases.length > 0
+        ? svg`<line x1=${leftmostX} y1=${midY} x2=${ML} y2=${midY}
+                    stroke=${colors.accent} stroke-width="2"/>`
+        : nothing;
+    // Decorative arrow indicator (kept for visual consistency with the
+    // original PV block); only drawn when we have at least three phases.
+    const arrow =
+      phases.length >= 3
+        ? svg`<polygon
+                points="${leftmostX - 5},${midY + 14} ${leftmostX},${midY + 2} ${leftmostX + 5},${midY + 14}"
+                fill=${colors.accent}/>`
+        : nothing;
 
     return svg`
-      <circle class="pv-accent" cx=${PHASE_X.L3} cy=${pvMidY} r="3.5"/>
-      <circle class="pv-accent" cx=${PHASE_X.L2} cy=${pvMidY} r="3.5"/>
-      <circle class="pv-accent" cx=${PHASE_X.L1} cy=${pvMidY} r="3.5"/>
-      <line class="pv-accent-line" x1=${PHASE_X.L3} y1=${pvMidY} x2=${ML} y2=${pvMidY}/>
-      <polygon class="pv-accent"
-        points="${PHASE_X.L3 - 5},${pvMidY + 14} ${PHASE_X.L3},${pvMidY + 2} ${PHASE_X.L3 + 5},${pvMidY + 14}"
-      />
-      <rect class="pv-bg" x=${ML} y=${layout.pvYOff} width=${GW} height=${GHDR} rx="5"/>
-      <text class="pv-icon" x=${ML + 14} y=${layout.pvYOff + GHDR / 2 + 5}
-            text-anchor="middle" font-size="14">⚡</text>
-      <text class="pv-text" x=${ML + 30} y=${layout.pvYOff + 14}
-            text-anchor="start" font-size="8" font-weight="bold">${title}</text>
-      <text class="pv-text" x=${ML + 30} y=${layout.pvYOff + 27}
-            text-anchor="start" font-size="7.5">${t.pv.injection}</text>
-      ${this._bubble({
-        id: 'pv',
-        x: PWR_X,
-        y: layout.pvYOff + GHDR / 2 + 5,
-        fill: 'var(--primary-text-color)',
-        powerEntity: pvEntity,
+      ${taps}
+      ${tapLine}
+      ${arrow}
+
+      <rect x=${ML} y=${gl.yOff} width=${GW} height=${GHDR}
+            fill=${tint(colors.accent, 15)} stroke=${colors.accent}
+            stroke-width="1.8" rx="5"/>
+      <text x=${ML + 14} y=${gl.yOff + GHDR / 2 + 5} text-anchor="middle"
+            font-size="14" fill=${colors.accent}>⚡</text>
+      <text x=${ML + 30} y=${gl.yOff + (subtitle ? 14 : 22)} text-anchor="start"
+            font-size="8" font-weight="bold"
+            fill="var(--primary-text-color)">${title}</text>
+      ${
+        subtitle
+          ? svg`<text x=${ML + 30} y=${gl.yOff + 27} text-anchor="start"
+                      font-size="7.5" fill="var(--primary-text-color)">${subtitle}</text>`
+          : nothing
+      }
+      ${
+        g.sensor
+          ? this._bubble({
+              id: `g-${g.id}`,
+              x: PWR_X,
+              y: gl.yOff + GHDR / 2 + 5,
+              fill: 'var(--primary-text-color)',
+              powerEntity: g.sensor,
+            })
+          : nothing
+      }
+      ${rows.map((row, i) => {
+        const rowY = gl.yOff + GHDR + i * ZH;
+        const tintPct = i % 2 === 0 ? 10 : 5;
+        return svg`
+          <rect x=${ML} y=${rowY} width=${GW} height=${ZH}
+                fill=${tint(colors.accent, tintPct)} stroke=${colors.accent}
+                stroke-width="0.5"/>
+          ${
+            row.icon
+              ? svg`<text x=${ML + 6} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
+                          font-size="12" fill=${colors.accent}>${row.icon}</text>`
+              : nothing
+          }
+          <text x=${ML + 22} y=${rowY + ZH / 2 + 3.5} text-anchor="start"
+                font-size="8" fill="var(--primary-text-color)">${row.label}</text>
+        `;
       })}
-      <rect class="pv-bg-row" x=${ML} y=${pvR1} width=${GW} height=${ZH}/>
-      <text class="pv-icon" x=${ML + 6} y=${pvR1 + ZH / 2 + 3.5}
-            text-anchor="start" font-size="12">☀</text>
-      <text class="pv-text" x=${ML + 22} y=${pvR1 + ZH / 2 + 3.5}
-            text-anchor="start" font-size="8">${t.pv.inverters}</text>
-      <rect class="pv-bg-row-alt" x=${ML} y=${pvR2} width=${GW} height=${ZH}/>
-      <text class="pv-icon" x=${ML + 6} y=${pvR2 + ZH / 2 + 3.5}
-            text-anchor="start" font-size="10">☀</text>
-      <text class="pv-text" x=${ML + 22} y=${pvR2 + ZH / 2 + 3.5}
-            text-anchor="start" font-size="8">${t.pv.panels}</text>
-      <line class="pv-divider" x1=${ML} y1=${pvR2 + ZH} x2=${ML + GW} y2=${pvR2 + ZH}/>
+      ${
+        rows.length > 0
+          ? svg`<line x1=${ML} y1=${gl.yOff + GHDR + rows.length * ZH}
+                      x2=${ML + GW} y2=${gl.yOff + GHDR + rows.length * ZH}
+                      stroke=${colors.accent} stroke-width="1"/>`
+          : nothing
+      }
     `;
   }
 
-  // After each render, size each power-bubble background to match its text bbox
-  // (replicates the original imperative updateSVGPower behaviour).
+  // After each render, size each power-bubble background to match its text bbox.
   protected override updated(): void {
     if (!this.shadowRoot) return;
     const texts = this.shadowRoot.querySelectorAll<SVGTextElement>('text.pwr-value');
@@ -654,17 +757,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     return css`
       :host {
         display: block;
-        /* Phase colours — light-theme defaults. Override in a HA theme YAML
-           (under \`card-mod\` or theme-level vars) for custom palettes. */
         --electrical-panel-phase-l1-color: #8b4513;
         --electrical-panel-phase-l2-color: #1a202c;
         --electrical-panel-phase-l3-color: #5a6474;
       }
-      /* Dark mode — driven by HA's hass.themes.darkMode (reflected to the
-         host attribute) and falling back to the OS preference for users
-         outside HA's control. Phase wire colours stay canonical IEC 60446
-         in both themes (real cables don't lighten at night); text uses
-         theme-aware variables so labels and values stay readable. */
       :host([dark]) text.pwr-value[data-id^='g-'],
       :host([dark]) text.pwr-value[data-id^='c-'] {
         filter: brightness(1.55) saturate(0.85);
@@ -691,7 +787,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           var(--paper-font-body1_-_font-family, Arial, sans-serif)
         );
       }
-      /* Theme-aware structural elements */
       .bubble-bg {
         fill: var(--ha-card-background, var(--card-background-color, #fff));
         stroke: var(--divider-color, #e2e8f0);
@@ -707,54 +802,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
       .phase-label {
         fill: var(--primary-text-color);
-      }
-      /* PV / injection block — uses HA energy-solar accent variable so the
-         block stays recognisable as solar without imposing a custom palette
-         (themes can override --energy-solar-color). Texts use the standard
-         primary text colour. */
-      .pv-accent {
-        fill: var(--energy-solar-color, #ff9800);
-      }
-      .pv-accent-line {
-        stroke: var(--energy-solar-color, #ff9800);
-        stroke-width: 2;
-      }
-      .pv-icon {
-        fill: var(--energy-solar-color, #ff9800);
-      }
-      .pv-text {
-        fill: var(--primary-text-color);
-      }
-      .pv-bg {
-        fill: color-mix(
-          in srgb,
-          var(--energy-solar-color, #ff9800) 15%,
-          var(--ha-card-background, var(--card-background-color, transparent))
-        );
-        stroke: var(--energy-solar-color, #ff9800);
-        stroke-width: 1.8;
-      }
-      .pv-bg-row {
-        fill: color-mix(
-          in srgb,
-          var(--energy-solar-color, #ff9800) 10%,
-          var(--ha-card-background, var(--card-background-color, transparent))
-        );
-        stroke: var(--energy-solar-color, #ff9800);
-        stroke-width: 0.5;
-      }
-      .pv-bg-row-alt {
-        fill: color-mix(
-          in srgb,
-          var(--energy-solar-color, #ff9800) 5%,
-          var(--ha-card-background, var(--card-background-color, transparent))
-        );
-        stroke: var(--energy-solar-color, #ff9800);
-        stroke-width: 0.5;
-      }
-      .pv-divider {
-        stroke: var(--energy-solar-color, #ff9800);
-        stroke-width: 1;
       }
     `;
   }
