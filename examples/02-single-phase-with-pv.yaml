@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Example 2 — Single-phase house with a small PV installation
+#
+# Adds:
+#  - Top-of-card live readings (total / grid)
+#  - Per-zone smart-plug entities with toggle controls (`switch:`) and the
+#    `critical: true` flag on the fridge to require a confirmation dialog
+#    before toggling
+#  - Zone-level icon overrides (`icon: mdi:fridge`, etc.)
+#  - A PV production group with two microinverters expressed as zones, each
+#    with its own live-power sensor — same mechanics as load zones, no
+#    PV-specific schema
+# ─────────────────────────────────────────────────────────────────────────────
+type: custom:electrical-panel-card
+title: Home electrical panel
+
+sensors:
+  total: { entity: sensor.house_total_power }
+  grid:  { entity: sensor.grid_import_export }
+
+floors:
+  L0: { bg: '#38a169', fg: white }   # Ground floor
+  L1: { bg: '#3182ce', fg: white }   # First floor
+  TO: { bg: '#c2410c', fg: white }   # Roof
+
+groups:
+  - id: D1
+    phases: [L1]
+    accent: '#3182ce'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    sensor: sensor.subpanel_d1_power
+    circuits:
+      - id: A
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        sensor: sensor.kitchen_circuit_power
+        zones:
+          - { floor: L0, room: Kitchen sockets }
+          - floor: L0
+            room: Fridge
+            sensor: sensor.fridge_power
+            switch: switch.fridge
+            critical: true             # confirmation dialog on toggle
+            icon: mdi:fridge
+          - floor: L0
+            room: Coffee maker
+            sensor: sensor.coffee_maker_power
+            switch: switch.coffee_maker
+            icon: mdi:coffee-maker
+
+      - id: B
+        type: light
+        amp: 10
+        poles: 2
+        mm2: 1.5
+        zones:
+          - { floor: L0, room: Living room }
+          - { floor: L0, room: Bathroom }
+          - { floor: L1, room: Bedroom }
+          - { floor: L1, room: Hallway }
+
+      - id: C
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - floor: L1
+            room: Bedroom
+            sensor: sensor.bedroom_outlet_power
+            switch: switch.bedroom_outlet
+
+  - id: PV
+    type: solar
+    phases: [L1]
+    accent: 'var(--energy-solar-color, #d97706)'
+    sensor: sensor.solar_total_production
+    circuits:
+      - id: INV
+        type: power
+        icon: mdi:solar-power
+        zones:
+          - { floor: TO, room: "Inverter #1", sensor: sensor.inverter_1_power }
+          - { floor: TO, room: "Inverter #2", sensor: sensor.inverter_2_power }

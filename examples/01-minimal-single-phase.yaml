@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Example 1 — Minimal single-phase installation (no production)
+#
+# The smallest useful config: one RCD covering two breakers (a socket circuit
+# and a lighting circuit), no live sensors. Demonstrates the bare structure of
+# Group → Circuit → Zone with an explicit floor map.
+#
+# Use this as a starting point. Add `sensor:` / `switch:` to any element when
+# you have entities to wire up.
+# ─────────────────────────────────────────────────────────────────────────────
+type: custom:electrical-panel-card
+title: Apartment panel
+
+floors:
+  L0: { bg: '#38a169', fg: white }   # Ground floor
+
+groups:
+  - id: D1
+    phases: [L1]
+    accent: '#3182ce'
+    # RCD specs (tooltip / dialog only — not rendered as text)
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    circuits:
+      - id: A
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - { floor: L0, room: Kitchen }
+          - { floor: L0, room: Living room }
+
+      - id: B
+        type: light
+        amp: 10
+        poles: 2
+        mm2: 1.5
+        zones:
+          - { floor: L0, room: Living room }
+          - { floor: L0, room: Bathroom }
+          - { floor: L0, room: Hallway }

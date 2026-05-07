@@ -4,32 +4,37 @@
 [![GitHub Release](https://img.shields.io/github/v/release/JohannBlais/lovelace-electrical-panel-card)](https://github.com/JohannBlais/lovelace-electrical-panel-card/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Custom Lovelace card for Home Assistant — interactive one-line electrical panel diagram with live power readings, smart-plug toggles, and per-circuit / per-zone breakdown. Configured entirely from YAML.
+A Lovelace custom card that renders your electrical panel as an interactive **one-line diagram** — phase trunks, RCDs, breakers, zones — with **live power readings** at every level and **smart-plug toggles** built in. Configured entirely from YAML.
+
+If you've ever wished your HA dashboard could show the panel the way the electrician sees it, this is that.
+
+---
 
 ## Features
 
-- Live power on phases (L1/L2/L3), groups, circuits and individual zones
-- Toggle smart plugs straight from the diagram, with confirmation for critical loads
-- Floor + room labelling per zone
-- One model for everything: each group has a `type` (`distribution` for loads — the default — or `solar` / `wind` / `geothermal` / `hydro` for productions). Loads and productions render the same way; production units (PV inverters, turbines, …) are expressed as zones with their own `sensor`.
-- Single `accent` colour per group — the renderer derives `color` / `fill` / `stroke` via `color-mix()`. Override individually for exact control.
-- Phase array (`phases: [L1]`, `[L1, L2, L3]`, …) — single, three- or any combination
-- 100 % YAML configuration; pure SVG, no iframe, no token, no polling — uses the standard `hass` object
-- Light / dark theme aware (cable colours stay IEC 60446; texts adapt)
-- 18 built-in languages auto-detected from `hass.locale.language` — English (default), French, German, Spanish, Italian, Portuguese, Dutch, Polish, Swedish, Danish, Norwegian, Finnish, Czech, Russian, Ukrainian, Japanese, Chinese (Simplified), Korean
+- **One-line diagram** rendered as pure SVG, scaling to any width
+- **Live power** on phase trunks, RCDs, circuits and individual zones — read straight from `hass.states`, no polling, no token
+- **Smart-plug toggles** inline on each bubble, with confirmation dialog for `critical:` loads (fridges, freezers, sump pumps, …)
+- **Production groups** alongside loads — `type: solar | wind | geothermal | hydro` rendered with the same primitives. Inverters and turbines become zones with their own sensors.
+- **Three-phase aware** — `phases: [L1, L2, L3]` for 4P breakers, single phase for everything else, any combination accepted
+- **MDI icons** per circuit type with per-circuit and per-zone overrides — `mdi:fridge`, `mdi:solar-power`, anything Material Design ships
+- **Floor / room labelling** per zone with configurable colour-coded pills
+- **Hover tooltips + click-to-open metadata dialog** with structured RCD / breaker specs (rating, sensitivity, poles, class, cross-section, …)
+- **Theme-aware**: cable colours stay IEC 60446 across light / dark themes; everything else (text, dividers, bubbles, accents) follows the active HA theme
+- **18 built-in languages** auto-detected from `hass.locale.language`: English, French, German, Spanish, Italian, Portuguese, Dutch, Polish, Swedish, Danish, Norwegian, Finnish, Czech, Russian, Ukrainian, Japanese, Chinese (Simplified), Korean
 
-## Installation
+## Install
 
-### HACS (recommended)
+### HACS
 
-1. Open HACS → **Frontend** → menu (⋮) → **Custom repositories**.
-2. Add `https://github.com/JohannBlais/lovelace-electrical-panel-card` with category **Lovelace**.
-3. Search for *Electrical Panel Card* and install.
-4. Refresh your browser (or hard-reload the dashboard).
+1. HACS → **Frontend** → menu (⋮) → **Custom repositories**
+2. Add `https://github.com/JohannBlais/lovelace-electrical-panel-card`, category **Lovelace**
+3. Search for *Electrical Panel Card* and install
+4. Hard-refresh your dashboard (`Ctrl+Shift+R`)
 
 ### Manual
 
-Download `electrical-panel-card.js` from the latest [release](https://github.com/JohannBlais/lovelace-electrical-panel-card/releases), copy it to `<config>/www/electrical-panel-card/`, then add a Lovelace resource:
+Grab `electrical-panel-card.js` from the latest [release](https://github.com/JohannBlais/lovelace-electrical-panel-card/releases), drop it under `<config>/www/electrical-panel-card/`, then declare a Lovelace resource:
 
 ```yaml
 resources:
@@ -37,86 +42,98 @@ resources:
     type: module
 ```
 
-## Usage
+## Quick start
 
-Add the card to a dashboard:
+The minimum viable configuration is one group with one circuit and one zone:
 
 ```yaml
 type: custom:electrical-panel-card
-title: Electrical panel
-# Optional — overrides the language auto-detected from hass.locale.
-# Built-in: 'en' (default) and 'fr'. Falls back to English if unknown.
-# language: fr
-sensors:
-  total: { entity: sensor.envoy_current_power_consumption }
-  grid:  { entity: sensor.envoy_current_net_power_consumption }
-  phases:
-    l1: { entity: sensor.envoy_current_power_consumption_l1 }
-    l2: { entity: sensor.envoy_current_power_consumption_l2 }
-    l3: { entity: sensor.envoy_current_power_consumption_l3 }
 floors:
-  # Recommended L-convention (matches HA floor-plans). Copy into your
-  # config and tweak — the card ships with no built-in floor presets.
-  LB: { bg: '#718096', fg: white }   # lower basement
-  L0: { bg: '#38a169', fg: white }   # ground floor
-  L1: { bg: '#3182ce', fg: white }   # first floor
-  L2: { bg: '#d69e2e', fg: white }   # second floor
+  L0: { bg: '#38a169', fg: white }
 groups:
   - id: D1
     phases: [L1]
-    accent: '#3182ce'         # single colour, renderer derives the rest
-    sensor: sensor.emporia_d1_power
+    accent: '#3182ce'
     circuits:
       - id: A
         type: socket
-        sensor: sensor.washing_machine_power
-        switch: switch.washing_machine
         zones:
-          - { floor: L1, room: laundry }
-
-  - id: PV
-    type: solar
-    phases: [L1, L2, L3]
-    accent: 'var(--energy-solar-color, #d97706)'
-    sensor: sensor.envoy_current_power_production
-    circuits:
-      - id: INV
-        type: power
-        zones:
-          - { room: "IQ7+ #1", sensor: sensor.envoy_microinverter_1_power }
-          - { room: "IQ7+ #2", sensor: sensor.envoy_microinverter_2_power }
-          # ... one zone per microinverter
+          - { floor: L0, room: Kitchen }
 ```
 
-See [docs/data-model.md](docs/data-model.md) for the full schema, theming variables, and special concepts (three-phase loads, critical-toggle confirmation, internationalisation).
+From there you grow horizontally (more zones, more circuits, more groups) and vertically (sensors, switches, icons, metadata).
+
+See [`examples/`](examples/) for richer configs:
+
+| Scenario | File |
+| -------- | ---- |
+| Apartment, single-phase, no monitoring | [`01-minimal-single-phase.yaml`](examples/01-minimal-single-phase.yaml) |
+| House, single-phase, small PV | [`02-single-phase-with-pv.yaml`](examples/02-single-phase-with-pv.yaml) |
+| House, three-phase, no production | [`03-three-phase-no-production.yaml`](examples/03-three-phase-no-production.yaml) |
+| House, three-phase, full PV | [`04-three-phase-with-pv.yaml`](examples/04-three-phase-with-pv.yaml) |
+
+## Configuration reference
+
+The full schema lives in [`docs/data-model.md`](docs/data-model.md). Key concepts in one paragraph:
+
+- **`groups[]`** is the top-level structure; each group has a `type` (`distribution` for loads — the default — or one of the production kinds), a `phases` array describing which trunks it taps, and an `accent` colour from which the renderer derives `color` / `fill` / `stroke`.
+- **`circuits[]`** under a group: one entry per breaker. Carries an icon-defining `type` (`socket` / `light` / `power`), optional `sensor` for live readings, optional `switch` for inline toggling, and a list of `zones[]`.
+- **`zones[]`** are the leaves: a `floor` pill (defined in `floors:`), a free-text `room`, and optionally `sensor`, `switch`, `critical`, plus icon / metadata overrides.
+- **`sensors:`** at the top level wires the card-wide totals — `total`, `grid` and the per-phase trunk readings.
+
+## Languages
+
+Auto-detected from `hass.locale.language` (BCP 47 primary subtag matching, so `pt-BR` → `pt`, `zh-Hans` → `zh`, `nb-NO` → `nb`). Override explicitly:
+
+```yaml
+type: custom:electrical-panel-card
+language: de
+...
+```
+
+To add a language, drop a `xx.ts` file next to `src/translations/en.ts` exporting a `Translations` object, then register it in `DICTS` in `src/translations/index.ts`. Three strings to translate (`card.total`, `card.grid`, `confirm.toggle`) plus the dialog vocabulary (`dialog.group_title`, `dialog.circuit_title`, `dialog.close`, and the field labels under `dialog.fields`).
+
+## Theming
+
+CSS custom properties exposed:
+
+| Variable | Default | Used by |
+| -------- | ------- | ------- |
+| `--electrical-panel-phase-l1-color` | `#8B4513` | L1 trunk + tap dots |
+| `--electrical-panel-phase-l2-color` | `#1A202C` | L2 trunk + tap dots |
+| `--electrical-panel-phase-l3-color` | `#5A6474` | L3 trunk + tap dots |
+
+Plus the standard HA variables: `--primary-text-color`, `--secondary-text-color`, `--ha-card-background`, `--card-background-color`, `--divider-color`, `--ha-font-family-body`, and `--energy-solar-color` (used as a default solar accent if you write `accent: 'var(--energy-solar-color, #d97706)'`).
+
+Phase wire colours stay IEC 60446 across themes — real cables don't lighten at night. Phase **labels** and bubble values use `--primary-text-color` so they stay readable. In dark mode, user-configured group / circuit colours get a subtle CSS filter so dark accents stay legible.
 
 ## Development
 
 ```bash
 npm install
-npm run watch     # rebuild on changes → dist/ + Z:/www/electrical-panel-card/
+npm run watch       # → dist/ + Z:/www/electrical-panel-card/
 npm run typecheck
-npm run build     # production bundle (minified)
+npm run build       # production bundle (minified)
 ```
 
-The build mirrors the bundle into `<HA-config>/www/electrical-panel-card/` so changes land directly in Home Assistant. By default it expects the HA config dir at `Z:/www` (a Samba mount). Override:
+`watch` and `build` mirror the bundle into the HA config directory so the card lands directly in HA. Defaults to `Z:/www` (a Samba mount on the author's machine). Override with environment variables:
 
-| Variable                | Effect                                                            |
-| ----------------------- | ----------------------------------------------------------------- |
-| `HA_WWW_DIR=/path/to/www` | Use that directory instead of `Z:/www`.                          |
-| `NO_HA_MIRROR=1`        | Skip the mirror entirely (build dist/ only). For contributors without an HA setup. |
-| `CI=true`               | Same as `NO_HA_MIRROR` — auto-set by GitHub Actions.             |
+| Variable | Effect |
+| -------- | ------ |
+| `HA_WWW_DIR=/path/to/www` | Mirror to a different directory |
+| `NO_HA_MIRROR=1` | Skip the mirror (dist/ only) |
+| `CI=true` | Same — auto-set by GitHub Actions |
 
-If the target path doesn't exist and none of the opt-outs are set, the build **fails loudly** rather than silently leaving stale code in HA.
+When the target path is missing and no opt-out is set, the build **fails loudly** so stale code never lingers in HA.
 
 ## Releasing
-
-Push a tag and the GitHub workflow will build and attach the bundle to the release:
 
 ```bash
 npm version patch   # or minor / major
 git push --follow-tags
 ```
+
+The `.github/workflows/release.yml` action builds, type-checks, and attaches `dist/electrical-panel-card.js` to the GitHub release.
 
 ## License
 

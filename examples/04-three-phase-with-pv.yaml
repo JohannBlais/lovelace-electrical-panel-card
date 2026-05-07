@@ -1,0 +1,220 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Example 4 — Three-phase home with full PV monitoring (microinverters)
+#
+# This is the realistic configuration: a multi-RCD three-phase panel with
+# load groups across the four storeys of a house, three-phase loads on a
+# dedicated RCD, plus a PV system with N microinverters expressed as zones —
+# each carrying its own live-power sensor.
+#
+# Highlights:
+#  - Five floors mapped (LB / L0 / L1 / L2 / TO for the roof)
+#  - Six load RCDs distributed across the three phases for load balancing
+#  - Critical loads (`critical: true`) require a confirmation dialog before
+#    toggling — used here for fridge / freezer / sump pump
+#  - Per-circuit MDI icons to override the default for the type
+#    (`Circuit.icon: mdi:solar-power` on the inverter circuit)
+#  - 6 microinverters expressed as zones of the PV → INV circuit; the group's
+#    `sensor:` shows the system total in the header bubble
+# ─────────────────────────────────────────────────────────────────────────────
+type: custom:electrical-panel-card
+title: Home electrical panel
+
+sensors:
+  total: { entity: sensor.envoy_total_consumption }
+  grid:  { entity: sensor.envoy_grid_net_power }
+  phases:
+    l1: { entity: sensor.envoy_phase_l1 }
+    l2: { entity: sensor.envoy_phase_l2 }
+    l3: { entity: sensor.envoy_phase_l3 }
+
+floors:
+  LB: { bg: '#718096', fg: white }   # Lower basement
+  L0: { bg: '#38a169', fg: white }   # Ground floor
+  L1: { bg: '#3182ce', fg: white }   # First floor
+  L2: { bg: '#d69e2e', fg: white }   # Second floor
+  TO: { bg: '#c2410c', fg: white }   # Roof
+
+groups:
+  - id: D1
+    phases: [L3]
+    accent: '#38a169'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    sensor: sensor.subpanel_d1_power
+    circuits:
+      - id: A
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - floor: L1
+            room: Washing machine
+            sensor: sensor.washing_machine_power
+            switch: switch.washing_machine
+            icon: mdi:washing-machine
+      - id: B
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - floor: L1
+            room: Dryer
+            sensor: sensor.dryer_power
+            switch: switch.dryer
+            icon: mdi:tumble-dryer
+      - id: C
+        type: light
+        amp: 10
+        poles: 2
+        mm2: 1.5
+        zones:
+          - { floor: L1, room: Master bedroom }
+          - { floor: L2, room: Office }
+          - { floor: L2, room: Hallway }
+
+  - id: D2
+    phases: [L1]
+    accent: '#3182ce'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    sensor: sensor.subpanel_d2_power
+    circuits:
+      - id: D
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - { floor: L0, room: Garage }
+          - floor: L0
+            room: EV charger
+            sensor: sensor.ev_charger_power
+            switch: switch.ev_charger
+            icon: mdi:car-electric
+          - floor: L0
+            room: Fridge
+            sensor: sensor.fridge_power
+            switch: switch.fridge
+            critical: true
+            icon: mdi:fridge
+      - id: E
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - floor: L2
+            room: Server rack
+            sensor: sensor.server_rack_power
+            switch: switch.server_rack
+            icon: mdi:server
+
+  - id: D3
+    phases: [L2]
+    accent: '#d69e2e'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    circuits:
+      - id: F
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - floor: L0
+            room: Dishwasher
+            sensor: sensor.dishwasher_power
+            switch: switch.dishwasher
+            icon: mdi:dishwasher
+          - { floor: L0, room: Kitchen }
+      - id: G
+        type: light
+        amp: 10
+        poles: 2
+        mm2: 1.5
+        zones:
+          - { floor: L0, room: Living room }
+          - { floor: L0, room: Dining room }
+          - { floor: L0, room: Kitchen }
+
+  - id: D4
+    phases: [L1]
+    accent: '#e53e3e'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    sensor: sensor.subpanel_d4_power
+    circuits:
+      - id: H
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - { floor: LB, room: Basement }
+          - floor: LB
+            room: Freezer
+            sensor: sensor.freezer_power
+            switch: switch.freezer
+            critical: true
+            icon: mdi:fridge-outline
+          - floor: LB
+            room: Sump pump
+            sensor: sensor.sump_pump_power
+            switch: switch.sump_pump
+            critical: true
+            icon: mdi:water-pump
+
+  # Three-phase loads
+  - id: HVAC
+    phases: [L1, L2, L3]
+    accent: '#805ad5'
+    amp: 40
+    mA: 30
+    poles: 4
+    class: A
+    circuits:
+      - id: HP
+        type: power
+        amp: 20
+        poles: 4
+        mm2: 6
+        sensor: sensor.heat_pump_power
+        zones:
+          - { floor: L0, room: Heat pump, icon: mdi:heat-pump }
+      - id: CT
+        type: power
+        amp: 20
+        poles: 4
+        mm2: 6
+        sensor: sensor.cooktop_power
+        zones:
+          - { floor: L0, room: Induction cooktop, icon: mdi:stove }
+
+  # Photovoltaic production — same renderer as a load group, but `type: solar`
+  # signals intent and conventionally pairs with the energy-solar accent.
+  - id: PV
+    type: solar
+    phases: [L1, L2, L3]
+    accent: 'var(--energy-solar-color, #d97706)'
+    sensor: sensor.envoy_solar_production
+    circuits:
+      - id: INV
+        type: power
+        icon: mdi:solar-power
+        zones:
+          - { floor: TO, room: "Microinverter #1", sensor: sensor.microinv_1_power }
+          - { floor: TO, room: "Microinverter #2", sensor: sensor.microinv_2_power }
+          - { floor: TO, room: "Microinverter #3", sensor: sensor.microinv_3_power }
+          - { floor: TO, room: "Microinverter #4", sensor: sensor.microinv_4_power }
+          - { floor: TO, room: "Microinverter #5", sensor: sensor.microinv_5_power }
+          - { floor: TO, room: "Microinverter #6", sensor: sensor.microinv_6_power }
