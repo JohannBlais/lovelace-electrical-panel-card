@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.8.0] — 16 additional languages
+
+Built-in translations expanded from `en` / `fr` to 18 languages, covering
+the most common European and world languages used by HA installations:
+
+| Code | Language       |
+| ---- | -------------- |
+| en   | English (default) |
+| fr   | French          |
+| de   | German          |
+| es   | Spanish         |
+| it   | Italian         |
+| pt   | Portuguese      |
+| nl   | Dutch           |
+| pl   | Polish          |
+| sv   | Swedish         |
+| da   | Danish          |
+| nb   | Norwegian Bokmål (also matches `no`) |
+| fi   | Finnish         |
+| cs   | Czech           |
+| ru   | Russian         |
+| uk   | Ukrainian       |
+| ja   | Japanese        |
+| zh   | Chinese (Simplified) |
+| ko   | Korean          |
+
+Detection still uses BCP 47 primary-subtag matching: `fr-BE` → `fr`,
+`pt-BR` → `pt`, `zh-Hant` → `zh`, etc. Unknown languages fall back to
+English (unchanged).
+
+A new export `SUPPORTED_LANGUAGES` lists the registered codes — useful
+for docs or future UI.
+
 ## [0.7.1] — Fix MDI icon clipping inside foreignObject
 
 `<ha-icon>` defaults to `display: inline-flex` with `vertical-align: middle`,

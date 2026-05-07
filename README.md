@@ -16,7 +16,7 @@ Custom Lovelace card for Home Assistant — interactive one-line electrical pane
 - Phase array (`phases: [L1]`, `[L1, L2, L3]`, …) — single, three- or any combination
 - 100 % YAML configuration; pure SVG, no iframe, no token, no polling — uses the standard `hass` object
 - Light / dark theme aware (cable colours stay IEC 60446; texts adapt)
-- English (default) and French built-in; auto-detected from `hass.locale.language`
+- 18 built-in languages auto-detected from `hass.locale.language` — English (default), French, German, Spanish, Italian, Portuguese, Dutch, Polish, Swedish, Danish, Norwegian, Finnish, Czech, Russian, Ukrainian, Japanese, Chinese (Simplified), Korean
 
 ## Installation
 

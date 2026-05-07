@@ -1,3 +1,3 @@
 export const CARD_TAG = 'electrical-panel-card';
 export const EDITOR_TAG = 'electrical-panel-card-editor';
-export const CARD_VERSION = '0.7.1';
+export const CARD_VERSION = '0.8.0';
