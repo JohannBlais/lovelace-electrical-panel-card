@@ -365,6 +365,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     switchEntity?: string;
     criticalLabel?: string;
     powerEntity?: string;
+    /** When set together with a power reading, renders a saturation bar
+        beneath the bubble (current / maxW, clamped to 100 %). */
+    maxW?: number;
   }): unknown {
     const {
       id,
@@ -376,8 +379,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       switchEntity,
       criticalLabel,
       powerEntity,
+      maxW,
     } = args;
-    const text = ElectricalPanelCard._fmt(this._power(powerEntity));
+    const value = this._power(powerEntity);
+    const text = ElectricalPanelCard._fmt(value);
     const isOn = this._switch(switchEntity);
     const tw = 14;
     const th = 8;
@@ -386,6 +391,17 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const sy = y - th / 2 - 3;
     const knobX = isOn === true ? sx + tw - tr - 1.5 : sx + tr + 1.5;
     const togFill = isOn === true ? '#38a169' : '#a0aec0';
+    // Saturation bar: rendered when both maxW and a current reading exist.
+    const SAT_W = 30;
+    const SAT_H = 2;
+    const satX = x - SAT_W;
+    const satY = y + 6;
+    const satRatio =
+      maxW !== undefined && value !== null && maxW > 0
+        ? Math.abs(value) / maxW
+        : null;
+    const satFillW = satRatio !== null ? Math.min(1, satRatio) * SAT_W : 0;
+    const satOver = satRatio !== null && satRatio > 1;
 
     return svg`
       ${
@@ -398,6 +414,17 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             height="15" rx="3" visibility="hidden"></rect>
       <text class="pwr-value" data-id=${id} x=${x} y=${y} text-anchor=${anchor}
             font-size="7.5" font-weight="bold" fill=${fill}>${text}</text>
+      ${
+        satRatio !== null
+          ? svg`
+              <title>${(satRatio * 100).toFixed(0)} % of ${maxW} W</title>
+              <rect class="sat-track" x=${satX} y=${satY} width=${SAT_W} height=${SAT_H} rx="1"/>
+              <rect class="sat-fill" x=${satX} y=${satY}
+                    width=${satFillW.toFixed(1)} height=${SAT_H} rx="1"
+                    fill=${satOver ? 'var(--error-color, #c53030)' : fill}/>
+            `
+          : nothing
+      }
       ${
         switchEntity
           ? svg`
@@ -461,6 +488,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               fill: 'var(--primary-text-color)',
               connX: PHASE_X.L1,
               powerEntity: phases.l1?.entity,
+              maxW: phases.l1?.max_w,
             })}
             <circle cx=${PHASE_X.L2} cy=${phTapY2} r="2" fill=${PHASE_COLOR.L2}/>
             ${this._bubble({
@@ -470,6 +498,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               fill: 'var(--primary-text-color)',
               connX: PHASE_X.L2,
               powerEntity: phases.l2?.entity,
+              maxW: phases.l2?.max_w,
             })}
             <circle cx=${PHASE_X.L3} cy=${phTapY3} r="2" fill=${PHASE_COLOR.L3}/>
             ${this._bubble({
@@ -479,6 +508,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               fill: 'var(--primary-text-color)',
               connX: PHASE_X.L3,
               powerEntity: phases.l3?.entity,
+              maxW: phases.l3?.max_w,
             })}
 
             <!-- Main totals (right column) -->
@@ -490,6 +520,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               y: phTapY1 + 3,
               fill: '#c53030',
               powerEntity: sensors.total?.entity,
+              maxW: sensors.total?.max_w,
             })}
             <text class="label-secondary" x=${PWR_X - 55} y=${phTapY2 + 3}
                   text-anchor="end" font-size="7.5">${sensors.grid?.label ?? t.card.grid}</text>
@@ -498,6 +529,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               x: PWR_X,
               y: phTapY2 + 3,
               powerEntity: sensors.grid?.entity,
+              maxW: sensors.grid?.max_w,
             })}
 
             ${this._config.groups.map((g, idx) => {
@@ -594,6 +626,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               connX: ML + SQ,
               switchEntity: g.switch,
               powerEntity: g.sensor,
+              maxW: g.max_w,
             })
           : nothing
       }
@@ -853,6 +886,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
       .meta-table td {
         color: var(--primary-text-color);
+      }
+      .sat-track {
+        fill: var(--divider-color, #e2e8f0);
+        opacity: 0.5;
       }
     `;
   }

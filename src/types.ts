@@ -104,6 +104,14 @@ export interface Group {
   stroke?: string;
   /** Group-level live power. Renders a bubble next to the box. */
   sensor?: string;
+  /**
+   * Optional peak / rated power in watts. When set together with `sensor`,
+   * the bubble gets a thin saturation bar showing `current / max_w` as
+   * a percentage (clamped to 100 %). Useful for production groups
+   * (e.g. PV peak Wc) or for showing how close a group is to its
+   * subscribed grid limit.
+   */
+  max_w?: number;
   /** Group-level toggle. Adds an inline switch to the bubble. */
   switch?: string;
   /**

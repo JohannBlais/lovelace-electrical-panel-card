@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.13.0] — Saturation gauge under bubbles (`max_w`)
+
+The `max_w` field — declared on `Sensor` since v0.1 but never rendered —
+now drives a small saturation bar drawn beneath any bubble when both a
+live reading and a peak value are configured. New `Group.max_w` field
+extends this to group-level bubbles (typically the PV total: peak Wc).
+
+### Added
+
+- `Group.max_w?: number` — peak / rated power in watts.
+- Saturation bar (30 × 2 px) under bubbles, fill width =
+  `min(1, |current| / max_w) × 30`. Hover shows a percentage tooltip.
+- Over 100 % saturation switches the fill to `var(--error-color)`
+  (red) — caps at 100 % visual width but the tooltip still reports the
+  real percentage.
+
+### Wired
+
+- Top-of-card `total` / `grid` / `phases.l[1-3]` bubbles read
+  `max_w` from the corresponding `Sensor` entry.
+- Group-level bubble reads `max_w` from `Group.max_w`.
+
+Circuit and zone bubbles aren't wired yet (no `Circuit.max_w` or
+`Zone.max_w` fields). Could be added later if useful.
+
+### Example
+
+```yaml
+- id: PV
+  type: solar
+  phases: [L1, L2, L3]
+  sensor: sensor.envoy_solar_production
+  max_w: 8075                # 19 × 425 Wc array — peak power
+```
+
 ## [0.12.0] — Metadata popup on click + i18n
 
 Click on an RCD or breaker box opens an HA-native `<ha-dialog>` listing
