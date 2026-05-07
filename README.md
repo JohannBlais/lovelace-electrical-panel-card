@@ -10,8 +10,6 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 
 ![Card preview](https://raw.githubusercontent.com/JohannBlais/lovelace-electrical-panel-card/main/assets/preview-04-three-phase-with-pv.svg)
 
-> The previews under [`assets/`](assets/) are generated from the YAML configs in [`examples/`](examples/) by `npm run generate-previews` — running the real card bundle inside jsdom with synthetic state values. They reflect the exact code paths the live card takes.
-
 ---
 
 ## Features
@@ -129,6 +127,18 @@ npm run build       # production bundle (minified)
 | `CI=true` | Same — auto-set by GitHub Actions |
 
 When the target path is missing and no opt-out is set, the build **fails loudly** so stale code never lingers in HA.
+
+## Previews
+
+The SVGs under [`assets/`](assets/) are generated from the YAML configs in [`examples/`](examples/) by:
+
+```bash
+npm run generate-previews
+```
+
+The script runs the real card bundle inside jsdom with synthetic state values, then bakes every `<text>` element into `<path>` outlines using the actual Roboto glyphs (via `opentype.js`). The output reflects the exact code paths the live card takes — same layout maths, same icon resolution, same saturation gauge — and renders identically in any SVG viewer (GitHub camo, librsvg, ImageMagick, mobile browsers) without depending on the Roboto webfont.
+
+It doubles as a sanity test: if the renderer throws or yields no SVG, generation fails. A future commit can wire snapshot diffing for proper visual regression coverage.
 
 ## Releasing
 
