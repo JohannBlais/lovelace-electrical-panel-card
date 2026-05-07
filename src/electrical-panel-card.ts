@@ -164,6 +164,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
   @state() private _config?: ElectricalPanelCardConfig;
 
+  @state()
+  private _dialog: { title: string; rows: Array<[string, string]> } | null = null;
+
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('hass')) {
       const darkMode = !!(this.hass?.themes as { darkMode?: boolean } | undefined)?.darkMode;
@@ -256,6 +259,49 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const sign = w < 0 ? '−' : '';
     const abs = Math.abs(w);
     return sign + (abs >= 1000 ? `${(abs / 1000).toFixed(1)} kW` : `${Math.round(abs)} W`);
+  }
+
+  // ── Metadata dialog (HA-native) ───────────────────────────────────────────
+  private _openGroupDialog(ev: Event, g: Group): void {
+    ev.stopPropagation();
+    const t = this._t();
+    const f = t.dialog.fields;
+    const rows: Array<[string, string]> = [];
+    if (g.label) rows.push([f.label, g.label]);
+    if (g.type) rows.push([f.type, g.type]);
+    if (g.phases?.length) rows.push([f.phases, g.phases.join(' / ')]);
+    if (g.amp !== undefined) rows.push([f.rating, `${g.amp} A`]);
+    if (g.mA !== undefined) rows.push([f.sensitivity, `${g.mA} mA`]);
+    if (g.poles !== undefined) rows.push([f.poles, `${g.poles}P`]);
+    if (g.class) rows.push([f.class, `Cl. ${g.class}`]);
+    if (g.sensor) {
+      const v = ElectricalPanelCard._fmt(this._power(g.sensor));
+      rows.push([f.power, v || '—']);
+    }
+    this._dialog = { title: formatI18n(t.dialog.group_title, { id: g.id }), rows };
+  }
+
+  private _openCircuitDialog(ev: Event, c: Circuit): void {
+    ev.stopPropagation();
+    const t = this._t();
+    const f = t.dialog.fields;
+    const rows: Array<[string, string]> = [];
+    rows.push([f.type, c.type]);
+    if (c.amp !== undefined) rows.push([f.rating, `${c.amp} A`]);
+    if (c.poles !== undefined) rows.push([f.poles, `${c.poles}P`]);
+    if (c.mm2 !== undefined) rows.push([f.cross_section, `${c.mm2} mm²`]);
+    if (c.cond !== undefined) rows.push([f.conductors, `${c.cond}`]);
+    if (c.pts) rows.push([f.points, c.pts]);
+    else if (c.n_pts !== undefined) rows.push([f.points, `${c.n_pts}`]);
+    if (c.sensor) {
+      const v = ElectricalPanelCard._fmt(this._power(c.sensor));
+      rows.push([f.power, v || '—']);
+    }
+    this._dialog = { title: formatI18n(t.dialog.circuit_title, { id: c.id }), rows };
+  }
+
+  private _closeDialog(): void {
+    this._dialog = null;
   }
 
   private _toggle(ev: Event, entity: string, criticalLabel?: string): void {
@@ -461,6 +507,26 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           </svg>
         </div>
       </ha-card>
+      ${this._dialog ? this._renderDialog() : nothing}
+    `;
+  }
+
+  private _renderDialog(): TemplateResult {
+    const d = this._dialog!;
+    const t = this._t();
+    return html`
+      <ha-dialog
+        open
+        heading=${d.title}
+        @closed=${() => this._closeDialog()}
+      >
+        <table class="meta-table">
+          ${d.rows.map(
+            ([k, v]) => html`<tr><th>${k}</th><td>${v}</td></tr>`,
+          )}
+        </table>
+        <mwc-button slot="primaryAction" dialogAction="close">${t.dialog.close}</mwc-button>
+      </ha-dialog>
     `;
   }
 
@@ -507,7 +573,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       ${taps}
       ${tapLine}
 
-      <g>
+      <g class="meta-target" @click=${(ev: Event) => this._openGroupDialog(ev, g)}>
         ${(() => {
           const tt = groupTooltip(g);
           return tt ? svg`<title>${tt}</title>` : nothing;
@@ -563,7 +629,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                       stroke=${colors.stroke} stroke-width="1.5"/>`
           : nothing
       }
-      <g>
+      <g class="meta-target" @click=${(ev: Event) => this._openCircuitDialog(ev, c)}>
         ${(() => {
           const tt = circuitTooltip(c);
           return tt ? svg`<title>${tt}</title>` : nothing;
@@ -766,6 +832,27 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       .zone-icon {
         --mdc-icon-size: 12px;
         color: var(--secondary-text-color, #718096);
+      }
+      .meta-target {
+        cursor: pointer;
+      }
+      .meta-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .meta-table th,
+      .meta-table td {
+        text-align: left;
+        padding: 4px 12px 4px 0;
+        font-size: 14px;
+      }
+      .meta-table th {
+        color: var(--secondary-text-color);
+        font-weight: 400;
+        white-space: nowrap;
+      }
+      .meta-table td {
+        color: var(--primary-text-color);
       }
     `;
   }

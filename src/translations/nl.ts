@@ -8,4 +8,22 @@ export const nl: Translations = {
   confirm: {
     toggle: 'Weet je zeker dat je "{name}" wilt schakelen?',
   },
+  dialog: {
+    group_title: 'Aardlekschakelaar {id}',
+    circuit_title: 'Circuit {id}',
+    close: 'Sluiten',
+    fields: {
+      label: 'Label',
+      type: 'Type',
+      phases: 'Fasen',
+      rating: 'Stroomwaarde',
+      sensitivity: 'Gevoeligheid',
+      poles: 'Polen',
+      class: 'Klasse',
+      power: 'Vermogen',
+      cross_section: 'Doorsnede',
+      conductors: 'Geleiders',
+      points: 'Punten',
+    },
+  },
 };

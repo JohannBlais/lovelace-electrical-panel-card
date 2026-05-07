@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.12.0] — Metadata popup on click + i18n
+
+Click on an RCD or breaker box opens an HA-native `<ha-dialog>` listing
+the structured metadata. Coexists with the SVG `<title>` tooltip from
+v0.11 — hover shows compact text, click opens the full table.
+
+### Added on `Translations`
+
+```ts
+dialog: {
+  group_title:   'RCD {id}',
+  circuit_title: 'Circuit {id}',
+  close: 'Close',
+  fields: {
+    label, type, phases, rating, sensitivity, poles, class,
+    power, cross_section, conductors, points,
+  },
+}
+```
+
+All 18 built-in languages translated. The dialog title uses `{id}`
+substitution so a French user sees "Différentiel D1", a German user
+"FI-Schalter D1", a Russian user "УЗО D1", etc.
+
+### Changed
+
+- Group / circuit boxes get `class="meta-target"` and a `cursor: pointer`
+  hint so hovering signals interactivity.
+
 ## [0.11.0] — Metadata tooltips on hover
 
 The `Group` and `Circuit` metadata fields finally have a visible role.

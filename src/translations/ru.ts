@@ -8,4 +8,22 @@ export const ru: Translations = {
   confirm: {
     toggle: 'Вы уверены, что хотите переключить «{name}»?',
   },
+  dialog: {
+    group_title: 'УЗО {id}',
+    circuit_title: 'Цепь {id}',
+    close: 'Закрыть',
+    fields: {
+      label: 'Метка',
+      type: 'Тип',
+      phases: 'Фазы',
+      rating: 'Номинальный ток',
+      sensitivity: 'Чувствительность',
+      poles: 'Полюса',
+      class: 'Класс',
+      power: 'Мощность',
+      cross_section: 'Сечение',
+      conductors: 'Жилы',
+      points: 'Точки',
+    },
+  },
 };
