@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 380" preserveAspectRatio="xMidYMid meet" font-family="Arial, sans-serif">
+  <rect x="0" y="0" width="440" height="380" fill="#fafafa"/>
+
+  <!-- Phase trunks -->
+  <line x1="24" y1="20" x2="24" y2="200" stroke="#5A6474" stroke-width="3"/>
+  <line x1="36" y1="20" x2="36" y2="200" stroke="#1A202C" stroke-width="3"/>
+  <line x1="48" y1="20" x2="48" y2="200" stroke="#8B4513" stroke-width="3"/>
+
+  <!-- Phase labels -->
+  <text x="24" y="16" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#1a202c">L3</text>
+  <text x="36" y="16" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#1a202c">L2</text>
+  <text x="48" y="16" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#1a202c">L1</text>
+
+  <!-- Staggered phase taps -->
+  <circle cx="48" cy="26" r="2" fill="#8B4513"/>
+  <text x="150" y="29" text-anchor="end" font-size="7.5" font-weight="bold" fill="#1a202c">1.4 kW</text>
+  <circle cx="36" cy="46" r="2" fill="#1A202C"/>
+  <text x="185" y="49" text-anchor="end" font-size="7.5" font-weight="bold" fill="#1a202c">820 W</text>
+  <circle cx="24" cy="66" r="2" fill="#5A6474"/>
+  <text x="220" y="69" text-anchor="end" font-size="7.5" font-weight="bold" fill="#1a202c">1.1 kW</text>
+
+  <!-- Right column: Total / Grid -->
+  <text x="295" y="29" text-anchor="end" font-size="7.5" fill="#718096">Total</text>
+  <text x="350" y="29" text-anchor="end" font-size="7.5" font-weight="bold" fill="#c53030">3.4 kW</text>
+  <text x="295" y="49" text-anchor="end" font-size="7.5" fill="#718096">Grid</text>
+  <text x="350" y="49" text-anchor="end" font-size="7.5" font-weight="bold" fill="#718096">1.2 kW</text>
+
+  <!-- D1 (L3) -->
+  <circle cx="24" cy="100" r="3.5" fill="#38a169"/>
+  <line x1="24" y1="100" x2="70" y2="100" stroke="#38a169" stroke-width="2"/>
+  <rect x="70" y="88" width="24" height="24" fill="#dff5e6" stroke="#38a169" stroke-width="1.8" rx="2"/>
+  <text x="82" y="104" text-anchor="middle" font-size="9" font-weight="bold" fill="#38a169">D1</text>
+
+  <!-- Sub-bus down to last circuit -->
+  <line x1="82" y1="112" x2="82" y2="170" stroke="#38a169" stroke-width="3"/>
+
+  <!-- Circuit A -->
+  <line x1="82" y1="130" x2="104" y2="130" stroke="#38a169" stroke-width="3"/>
+  <rect x="104" y="120" width="20" height="20" fill="#dff5e6" stroke="#38a169" stroke-width="1.8" rx="2"/>
+  <text x="114" y="134" text-anchor="middle" font-size="9" font-weight="bold" fill="#38a169">A</text>
+  <line x1="114" y1="146" x2="114" y2="146" stroke="#38a169" stroke-width="1.5"/>
+  <!-- Zone: washing machine -->
+  <line x1="114" y1="146" x2="132" y2="146" stroke="#38a169" stroke-width="0.8"/>
+  <rect x="132" y="140" width="20" height="12" fill="#3182ce" rx="3"/>
+  <text x="142" y="145" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" fill="#ffffff">L1</text>
+  <text x="172" y="145" font-size="8" fill="#4a5568" dominant-baseline="central">Washing machine</text>
+  <text x="350" y="148" text-anchor="end" font-size="7.5" font-weight="bold" fill="#38a169">540 W</text>
+  <!-- Toggle indicator -->
+  <rect x="354" y="143" width="14" height="8" fill="#38a169" rx="4"/>
+  <circle cx="364.5" cy="147" r="3" fill="white"/>
+
+  <!-- Circuit B -->
+  <line x1="82" y1="170" x2="104" y2="170" stroke="#38a169" stroke-width="3"/>
+  <rect x="104" y="160" width="20" height="20" fill="#dff5e6" stroke="#38a169" stroke-width="1.8" rx="2"/>
+  <text x="114" y="174" text-anchor="middle" font-size="9" font-weight="bold" fill="#38a169">B</text>
+  <line x1="114" y1="186" x2="132" y2="186" stroke="#38a169" stroke-width="0.8"/>
+  <rect x="132" y="180" width="20" height="12" fill="#38a169" rx="3"/>
+  <text x="142" y="185" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" fill="#ffffff">L0</text>
+  <text x="172" y="185" font-size="8" fill="#4a5568" dominant-baseline="central">Living room lights</text>
+  <text x="350" y="188" text-anchor="end" font-size="7.5" font-weight="bold" fill="#38a169">120 W</text>
+
+  <!-- D5 (3-phase) -->
+  <circle cx="24" cy="225" r="3.5" fill="#805ad5"/>
+  <circle cx="36" cy="225" r="3.5" fill="#805ad5"/>
+  <circle cx="48" cy="225" r="3.5" fill="#805ad5"/>
+  <line x1="24" y1="225" x2="70" y2="225" stroke="#805ad5" stroke-width="2"/>
+  <rect x="70" y="213" width="24" height="24" fill="#ece4f8" stroke="#805ad5" stroke-width="1.8" rx="2"/>
+  <text x="82" y="229" text-anchor="middle" font-size="9" font-weight="bold" fill="#805ad5">D5</text>
+
+  <!-- Heat pump 3P -->
+  <line x1="82" y1="237" x2="82" y2="255" stroke="#805ad5" stroke-width="3"/>
+  <line x1="82" y1="255" x2="104" y2="255" stroke="#805ad5" stroke-width="3"/>
+  <rect x="104" y="245" width="20" height="20" fill="#ece4f8" stroke="#805ad5" stroke-width="1.8" rx="2"/>
+  <text x="114" y="259" text-anchor="middle" font-size="9" font-weight="bold" fill="#805ad5">HP</text>
+  <line x1="114" y1="271" x2="132" y2="271" stroke="#805ad5" stroke-width="0.8"/>
+  <rect x="132" y="265" width="20" height="12" fill="#38a169" rx="3"/>
+  <text x="142" y="270" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" fill="#ffffff">L0</text>
+  <text x="172" y="270" font-size="8" fill="#4a5568" dominant-baseline="central">Heat pump</text>
+  <text x="350" y="273" text-anchor="end" font-size="7.5" font-weight="bold" fill="#805ad5">2.1 kW</text>
+
+  <!-- PV (solar production) -->
+  <circle cx="24" cy="305" r="3.5" fill="#d97706"/>
+  <circle cx="36" cy="305" r="3.5" fill="#d97706"/>
+  <circle cx="48" cy="305" r="3.5" fill="#d97706"/>
+  <line x1="24" y1="305" x2="70" y2="305" stroke="#d97706" stroke-width="2"/>
+  <polygon points="19,319 24,307 29,319" fill="#d97706"/>
+  <rect x="70" y="293" width="24" height="24" fill="#fde9c8" stroke="#d97706" stroke-width="1.8" rx="2"/>
+  <text x="82" y="309" text-anchor="middle" font-size="9" font-weight="bold" fill="#d97706">PV</text>
+  <text x="350" y="309" text-anchor="end" font-size="7.5" font-weight="bold" fill="#d97706">−4.2 kW</text>
+  <!-- Saturation gauge -->
+  <rect x="320" y="312" width="30" height="2" rx="1" fill="#e2e8f0" opacity="0.5"/>
+  <rect x="320" y="312" width="15.6" height="2" rx="1" fill="#d97706"/>
+
+  <!-- Inverters -->
+  <line x1="82" y1="317" x2="82" y2="345" stroke="#d97706" stroke-width="3"/>
+  <line x1="82" y1="345" x2="104" y2="345" stroke="#d97706" stroke-width="3"/>
+  <rect x="104" y="335" width="20" height="20" fill="#fde9c8" stroke="#d97706" stroke-width="1.8" rx="2"/>
+  <text x="114" y="349" text-anchor="middle" font-size="9" font-weight="bold" fill="#d97706">INV</text>
+  <line x1="114" y1="361" x2="132" y2="361" stroke="#d97706" stroke-width="0.8"/>
+  <rect x="132" y="355" width="20" height="12" fill="#c2410c" rx="3"/>
+  <text x="142" y="360" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="bold" fill="#ffffff">TO</text>
+  <text x="172" y="360" font-size="8" fill="#4a5568" dominant-baseline="central">Microinverter #1</text>
+  <text x="350" y="363" text-anchor="end" font-size="7.5" font-weight="bold" fill="#1a202c">220 W</text>
+</svg>

@@ -8,6 +8,8 @@ A Lovelace custom card that renders your electrical panel as an interactive **on
 
 If you've ever wished your HA dashboard could show the panel the way the electrician sees it, this is that.
 
+![Card preview](assets/preview.svg)
+
 ---
 
 ## Features
