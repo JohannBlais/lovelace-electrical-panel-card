@@ -16,7 +16,11 @@ import {
   type LovelaceCardConfig,
 } from 'custom-card-helpers';
 
-import { CARD_TAG, CARD_VERSION } from './const.js';
+import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from './const.js';
+// Side-effect import — registers the <electrical-panel-card-editor> element
+// so HA's card picker can use it via getConfigElement() without a separate
+// dynamic import / chunk split.
+import './editor.js';
 import {
   format as formatI18n,
   getDict,
@@ -299,6 +303,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       0,
     );
     return Math.max(3, Math.ceil(rows / 4));
+  }
+
+  public static getConfigElement(): HTMLElement {
+    return document.createElement(EDITOR_TAG);
   }
 
   public static getStubConfig(): Partial<ElectricalPanelCardConfig> {

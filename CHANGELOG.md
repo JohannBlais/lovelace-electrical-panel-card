@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.17.0] — Visual editor (`getConfigElement`)
+
+The card now ships a visual editor so it shows up properly in HA's
+"Edit card" UI instead of falling back to the generic YAML pane.
+
+### Implementation
+
+- **`<ha-form>`** for the simple top-level scalars (`title`,
+  `language`). Language is a dropdown populated from
+  `SUPPORTED_LANGUAGES`.
+- **`<ha-yaml-editor>`** for the nested structures (`sensors`,
+  `floors`, `groups`). Groups / circuits / zones are too nested for a
+  comfortable form UI; the YAML round-trip keeps full schema control
+  with a familiar editor (syntax highlight, validation, …).
+- A small inline hint links to the data-model reference for users new
+  to the YAML schema.
+
+The editor lives in `src/editor.ts` and is imported for side effect
+from the main card so a single bundle still does the job — no separate
+chunk to wire up.
+
+### Bundle
+
+47 KB minified (+~12 KB for the editor + ha-form / ha-yaml-editor
+bindings).
+
 ## [0.16.0] — Per-zone tooltip + dialog
 
 Zones get the same hover tooltip / click dialog treatment as RCDs and
