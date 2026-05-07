@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.17.4] — Right-align all bubbles regardless of toggle
+
+In dense panels with mixed smart plugs and plain power readings, the
+no-toggle bubbles (group / circuit totals) ended ~20 px to the left
+of the with-toggle ones (smart plug zones), because their pill
+background tightly wrapped the text whereas toggle bubbles also
+englobed the toggle widget. Visible as a "stairstep" right edge
+between rows.
+
+Fix: shift the value text (and saturation gauge) right by the
+toggle-reserved width on bubbles without a toggle, so every bubble
+pill ends at the same x — `PWR_X + 25`. No empty space inside the
+pill, no empty space between text and where the toggle would have
+been: rows simply line up.
+
 ## [0.17.3] — Bound the bubble-sizing retry loop
 
 Tightens the rAF retry path introduced in 0.17.2:

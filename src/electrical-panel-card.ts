@@ -524,6 +524,14 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const tw = 14;
     const th = 8;
     const tr = 3;
+    // Width reserved on the right of the value text for the toggle widget.
+    // We shift the text (and saturation gauge) right by this amount on
+    // bubbles without a toggle so every bubble's pill ends at the same
+    // visual x — `x + TOGGLE_RESERVED` — regardless of whether a toggle
+    // is rendered. Otherwise no-toggle bubbles would float ~20 px to the
+    // left of toggle ones, looking misaligned in dense panels.
+    const TOGGLE_RESERVED = 20;
+    const textX = switchEntity ? x : x + TOGGLE_RESERVED;
     const sx = x + 4;
     const sy = y - th / 2 - 3;
     const knobX = isOn === true ? sx + tw - tr - 1.5 : sx + tr + 1.5;
@@ -531,7 +539,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // Saturation bar: rendered when both maxW and a current reading exist.
     const SAT_W = 30;
     const SAT_H = 2;
-    const satX = x - SAT_W;
+    const satX = textX - SAT_W;
     const satY = y + 6;
     const satRatio =
       maxW !== undefined && value !== null && maxW > 0
@@ -547,9 +555,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                        x2=${x} y2=${y - 4} visibility="hidden"></line>`
           : nothing
       }
-      <rect class="bubble-bg" data-bg-for=${id} x=${x - 40} y=${y - 12} width="42"
+      <rect class="bubble-bg" data-bg-for=${id} x=${textX - 40} y=${y - 12} width="42"
             height="15" rx="3" visibility="hidden"></rect>
-      <text class="pwr-value" data-id=${id} x=${x} y=${y} text-anchor=${anchor}
+      <text class="pwr-value" data-id=${id} x=${textX} y=${y} text-anchor=${anchor}
             font-size="7.5" font-weight="bold" fill=${fill}>${text}</text>
       ${
         satRatio !== null

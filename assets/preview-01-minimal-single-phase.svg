@@ -20,7 +20,7 @@
             <circle r="2" cx="48" cy="26" fill="var(--electrical-panel-phase-l1-color, #8B4513)"></circle>
             
       <line class="bubble-conn" visibility="hidden" data-ln-for="phase_l1" x1="48" y1="22" x2="150" y2="22"></line>
-      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="phase_l1" x="110" y="14"></rect>
+      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="phase_l1" x="130" y="14"></rect>
       
       
       
@@ -28,7 +28,7 @@
             <circle r="2" cx="36" cy="46" fill="var(--electrical-panel-phase-l2-color, #1A202C)"></circle>
             
       <line class="bubble-conn" visibility="hidden" data-ln-for="phase_l2" x1="36" y1="42" x2="185" y2="42"></line>
-      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="phase_l2" x="145" y="34"></rect>
+      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="phase_l2" x="165" y="34"></rect>
       
       
       
@@ -36,7 +36,7 @@
             <circle r="2" cx="24" cy="66" fill="var(--electrical-panel-phase-l3-color, #5A6474)"></circle>
             
       <line class="bubble-conn" visibility="hidden" data-ln-for="phase_l3" x1="24" y1="62" x2="220" y2="62"></line>
-      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="phase_l3" x="180" y="54"></rect>
+      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="phase_l3" x="200" y="54"></rect>
       
       
       
@@ -46,7 +46,7 @@
             <path d="M282.6 23.7L282.6 24.2L280.8 24.2L280.8 29L280.2 29L280.2 24.2L278.4 24.2L278.4 23.7L282.6 23.7M282.7 27L282.7 27Q282.7 26.4 282.9 25.9Q283.2 25.5 283.6 25.2Q284 25 284.5 25Q285.3 25 285.8 25.5Q286.3 26.1 286.3 27L286.3 27.1Q286.3 27.6 286.1 28.1Q285.9 28.6 285.5 28.8Q285 29.1 284.5 29.1Q283.7 29.1 283.2 28.5Q282.7 28 282.7 27M283.4 27.1Q283.4 27.7 283.7 28.1Q284 28.5 284.5 28.5Q285 28.5 285.3 28.1Q285.6 27.7 285.6 27Q285.6 26.3 285.3 25.9Q285 25.5 284.5 25.5Q284 25.5 283.7 25.9Q283.4 26.3 283.4 27.1M287.4 24.1L288.1 24.1L288.1 25L288.8 25L288.8 25.6L288.1 25.6L288.1 28Q288.1 28.3 288.2 28.4Q288.3 28.5 288.5 28.5Q288.6 28.5 288.8 28.5L288.8 29Q288.6 29.1 288.3 29.1Q287.9 29.1 287.6 28.8Q287.4 28.5 287.4 28L287.4 25.6L286.7 25.6L286.7 25L287.4 25L287.4 24.1M292.8 29L292.1 29Q292 28.9 292 28.6Q291.5 29.1 290.8 29.1Q290.3 29.1 289.9 28.7Q289.5 28.4 289.5 27.9Q289.5 27.3 290 26.9Q290.4 26.6 291.3 26.6L292 26.6L292 26.3Q292 25.9 291.7 25.7Q291.5 25.5 291.1 25.5Q290.8 25.5 290.5 25.7Q290.3 25.9 290.3 26.1L289.6 26.1Q289.6 25.8 289.8 25.6Q290 25.3 290.4 25.1Q290.7 25 291.2 25Q291.8 25 292.2 25.3Q292.6 25.6 292.6 26.2L292.6 28.1Q292.6 28.6 292.8 28.9L292.8 29M290.9 28.5Q291.3 28.5 291.5 28.3Q291.8 28.2 292 27.9L292 27.1L291.4 27.1Q290.2 27.1 290.2 27.8Q290.2 28.1 290.4 28.3Q290.6 28.5 290.9 28.5M294.4 23.4L294.4 29L293.8 29L293.8 23.4" class="label-secondary"></path>
             
       
-      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="total" x="310" y="17"></rect>
+      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="total" x="330" y="17"></rect>
       
       
       
@@ -54,7 +54,7 @@
             <path d="M285.9 46.3L285.9 48.3Q285.6 48.7 285.1 48.9Q284.6 49.1 284 49.1Q283.3 49.1 282.8 48.8Q282.3 48.5 282 47.9Q281.8 47.3 281.8 46.6L281.8 46.1Q281.8 44.9 282.3 44.3Q282.9 43.6 283.9 43.6Q284.7 43.6 285.2 44Q285.7 44.4 285.9 45.2L285.2 45.2Q285 44.2 283.9 44.2Q283.2 44.2 282.8 44.7Q282.5 45.2 282.5 46.1L282.5 46.5Q282.5 47.4 282.9 48Q283.3 48.5 284 48.5Q284.4 48.5 284.7 48.4Q285 48.3 285.2 48.1L285.2 46.9L283.9 46.9L283.9 46.3L285.9 46.3M288.8 45L288.8 45.6Q288.7 45.6 288.5 45.6Q287.8 45.6 287.6 46.2L287.6 49L286.9 49L286.9 45L287.6 45L287.6 45.5Q287.9 45 288.5 45Q288.7 45 288.8 45M290.2 45L290.2 49L289.5 49L289.5 45L290.2 45M289.5 44Q289.5 43.8 289.6 43.7Q289.7 43.6 289.9 43.6Q290.1 43.6 290.2 43.7Q290.3 43.8 290.3 44Q290.3 44.2 290.2 44.3Q290.1 44.4 289.9 44.4Q289.7 44.4 289.6 44.3Q289.5 44.2 289.5 44M291.1 47L291.1 47Q291.1 46.1 291.6 45.5Q292 45 292.7 45Q293.4 45 293.8 45.4L293.8 43.4L294.5 43.4L294.5 49L293.8 49L293.8 48.6Q293.4 49.1 292.7 49.1Q292 49.1 291.6 48.5Q291.1 47.9 291.1 47M291.8 47.1Q291.8 47.7 292.1 48.1Q292.4 48.5 292.8 48.5Q293.5 48.5 293.8 47.9L293.8 46.1Q293.5 45.5 292.9 45.5Q292.4 45.5 292.1 45.9Q291.8 46.3 291.8 47.1" class="label-secondary"></path>
             
       
-      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="grid" x="310" y="37"></rect>
+      <rect class="bubble-bg" width="42" height="15" rx="3" visibility="hidden" data-bg-for="grid" x="330" y="37"></rect>
       
       
       
