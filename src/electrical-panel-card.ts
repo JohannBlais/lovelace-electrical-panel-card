@@ -933,9 +933,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // early here is what previously left bubbles whose entity stayed at the
   // same value (e.g. "0 W") permanently `visibility: hidden`, because
   // shouldUpdate() then skipped every subsequent render.
-  private _sizeBubble(t: SVGTextElement): void {
+  private _sizeBubble(t: SVGTextElement, retries = 5): void {
     const id = t.dataset.id;
-    if (!id || !this.shadowRoot) return;
+    if (!id || !this.shadowRoot || !t.isConnected) return;
     const txt = (t.textContent ?? '').trim();
     if (this._bubbleTextCache.get(id) === txt) return; // unchanged
 
@@ -954,10 +954,15 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       return; // transient DOM state; retry on next render
     }
     if (bbox.width === 0) {
-      // Text exists but layout isn't computed yet. Schedule one rAF retry
-      // — covers the case where the card paints inside a hidden HA tab,
-      // and the entity then never updates so updated() wouldn't fire again.
-      requestAnimationFrame(() => this._sizeBubble(t));
+      // Text exists but layout isn't computed yet. Schedule rAF retries —
+      // covers the case where the card paints inside a hidden HA tab, and
+      // the entity then never updates so updated() wouldn't fire again.
+      // Capped to 5 attempts (~5 frames ≈ 80 ms) so a permanently zero
+      // bbox — orphaned element, font that never loaded — can't drive an
+      // infinite loop.
+      if (retries > 0) {
+        requestAnimationFrame(() => this._sizeBubble(t, retries - 1));
+      }
       return;
     }
     const px = 5;

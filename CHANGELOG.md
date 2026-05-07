@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.17.3] — Bound the bubble-sizing retry loop
+
+Tightens the rAF retry path introduced in 0.17.2:
+
+- Cap retries at 5 frames (~80 ms) so a bubble whose bbox stays
+  permanently zero — orphaned element, font that never loaded, …
+  — can't spin a rAF forever.
+- Bail out if the text element is no longer connected to the DOM
+  (card was unmounted between scheduling and execution).
+
+Same root-cause fix as 0.17.2; this just makes the recovery loop
+provably bounded.
+
 ## [0.17.2] — Fix permanently-hidden bubble backgrounds on stable values
 
 ### Bug fix
