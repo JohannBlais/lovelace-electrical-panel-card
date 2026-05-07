@@ -363,7 +363,15 @@ async function renderExample(yamlPath) {
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   // Clean up
   document.body.removeChild(card);
-  return '<?xml version="1.0" encoding="UTF-8"?>\n' + svg.outerHTML + '\n';
+  // Strip Lit's part-marker comments (`<!--?lit$NNNNNNNNN$-->` and the
+  // empty `<!---->` placeholders). They're internal to Lit's reactive
+  // bookkeeping and embed a per-build hash — leaving them in causes the
+  // CI drift check to flap on every rebuild even when nothing visible
+  // changed. The empty-comment trail is also gone-after-rendering noise.
+  const cleaned = svg.outerHTML
+    .replace(/<!--\?lit\$\d+\$-->/g, '')
+    .replace(/<!---->/g, '');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n' + cleaned + '\n';
 }
 
 // ─── Run for every YAML in examples/ ──────────────────────────────────────────
