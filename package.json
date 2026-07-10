@@ -43,7 +43,7 @@
     "@typescript-eslint/eslint-plugin": "^8.13.0",
     "@typescript-eslint/parser": "^8.13.0",
     "eslint": "^9.14.0",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.3.0",
     "jsdom": "^29.1.1",
     "opentype.js": "^2.0.0",
     "roboto-fontface": "^0.10.0",
