@@ -1,0 +1,56 @@
+version: 2
+
+# Security updates run independently of this file and are unaffected by it —
+# they stay on, and they still open their own PRs the moment an advisory lands.
+# What this file adds is *version* updates: routine bumps that arrive on a
+# schedule instead of only when a CVE forces the issue. Without them,
+# dependencies here only ever moved under security pressure, which is how the
+# repo ended up taking two majors at once in #6.
+updates:
+  # GitHub Actions were the real blind spot: nothing watched them at all, and
+  # they had drifted three majors behind (checkout v4 → v7, setup-node v4 → v7,
+  # action-gh-release v2 → v3). One grouped PR a month is plenty.
+  #
+  # Note that hacs/action@main tracks a branch, so Dependabot leaves it alone.
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: monthly
+    # Low ceiling on purpose: this is a solo project, and a backlog of stale
+    # dependency PRs is worse than no PRs at all.
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      # Build tooling (rollup, eslint, typescript, jsdom…) never reaches users
+      # — it only has to keep CI green. Minor and patch bumps can land as a
+      # single monthly PR that the pipeline either accepts or rejects wholesale.
+      build-tooling:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+    # Deliberately left ungrouped, so each gets its own reviewable PR:
+    #
+    #   - Development *majors*. These are the ones that break the build or
+    #     change tool behaviour (see the ESLint 9 → 10 migration in #9), and
+    #     they deserve to be bisectable.
+    #
+    #   - Everything in `dependencies` — currently lit and custom-card-helpers.
+    #     These are bundled into dist/electrical-panel-card.js and execute in
+    #     the user's browser, so a regression there is a visible breakage in
+    #     someone's dashboard, not a red check on a PR. Different blast radius,
+    #     different review standard.
