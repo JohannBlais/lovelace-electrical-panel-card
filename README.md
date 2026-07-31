@@ -115,6 +115,7 @@ Phase wire colours stay IEC 60446 across themes — real cables don't lighten at
 npm install
 npm run watch       # → dist/ + Z:/www/electrical-panel-card/
 npm run typecheck
+npm run lint
 npm run build       # production bundle (minified)
 ```
 
@@ -127,6 +128,33 @@ npm run build       # production bundle (minified)
 | `CI=true` | Same — auto-set by GitHub Actions |
 
 When the target path is missing and no opt-out is set, the build **fails loudly** so stale code never lingers in HA.
+
+### Running a dev build next to the released one
+
+A normal build registers itself as `electrical-panel-card` — the same custom-element name the HACS release uses. Registering both in the same Home Assistant means whichever script loads second loses its `customElements.define()` call silently, and you end up testing an unpredictable one of the two.
+
+`build:dev` / `watch:dev` avoid that by suffixing every identity constant, so the two builds coexist:
+
+```bash
+npm run watch:dev   # → dist/ + Z:/www/electrical-panel-card-dev/
+npm run build:dev
+```
+
+|  | Released build | Dev build |
+| --- | --- | --- |
+| Card type | `custom:electrical-panel-card` | `custom:electrical-panel-card-dev` |
+| Editor element | `electrical-panel-card-editor` | `electrical-panel-card-editor-dev` |
+| Card picker entry | Electrical Panel Card | Electrical Panel Card (dev) |
+| Console banner | `v0.17.4` | `v0.17.4-dev` |
+| Mirror folder | `www/electrical-panel-card/` | `www/electrical-panel-card-dev/` |
+
+Register the dev bundle as a second Lovelace resource (Settings → Dashboards → ⋮ → Resources):
+
+```
+/local/electrical-panel-card-dev/electrical-panel-card.js
+```
+
+Then point a scratch dashboard at `type: custom:electrical-panel-card-dev` while your real dashboards keep running the stable HACS build. The separate mirror folder matters: sharing one folder would let a plain `npm run build` silently replace the dev bundle with a normally-tagged one, breaking the registered resource.
 
 ## Previews
 

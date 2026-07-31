@@ -16,7 +16,7 @@ import {
   type LovelaceCardConfig,
 } from 'custom-card-helpers';
 
-import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from './const.js';
+import { CARD_NAME, CARD_TAG, CARD_VERSION, EDITOR_TAG } from './const.js';
 // Side-effect import — registers the <electrical-panel-card-editor> element
 // so HA's card picker can use it via getConfigElement() without a separate
 // dynamic import / chunk split.
@@ -48,7 +48,7 @@ console.info(
   (window as unknown as { customCards?: unknown[] }).customCards ?? [];
 ((window as unknown as { customCards: unknown[] }).customCards as unknown[]).push({
   type: CARD_TAG,
-  name: 'Electrical Panel Card',
+  name: CARD_NAME,
   description:
     'Interactive one-line electrical panel diagram with live power readings and smart-plug toggles.',
   preview: false,
