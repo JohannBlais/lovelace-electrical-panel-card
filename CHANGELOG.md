@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.17.5] — Restore the metadata dialog on HA 2026.3+
+
+Clicking a group, circuit or zone opened a dialog showing only the
+properties table: no title, and neither the **Close** nor the **More
+info** button. The dialog's own X icon was the only way out, and the
+more-info action was unreachable, so the underlying entity could not be
+opened from the card at all.
+
+Home Assistant migrated `ha-dialog` from `mwc-dialog` to
+`@home-assistant/webawesome` in 2026.3.0, and the card still targeted
+the old API: `heading` became `headerTitle`, and the `primaryAction` /
+`secondaryAction` slots moved off `ha-dialog` itself onto the new
+`ha-dialog-footer`. Content addressed to a slot that no longer exists is
+dropped silently, which is why this failed invisibly instead of
+throwing — the table sits in the default slot and survived, everything
+else vanished.
+
+Fix: `headerTitle`, both buttons moved into an `ha-dialog-footer`,
+`mwc-button` replaced by `ha-button`, and `dialogAction="close"`
+replaced by an explicit handler.
+
+**This drops support for Home Assistant below 2026.3**, now declared in
+`hacs.json` and the README. The project previously stated no minimum
+version at all.
+
 ## [0.17.4] — Right-align all bubbles regardless of toggle
 
 In dense panels with mixed smart plugs and plain power readings, the
