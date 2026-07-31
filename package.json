@@ -24,7 +24,9 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
+    "build:dev": "rollup -c --environment DEV_TAG:1",
     "watch": "rollup -c -w",
+    "watch:dev": "rollup -c -w --environment DEV_TAG:1",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "generate-previews": "node scripts/generate-previews.mjs"
