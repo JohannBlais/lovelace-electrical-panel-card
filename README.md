@@ -27,6 +27,8 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 
 ## Install
 
+> **Requires Home Assistant 2026.3 or later.** The metadata dialog is built on the webawesome-based `ha-dialog` introduced in that release. On earlier versions the card still draws, but the dialog opens without its title or buttons.
+
 ### HACS
 
 1. HACS → **Frontend** → menu (⋮) → **Custom repositories**

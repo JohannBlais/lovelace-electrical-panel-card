@@ -688,13 +688,20 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     `;
   }
 
+  // Targets the webawesome-based `ha-dialog` that landed in Home Assistant
+  // 2026.3. The previous mwc-dialog API took `heading` and hung its buttons off
+  // `primaryAction` / `secondaryAction` slots on the dialog itself; those slot
+  // names still exist but moved down a level onto `ha-dialog-footer`. Content
+  // addressed to a slot that no longer exists is silently dropped, so the old
+  // markup rendered a dialog with no title and no buttons at all rather than
+  // failing loudly.
   private _renderDialog(): TemplateResult {
     const d = this._dialog!;
     const t = this._t();
     return html`
       <ha-dialog
         open
-        heading=${d.title}
+        .headerTitle=${d.title}
         @closed=${() => this._closeDialog()}
       >
         <table class="meta-table">
@@ -702,21 +709,28 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             ([k, v]) => html`<tr><th>${k}</th><td>${v}</td></tr>`,
           )}
         </table>
-        ${
-          d.entity
-            ? html`
-                <mwc-button
-                  slot="secondaryAction"
-                  @click=${() => this._openMoreInfo()}
-                >
-                  ${t.dialog.more_info}
-                </mwc-button>
-              `
-            : nothing
-        }
-        <mwc-button slot="primaryAction" dialogAction="close">
-          ${t.dialog.close}
-        </mwc-button>
+        <ha-dialog-footer slot="footer">
+          ${
+            d.entity
+              ? html`
+                  <ha-button
+                    slot="secondaryAction"
+                    variant="plain"
+                    @click=${() => this._openMoreInfo()}
+                  >
+                    ${t.dialog.more_info}
+                  </ha-button>
+                `
+              : nothing
+          }
+          <ha-button
+            slot="primaryAction"
+            variant="accent"
+            @click=${() => this._closeDialog()}
+          >
+            ${t.dialog.close}
+          </ha-button>
+        </ha-dialog-footer>
       </ha-dialog>
     `;
   }
