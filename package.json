@@ -30,7 +30,7 @@
     "generate-previews": "node scripts/generate-previews.mjs"
   },
   "dependencies": {
-    "custom-card-helpers": "^1.9.0",
+    "custom-card-helpers": "^2.0.0",
     "lit": "^3.3.3"
   },
   "devDependencies": {
