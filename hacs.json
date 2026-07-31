@@ -1,5 +1,6 @@
 {
   "name": "Electrical Panel Card",
   "render_readme": true,
-  "filename": "electrical-panel-card.js"
+  "filename": "electrical-panel-card.js",
+  "homeassistant": "2026.3.0"
 }
