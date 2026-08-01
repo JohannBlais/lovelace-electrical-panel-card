@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
@@ -6,6 +6,8 @@ import json from '@rollup/plugin-json';
 import terser from '@rollup/plugin-terser';
 
 const dev = process.env.ROLLUP_WATCH === 'true';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 // DEV_TAG=1 builds a bundle that registers itself under distinct custom-element
 // names, so it can live in Home Assistant next to the released (HACS) build
@@ -18,21 +20,38 @@ const dev = process.env.ROLLUP_WATCH === 'true';
 // come from — so the dev build is unambiguous everywhere it surfaces.
 const devTag = !!process.env.DEV_TAG;
 
-const devTagSuffix = () => ({
-  name: 'dev-tag-suffix',
+// Both rewrites land on src/const.ts, so they share one transform.
+//
+// CARD_VERSION always comes from package.json, which is therefore the only
+// place the version lives. It used to be a literal that had to be kept in step
+// with package.json and the git tag by hand, with nothing enforcing the
+// agreement — and since the console banner is how you tell builds apart in a
+// live Home Assistant, a stale one is worse than no banner at all.
+const rewriteIdentity = () => ({
+  name: 'rewrite-identity',
   transform(code, id) {
-    if (!devTag || !/[\\/]const\.ts$/.test(id)) return null;
-    const suffixed = code
-      .replace(/(export const CARD_TAG = ')([^']+)'/, "$1$2-dev'")
-      .replace(/(export const EDITOR_TAG = ')([^']+)'/, "$1$2-dev'")
-      .replace(/(export const CARD_NAME = ')([^']+)'/, "$1$2 (dev)'")
-      .replace(/(export const CARD_VERSION = ')([^']+)'/, "$1$2-dev'");
-    // A silent no-op here would ship a dev build that collides anyway, which is
-    // exactly the failure this flag exists to prevent.
-    if (suffixed === code) {
-      this.error('[rollup] DEV_TAG is set but no identity constant matched in src/const.ts');
+    if (!/[\\/]const\.ts$/.test(id)) return null;
+
+    // A rewrite that silently matched nothing would ship the placeholder
+    // version, or a dev build that collides anyway — exactly the failures this
+    // transform exists to prevent.
+    const rewrite = (constant, replacement) => {
+      const declaration = new RegExp(`(export const ${constant} = ')([^']*)'`);
+      if (!declaration.test(code)) {
+        this.error(`[rollup] no ${constant} declaration to rewrite in src/const.ts`);
+      }
+      code = code.replace(declaration, replacement);
+    };
+
+    rewrite('CARD_VERSION', `$1${pkg.version}${devTag ? '-dev' : ''}'`);
+
+    if (devTag) {
+      rewrite('CARD_TAG', "$1$2-dev'");
+      rewrite('EDITOR_TAG', "$1$2-dev'");
+      rewrite('CARD_NAME', "$1$2 (dev)'");
     }
-    return { code: suffixed, map: null };
+
+    return { code, map: null };
   },
 });
 
@@ -82,7 +101,7 @@ export default {
   ],
   plugins: [
     // Ahead of typescript() so it rewrites the original .ts source.
-    devTagSuffix(),
+    rewriteIdentity(),
     resolve({ browser: true }),
     commonjs(),
     typescript({ tsconfig: './tsconfig.json', sourceMap: dev, inlineSources: dev }),

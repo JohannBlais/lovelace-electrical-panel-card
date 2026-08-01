@@ -22,6 +22,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
 
+      # CARD_VERSION is injected from package.json at build time and surfaces
+      # only in the console banner — which is how you tell builds apart in a
+      # live Home Assistant. Assert it against the bundle that actually ships
+      # rather than the source it was derived from, so a broken injection
+      # cannot pass by leaving the placeholder in place.
+      - name: Verify the bundle reports the package.json version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if ! grep -qF "v$version " dist/electrical-panel-card.js; then
+            echo "::error::dist/electrical-panel-card.js does not report v$version"
+            exit 1
+          fi
+          echo "Bundle reports v$version."
+
       # Drive the built bundle in jsdom and exercise what rendering alone
       # cannot reach: opening the metadata dialog, its markup contract with
       # HA's <ha-dialog>, and the fireEvent call behind "More info". #19
