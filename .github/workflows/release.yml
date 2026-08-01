@@ -22,6 +22,19 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
+      # The tag is the one version still typed by hand, and it is what actually
+      # publishes: HACS serves whatever this job attaches to the release. A
+      # mistyped tag would ship an asset whose banner and release name
+      # disagree, so refuse to build rather than publish the inconsistency.
+      - name: Verify the tag matches package.json
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json ($expected)"
+            exit 1
+          fi
+          echo "Tag $GITHUB_REF_NAME matches package.json."
+
       - name: Install dependencies
         run: npm ci
 

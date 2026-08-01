@@ -154,7 +154,7 @@ npm run build:dev
 | Card type | `custom:electrical-panel-card` | `custom:electrical-panel-card-dev` |
 | Editor element | `electrical-panel-card-editor` | `electrical-panel-card-editor-dev` |
 | Card picker entry | Electrical Panel Card | Electrical Panel Card (dev) |
-| Console banner | `v0.17.4` | `v0.17.4-dev` |
+| Console banner | `v<version>` | `v<version>-dev` |
 | Mirror folder | `www/electrical-panel-card/` | `www/electrical-panel-card-dev/` |
 
 Register the dev bundle as a second Lovelace resource (Settings → Dashboards → ⋮ → Resources):
@@ -181,12 +181,21 @@ It doubles as a sanity test: if the renderer throws or yields no SVG, generation
 
 ## Releasing
 
+`package.json` is the only place the version lives. `CARD_VERSION` in [`src/const.ts`](src/const.ts) is injected from it at every build, so there is nothing to keep in sync by hand:
+
 ```bash
-npm version patch   # or minor / major
-git push --follow-tags
+npm version patch --no-git-tag-version   # or minor / major
 ```
 
-The `.github/workflows/release.yml` action builds, type-checks, and attaches `dist/electrical-panel-card.js` to the GitHub release.
+Land that as a release PR, then tag the merge commit:
+
+```bash
+git tag v0.17.6 && git push origin v0.17.6
+```
+
+[`release.yml`](.github/workflows/release.yml) refuses to build when the tag disagrees with `package.json` — a mistyped tag is the one remaining way to publish an inconsistent release. It then type-checks, builds, and attaches `dist/electrical-panel-card.js` to the GitHub release, which is the file HACS serves.
+
+One constraint on version numbers: HACS derives its cache-busting `hacstag` by stripping every non-digit from the tag, so `v0.17.5` becomes `0175`. Two releases whose digits collapse to the same string (`0.17.5` and `0.1.75`, or `1.0` and `0.10`) would leave users on a stale cached bundle. Ordinary patch and minor bumps are safe.
 
 ## License
 
