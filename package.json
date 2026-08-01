@@ -47,7 +47,7 @@
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.13.0",
     "eslint": "^10.8.0",
-    "globals": "^14.0.0",
+    "globals": "^17.8.0",
     "js-yaml": "^5.2.2",
     "jsdom": "^29.1.1",
     "opentype.js": "^2.0.0",
