@@ -34,17 +34,21 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 1. HACS → **Frontend** → menu (⋮) → **Custom repositories**
 2. Add `https://github.com/JohannBlais/lovelace-electrical-panel-card`, category **Lovelace**
 3. Search for *Electrical Panel Card* and install
-4. Hard-refresh your dashboard (`Ctrl+Shift+R`)
+4. Reload the page (`F5`)
+
+HACS warns after every plugin update that you have to clear the frontend cache manually. With dashboards in storage mode you don't: HACS rewrites the resource URL to `/hacsfiles/lovelace-electrical-panel-card/electrical-panel-card.js?hacstag=<id><version>` on each update, so the new bundle lives at a URL the browser has never seen and a plain reload picks it up. The warning is generic — HACS shows it for every Lovelace plugin. In YAML mode it does apply, since HACS cannot touch a `resources:` list it does not own; version the URL yourself as below.
 
 ### Manual
 
-Grab `electrical-panel-card.js` from the latest [release](https://github.com/JohannBlais/lovelace-electrical-panel-card/releases), drop it under `<config>/www/electrical-panel-card/`, then declare a Lovelace resource:
+Grab `electrical-panel-card.js` from the latest [release](https://github.com/JohannBlais/lovelace-electrical-panel-card/releases), drop it under `<config>/www/electrical-panel-card/`, then declare a Lovelace resource with the version in the URL:
 
 ```yaml
 resources:
-  - url: /local/electrical-panel-card/electrical-panel-card.js
+  - url: /local/electrical-panel-card/electrical-panel-card.js?v=0.17.5
     type: module
 ```
+
+Bump `?v=` every time you replace the file. Home Assistant serves `/local` with `Cache-Control: public, max-age=2678400` — 31 days — so on an unchanged URL the browser keeps serving the old bundle and the update looks like it did nothing.
 
 ## Quick start
 
@@ -156,10 +160,12 @@ npm run build:dev
 Register the dev bundle as a second Lovelace resource (Settings → Dashboards → ⋮ → Resources):
 
 ```
-/local/electrical-panel-card-dev/electrical-panel-card.js
+/local/electrical-panel-card-dev/electrical-panel-card.js?v=1
 ```
 
 Then point a scratch dashboard at `type: custom:electrical-panel-card-dev` while your real dashboards keep running the stable HACS build. The separate mirror folder matters: sharing one folder would let a plain `npm run build` silently replace the dev bundle with a normally-tagged one, breaking the registered resource.
+
+The 31-day cache on `/local` bites hardest here, where the file changes on every rebuild: a `watch:dev` loop writes a new bundle that the browser then refuses to fetch. Keep DevTools open with **Disable cache** ticked for the whole session — editing the resource's `?v=` after each rebuild works too, but you would be doing it every few minutes.
 
 ## Previews
 
