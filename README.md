@@ -119,7 +119,10 @@ npm run watch       # → dist/ + Z:/www/electrical-panel-card/
 npm run typecheck
 npm run lint
 npm run build       # production bundle (minified)
+npm run smoke-test  # drives the built bundle in jsdom (needs build first)
 ```
+
+`smoke-test` opens the metadata dialog and clicks through it, covering what `generate-previews` cannot: the markup contract with HA's `ha-dialog`, and the `fireEvent` call behind **More info**. Both scripts share the jsdom harness in `scripts/lib/card-harness.mjs`.
 
 `watch` and `build` mirror the bundle into the HA config directory so the card lands directly in HA. Defaults to `Z:/www` (a Samba mount on the author's machine). Override with environment variables:
 
