@@ -29,7 +29,8 @@
     "watch:dev": "rollup -c -w --environment DEV_TAG:1",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "generate-previews": "node scripts/generate-previews.mjs"
+    "generate-previews": "node scripts/generate-previews.mjs",
+    "smoke-test": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "custom-card-helpers": "^2.0.0",
