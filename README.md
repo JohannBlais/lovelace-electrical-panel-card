@@ -187,11 +187,13 @@ It doubles as a sanity test: if the renderer throws or yields no SVG, generation
 npm version patch --no-git-tag-version   # or minor / major
 ```
 
-Land that as a release PR, then tag the merge commit:
+That rewrites `package.json` and the lockfile without committing or tagging. Add a [`CHANGELOG.md`](CHANGELOG.md) entry for the new version, land both as a release PR, then tag the merge commit:
 
 ```bash
-git tag v0.17.6 && git push origin v0.17.6
+git checkout main && git pull && git tag "v$(node -p "require('./package.json').version")" && git push --tags
 ```
+
+Deriving the tag from `package.json` rather than typing it is the point — `release.yml` rejects a mismatch, and the pull matters because tagging a stale `main` would publish the previous commit.
 
 [`release.yml`](.github/workflows/release.yml) refuses to build when the tag disagrees with `package.json` — a mistyped tag is the one remaining way to publish an inconsistent release. It then type-checks, builds, and attaches `dist/electrical-panel-card.js` to the GitHub release, which is the file HACS serves.
 
