@@ -141,6 +141,8 @@ function groupTooltip(g: Group): string {
   if (g.mA !== undefined) parts.push(`${g.mA} mA`);
   if (g.poles !== undefined) parts.push(`${g.poles}P`);
   if (g.class) parts.push(`Cl. ${g.class}`);
+  if (g.mm2 !== undefined) parts.push(`${g.mm2} mm²`);
+  if (g.cond !== undefined) parts.push(`${g.cond} cond.`);
   if (g.phases?.length) parts.push(g.phases.join('+'));
   return parts.join(' · ');
 }
@@ -413,6 +415,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     if (g.mA !== undefined) rows.push([f.sensitivity, `${g.mA} mA`]);
     if (g.poles !== undefined) rows.push([f.poles, `${g.poles}P`]);
     if (g.class) rows.push([f.class, `Cl. ${g.class}`]);
+    if (g.mm2 !== undefined) rows.push([f.cross_section, `${g.mm2} mm²`]);
+    if (g.cond !== undefined) rows.push([f.conductors, `${g.cond}`]);
     if (g.sensor) {
       const v = ElectricalPanelCard._fmt(this._power(g.sensor));
       rows.push([f.power, v || '—']);

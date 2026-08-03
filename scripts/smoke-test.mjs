@@ -204,6 +204,8 @@ const nestedConfig = {
           id: 'R1',
           phases: ['L1'],
           mA: 30,
+          mm2: 10,
+          cond: 3,
           sensor: 'sensor.subboard_power',
           circuits: [
             {
@@ -258,6 +260,13 @@ check(
 
 const nestedDialog = await openDialogTitled(nested, 'RCD R1');
 check('clicking a nested group opens its dialog', !!nestedDialog);
+if (nestedDialog) {
+  // Feed-cable metadata is group-level; a missing row here means the field
+  // was declared in the type but never wired into the dialog.
+  const table = nestedDialog.querySelector('table.meta-table')?.textContent ?? '';
+  check('group dialog lists the feed cross-section', table.includes('10 mm²'), table);
+  check('group dialog lists the conductor count', table.includes('Conductors'), table);
+}
 
 unmountCard(nested);
 

@@ -107,6 +107,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, below this group's own circuits. |
 | `label`    | string                               | no       | _Metadata._ Reserved for future tooltips. |
 | `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (2 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
+| `mm2` / `cond` | numbers                      | no       | _Metadata._ The feed cable into this group: cross-section in mm² and conductor count. Most useful on a nested group, whose feed run is its own. |
 
 ### Group types
 

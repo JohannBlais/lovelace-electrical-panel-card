@@ -39,6 +39,11 @@ trunks directly, stating a protection hierarchy that isn't there.
   sub-board can reuse a breaker letter from the parent board. Two bubbles
   sharing an id would previously size themselves from each other's bbox.
 
+Groups also gained `mm2` and `cond` metadata, describing the cable feeding
+them — until now only circuits could carry a cross-section, which left the
+run into a sub-board with nowhere to be documented. Surfaced in the tooltip
+and the metadata dialog like every other spec field.
+
 Backwards compatible: existing configs render unchanged.
 
 New [example 05](examples/05-nested-subboard.yaml) and its preview cover the

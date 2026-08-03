@@ -149,6 +149,15 @@ export interface Group {
   poles?: 2 | 4;
   /** RCD class per IEC 60755 (typically `'A'`, `'AC'`, `'B'`, `'F'`). */
   class?: string;
+  /**
+   * Cross-section of the cable feeding this group, in mm². Numeric
+   * (e.g. `10`, `6`). Meaningful on any group, and especially on a nested
+   * one: a sub-board is fed by a run of its own, often heavier than
+   * anything downstream of it.
+   */
+  mm2?: number;
+  /** Conductor count of that feed (e.g. 3 for L+N+PE, 5 for 3P+N+PE). */
+  cond?: number;
 }
 
 export interface ElectricalPanelCardConfig extends LovelaceCardConfig {

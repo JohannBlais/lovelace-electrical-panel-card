@@ -80,6 +80,9 @@ groups:
         mA: 30
         poles: 2
         class: A
+        # The run feeding the sub-board — heavier than anything below it.
+        mm2: 10
+        cond: 3
         sensor: sensor.pool_rcd_power
         circuits:
           - id: P1
