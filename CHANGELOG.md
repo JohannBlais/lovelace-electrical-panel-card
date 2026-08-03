@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.19.0] — Names that fit
+
+The group box, the breaker box and the floor pill were each drawn at a fixed
+width with their text centred inside, so anything past roughly three characters
+spilled out of both sides — reported as a box drawn too small rather than as a
+name too long (#30). Boxes now size themselves to their contents, and long
+names have somewhere better to live than `id`.
+
+```yaml
+- id: P                        # short designator, drawn in the box
+  label: Pool sub-board feed   # readable name, drawn beside it
+  circuits:
+    - id: Q1
+      label: Kitchen sockets
+```
+
+- The three fixed widths become minimums. A box grows to fit its text, stops at
+  a ceiling, and elides past it — unbounded growth would walk the zone text
+  under the power bubbles. An elided id leads its own tooltip, so nothing
+  becomes unreachable.
+- `id` stays the short designator marked on the physical panel. It was always
+  an identity — it keys the layout and the power bubbles — and is now
+  documented as such.
+- `Circuit.label` is new. **`Group.label` is now drawn on the board**, where it
+  previously only reached the tooltip: panels that already set it will show it.
+- Text is measured against the theme's actual font, so a custom
+  `--ha-font-family-body` sizes correctly. Where measurement is unavailable the
+  boxes fall back to their previous fixed sizes.
+
 ## [0.18.0] — Nested groups (sub-boards)
 
 A group can now declare its own `groups[]`. Until now the schema was exactly
