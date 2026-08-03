@@ -8,6 +8,7 @@ Sample configurations covering common installation patterns. Drop the body of an
 | [`02-single-phase-with-pv.yaml`](02-single-phase-with-pv.yaml) | Single-phase house. Adds top-of-card live readings, smart-plug toggles with `critical:` confirmation, MDI icon overrides per zone, and a small PV system with two microinverters expressed as zones. |
 | [`03-three-phase-no-production.yaml`](03-three-phase-no-production.yaml) | Three-phase residential panel with three single-phase RCDs distributed across L1/L2/L3 plus one three-phase RCD for heat pump and induction cooktop. Per-phase total bubbles. No production. |
 | [`04-three-phase-with-pv.yaml`](04-three-phase-with-pv.yaml) | Realistic full-house setup. Five-storey floor map, six load RCDs, three-phase HVAC, plus a PV group with six microinverters as individual zones. Demonstrates the recommended pattern for monitoring per-microinverter power. |
+| [`05-nested-subboard.yaml`](05-nested-subboard.yaml) | Main breaker feeding a remote pool sub-board: one circuit wired straight off it, plus a nested 30 mA RCD protecting two more. Shows `groups:` inside a group, accent inheritance, and phases on a nested board. |
 
 ## How to use
 

@@ -18,6 +18,7 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 - **Live power** on phase trunks, RCDs, circuits and individual zones — read straight from `hass.states`, no polling, no token
 - **Smart-plug toggles** inline on each bubble, with confirmation dialog for `critical:` loads (fridges, freezers, sump pumps, …)
 - **Production groups** alongside loads — `type: solar | wind | geothermal | hydro` rendered with the same primitives. Inverters and turbines become zones with their own sensors.
+- **Nested sub-boards** — a group can carry its own `groups[]`, so a pool house, garage or workshop board fed by a main breaker draws as an indented branch instead of being flattened into the main panel
 - **Three-phase aware** — `phases: [L1, L2, L3]` for 4P breakers, single phase for everything else, any combination accepted
 - **MDI icons** per circuit type with per-circuit and per-zone overrides — `mdi:fridge`, `mdi:solar-power`, anything Material Design ships
 - **Floor / room labelling** per zone with configurable colour-coded pills
@@ -86,6 +87,7 @@ The full schema lives in [`docs/data-model.md`](docs/data-model.md). Key concept
 
 - **`groups[]`** is the top-level structure; each group has a `type` (`distribution` for loads — the default — or one of the production kinds), a `phases` array describing which trunks it taps, and an `accent` colour from which the renderer derives `color` / `fill` / `stroke`.
 - **`circuits[]`** under a group: one entry per breaker. Carries an icon-defining `type` (`socket` / `light` / `power`), optional `sensor` for live readings, optional `switch` for inline toggling, and a list of `zones[]`.
+- **`groups[]`** *inside* a group: a sub-board fed by that group rather than by the phase trunks. Drawn indented off the parent's bus, above the parent's own circuits, inheriting its `accent` unless it sets one.
 - **`zones[]`** are the leaves: a `floor` pill (defined in `floors:`), a free-text `room`, and optionally `sensor`, `switch`, `critical`, plus icon / metadata overrides.
 - **`sensors:`** at the top level wires the card-wide totals — `total`, `grid` and the per-phase trunk readings.
 

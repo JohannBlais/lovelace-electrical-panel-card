@@ -1,10 +1,12 @@
-# Data model (v0.4)
+# Data model (v0.5)
 
 Reference for the YAML configuration consumed by `custom:electrical-panel-card`.
 
 The schema describes _what is on the diagram_. **Everything is a group.** A group has a `type` that says whether it's a load (default) or a production source (`solar`, `wind`, `geothermal`, `hydro`). Loads and productions render with the same one-line-diagram visual; production units like PV inverters or wind turbines are expressed as **zones** of a circuit, which lets each unit carry its own sensor through the standard zone mechanics.
 
-> v0.4 is **not** backward-compatible with earlier versions. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
+Groups nest: a group can declare its own `groups[]` for a sub-board fed by it rather than by the phase trunks — see [nested groups](#nested-groups--sub-boards).
+
+> v0.5 adds nested groups; every v0.4 config remains valid. v0.4 is **not** backward-compatible with versions before it. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
 
 ## Top-level config
 
@@ -94,7 +96,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | ---------- | ------------------------------------ | -------- | ----------- |
 | `id`       | string                               | yes      | Unique label drawn inside the box (e.g. `D1`). |
 | `type`     | `'distribution'` \| `'solar'` \| `'wind'` \| `'geothermal'` \| `'hydro'` | no | Defaults to `'distribution'`. Loads vs production. Visual is identical; the discriminator is for documentation, future tooling, and theming hooks. |
-| `phases`   | `('L1' \| 'L2' \| 'L3')[]`           | yes      | Phase trunks the group taps into. `[L1]` = single-phase; `[L1, L2, L3]` = three-phase; `[]` = no tap. |
+| `phases`   | `('L1' \| 'L2' \| 'L3')[]`           | yes      | Phases the group runs on. `[L1]` = single-phase; `[L1, L2, L3]` = three-phase; `[]` = no tap. Top-level groups tap the trunks here; on a nested group the value is informational (see [nested groups](#nested-groups--sub-boards)). |
 | `accent`   | string (CSS colour)                  | no       | Single colour; renderer derives `color` / `stroke` / a tinted `fill` from it. When omitted, an accent is picked from a fallback palette by group index. |
 | `color`    | string (CSS colour)                  | no       | Override for derived text colour. |
 | `fill`     | string (CSS colour)                  | no       | Override for derived box fill. |
@@ -102,8 +104,10 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `sensor`   | string (entity ID)                   | no       | Group-level live power. Renders a bubble next to the box. |
 | `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
+| `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, below this group's own circuits. |
 | `label`    | string                               | no       | _Metadata._ Reserved for future tooltips. |
-| `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (2 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
+| `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (1, 2, 3 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
+| `mm2` / `cond` | numbers                      | no       | _Metadata._ The feed cable into this group: cross-section in mm² and conductor count. Most useful on a nested group, whose feed run is its own. |
 
 ### Group types
 
@@ -143,6 +147,52 @@ Fallback palette (cycled by group index when no accent is set): `#3182ce`, `#38a
 | `[L1, L2]`      | Two-phase. Two taps. (Rare in EU but supported.) |
 | `[]`            | No phase tap. Group floats. |
 
+### Nested groups / sub-boards
+
+A group's `groups[]` holds the boards it feeds: an RCD sitting behind a main breaker, a remote sub-panel in a pool house or workshop, a contactor with its own set of circuits. Without it, everything behind a main breaker has to be flattened onto the main panel's bus, which draws a protection hierarchy that doesn't exist.
+
+```yaml
+groups:
+  - id: P                  # main breaker, taps the trunks
+    phases: [L1, L2, L3]
+    poles: 4
+    amp: 20
+    sensor: sensor.pool_total_power
+    circuits:
+      - id: P3             # wired straight off P, no extra protection
+        type: power
+        sensor: sensor.pool_heat_pump_power
+        zones:
+          - { floor: L0, room: Pool heat pump, icon: mdi:heat-pump }
+    groups:
+      - id: R1             # 30 mA RCD inside the sub-board
+        phases: [L1]
+        amp: 40
+        mA: 30
+        poles: 2
+        class: A
+        sensor: sensor.pool_rcd_power
+        circuits:
+          - id: P1
+            type: light
+            zones:
+              - { floor: L0, room: Underwater light }
+              - { floor: L0, room: Safety cover }
+```
+
+Rendering rules:
+
+| Rule | Detail |
+| ---- | ------ |
+| Feed | A nested group hangs off its parent's vertical bus, not off the phase trunks. No tap dots are drawn for it. |
+| `phases` | Still required, still meaningful — but informational: it documents which phase the sub-board runs on and shows up in the tooltip and the metadata dialog. |
+| Indent | One step right per level, for the group box and everything under it. Depth is unbounded; each level eats horizontal room, so two or three is the practical limit. |
+| Order | A group's `groups[]` render first, then its own `circuits[]` — a feed to a remote board is a departure like any other and in practice sits above the breakers the parent keeps. YAML mappings carry no ordering between the two keys, so this is fixed rather than configurable. |
+| Colour | A nested group with no `accent` inherits its parent's, so one branch of the diagram reads as one branch. Set `accent` to break it out. |
+| Everything else | Identical to a top-level group: `sensor`, `switch`, `max_w`, metadata, tooltip, dialog. |
+
+Ids are scoped by position in the tree (`P/R1`), so a sub-board may reuse a breaker letter already used on the parent board without the two colliding.
+
 ## Circuits
 
 ```yaml
@@ -165,7 +215,7 @@ circuits:
 | `sensor` | string (entity ID)                    | no       | Per-circuit power. Bubble appears next to the breaker box. |
 | `switch` | string (entity ID)                    | no       | Adds an inline toggle on the circuit's bubble. |
 | `zones`  | [`Zone[]`](#zones)                    | no       | Branches off the circuit. Empty/missing = breaker box drawn alone, no zones. |
-| `amp` / `poles` / `mm2` / `cond` / `pts` / `n_pts` | various | no | _Metadata._ Reserved for future tooltips. |
+| `amp` / `poles` / `mm2` / `cond` / `pts` / `n_pts` | various | no | _Metadata._ Rating in A, pole count (1, 2, 3 or 4), cross-section in mm², conductor count, and a free-text / numeric points count. Surfaced in the tooltip and the metadata dialog. |
 
 Icon resolution per zone: `Zone.icon` ⟶ `Circuit.icon` ⟶ default for `Circuit.type` ⟶ `mdi:help`.
 
@@ -289,7 +339,7 @@ Any element (group / circuit / zone) with both `sensor` and `switch` shows a sma
 
 ## Live-update mechanism (internal)
 
-Bubble backgrounds are sized post-render in `updated()` via `getBBox()` on each `text.pwr-value`. Each element carries a `data-id` attribute used to find its companion `<rect data-bg-for="…">` background and `<line data-ln-for="…">` connector. Group / circuit / zone IDs must therefore be unique within a render — duplicate IDs would cause incorrect bbox attribution.
+Bubble backgrounds are sized post-render in `updated()` via `getBBox()` on each `text.pwr-value`. Each element carries a `data-id` attribute used to find its companion `<rect data-bg-for="…">` background and `<line data-ln-for="…">` connector. Those ids are built from the element's path in the tree — `g-P/R1`, `c-P/R1-P1`, `z-P/R1-P1-0` — so they stay unique without the config having to keep every `id` globally distinct.
 
 ## Minimal valid config
 
@@ -310,6 +360,7 @@ groups:
 `setConfig` enforces:
 
 - `groups` is a non-empty array.
-- Each group has an `id` and a `phases` array.
+- Each group has an `id` and a `phases` array — nested groups included, reported with a path (`groups[1].groups[0]`).
+- A group's `groups`, when present, is an array.
 
 Anything else is accepted as-is. Unknown fields are ignored without warnings.

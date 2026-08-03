@@ -144,7 +144,10 @@ function collectEntities(config) {
     s.phases?.l2?.entity,
     s.phases?.l3?.entity,
   ].forEach((e) => e && set.add(e));
-  for (const g of config.groups ?? []) {
+  // Mirrors the card's own entity walk — nested groups included, otherwise
+  // everything below a sub-board renders with no state and the preview shows
+  // empty bubbles that look like a layout bug.
+  const walk = (g) => {
     if (g.sensor) set.add(g.sensor);
     if (g.switch) set.add(g.switch);
     for (const c of g.circuits ?? []) {
@@ -155,7 +158,9 @@ function collectEntities(config) {
         if (z.switch) set.add(z.switch);
       }
     }
-  }
+    (g.groups ?? []).forEach(walk);
+  };
+  (config.groups ?? []).forEach(walk);
   return [...set];
 }
 

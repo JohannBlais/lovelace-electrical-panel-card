@@ -6,6 +6,58 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.18.0] — Nested groups (sub-boards)
+
+A group can now declare its own `groups[]`. Until now the schema was exactly
+three levels — group → circuit → zone — so anything behind a main breaker had
+to be flattened onto the main panel's bus: a pool house board, a workshop
+sub-panel, an RCD sitting behind a main breaker all drew as if they tapped the
+trunks directly, stating a protection hierarchy that isn't there.
+
+```yaml
+- id: P                  # main breaker, taps the trunks
+  phases: [L1, L2, L3]
+  circuits:
+    - id: P3             # wired straight off P
+      …
+  groups:
+    - id: R1             # 30 mA RCD inside the sub-board
+      phases: [L1]
+      circuits: [ … ]    # protected by R1, not just by P
+```
+
+- A nested group hangs off its parent's bus and draws no phase taps of its
+  own. Its `phases` stays required and meaningful, but informational: it
+  documents the phase the board runs on and surfaces in the tooltip and the
+  metadata dialog.
+- One indent step per level, applied to the group box, its breakers and their
+  zones. Depth is unbounded; horizontal room is the practical limit.
+- A group's `groups[]` render first, then its own `circuits[]`: the feed to a
+  remote board is a departure like any other, and in practice sits above the
+  breakers the parent keeps for itself.
+- A nested group inherits the parent's `accent` unless it sets its own, so a
+  branch reads as one branch.
+- Bubble ids are now scoped by tree path (`g-P/R1`, `c-P/R1-P1`), so a
+  sub-board can reuse a breaker letter from the parent board. Two bubbles
+  sharing an id would previously size themselves from each other's bbox.
+
+Groups also gained `mm2` and `cond` metadata, describing the cable feeding
+them — until now only circuits could carry a cross-section, which left the
+run into a sub-board with nowhere to be documented. Surfaced in the tooltip
+and the metadata dialog like every other spec field.
+
+`poles` widened from `2 | 4` to `1 | 2 | 3 | 4` on both groups and circuits.
+Single-pole control and lighting breakers are the norm on a sub-board, and
+motor loads are routinely 3P without a neutral; both were unexpressible.
+Runtime behaviour is unchanged — the value was only ever rendered as
+`{n}P` — so this is a type and documentation fix.
+
+Backwards compatible: existing configs render unchanged.
+
+New [example 05](examples/05-nested-subboard.yaml) and its preview cover the
+pattern; `docs/data-model.md` documents it under **Nested groups /
+sub-boards**.
+
 ## [0.17.5] — Restore the metadata dialog on HA 2026.3+
 
 Clicking a group, circuit or zone opened a dialog showing only the
