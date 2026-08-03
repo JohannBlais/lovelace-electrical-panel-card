@@ -43,6 +43,22 @@ updates:
           - minor
           - patch
 
+    ignore:
+      # TypeScript 7 is unreachable, and not because of anything in this repo:
+      # every published @typescript-eslint release — 8.66.0 and the canary
+      # alike — still pins `peer typescript@">=4.8.4 <6.1.0"`. A TS 7 bump
+      # therefore dies in `npm ci` on ERESOLVE, before the type-checker ever
+      # runs (#26). Dependabot would re-propose it every month regardless, so
+      # the major is muted here rather than reopened and reclosed forever.
+      #
+      # 6.x is deliberately still allowed through: it satisfies that peer
+      # range, so minor and patch bumps keep arriving normally.
+      #
+      # Drop this entry as soon as typescript-eslint widens the range.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+
     # Deliberately left ungrouped, so each gets its own reviewable PR:
     #
     #   - Development *majors*. These are the ones that break the build or
