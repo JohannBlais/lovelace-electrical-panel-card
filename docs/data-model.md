@@ -303,7 +303,7 @@ CSS custom properties exposed by the card:
 Standard HA variables drive the chrome:
 
 - `--primary-text-color` → labels, all bubble values
-- `--secondary-text-color` → "Total" / "Grid" labels, room names
+- `--secondary-text-color` → "Total" / "Grid" labels, room names, group / circuit `label` text
 - `--ha-card-background`, `--card-background-color` → bubble fills
 - `--divider-color` → bubble borders, connector lines
 - `--ha-font-family-body` → SVG font

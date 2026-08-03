@@ -1038,8 +1038,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // would rewrite every committed preview with blank lines and no visual
     // change. Keeping it flush means a preview diff always means a real one.
     const groupLabelMarkup = groupLabel
-      ? svg`<text class="board-label" x=${labelX} y=${midY + 3}
-                  text-anchor="start" dominant-baseline="central"
+      ? svg`<text class="board-label" x=${labelX} y=${midY + 4}
+                  text-anchor="start"
                   font-size=${LABEL_FONT}>${groupLabel.text}</text>`
       : nothing;
 
@@ -1108,8 +1108,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const circuitLabel = fitLabel(c.label, this._family, labelX);
     const circuitConnX = circuitLabel ? labelX + circuitLabel.w + LABEL_GAP : cbRight;
     const circuitLabelMarkup = circuitLabel
-      ? svg`<text class="board-label" x=${labelX} y=${cbMidY}
-                  text-anchor="start" dominant-baseline="central"
+      ? svg`<text class="board-label" x=${labelX} y=${cbMidY + 4}
+                  text-anchor="start"
                   font-size=${LABEL_FONT}>${circuitLabel.text}</text>`
       : nothing;
     const subX = gl.busX;
@@ -1366,13 +1366,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         stroke-width: 0.5;
       }
       .label-secondary,
-      .zone-room {
-        fill: var(--secondary-text-color, #718096);
-      }
-      /* Names the group or breaker it sits beside, so it reads a step stronger
-         than the zone rooms listed underneath it. */
+      .zone-room,
       .board-label {
-        fill: var(--primary-text-color, #2d3748);
+        fill: var(--secondary-text-color, #718096);
       }
       .phase-label {
         fill: var(--primary-text-color);
