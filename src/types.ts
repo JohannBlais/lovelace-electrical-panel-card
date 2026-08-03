@@ -66,7 +66,21 @@ export interface Zone {
 }
 
 export interface Circuit {
+  /**
+   * Short designator, drawn inside the breaker box — the marking on the
+   * physical panel (`Q1`, `F12`, `D3`). Doubles as this circuit's identity:
+   * it keys the layout within its group and, combined with the group path,
+   * the power bubble. Keep it to a few characters; the box grows to fit but
+   * stops at a ceiling and elides past it. The human-readable description
+   * belongs in `label`.
+   */
   id: string;
+  /**
+   * Human-readable name, drawn to the right of the breaker box (`Kitchen
+   * sockets`, `Garage door`). Free-form and safe to change at any time,
+   * unlike `id`.
+   */
+  label?: string;
   type: CircuitType;
   sensor?: string;
   switch?: string;
@@ -88,6 +102,13 @@ export interface Circuit {
 }
 
 export interface Group {
+  /**
+   * Short designator, drawn inside the group box (`D1`, `HVAC`, `PV`). Also
+   * this group's identity: it forms the path (`D1`, `P/R1`) that keys the
+   * layout and the power bubbles, so nested ids only need to be unique among
+   * their siblings. Keep it short — the box grows to fit but elides past a
+   * ceiling. Descriptive text belongs in `label`.
+   */
   id: string;
   /** Defaults to `'distribution'` when omitted. */
   type?: GroupType;
@@ -144,7 +165,13 @@ export interface Group {
    * horizontal room, so two or three deep is the practical limit.
    */
   groups?: Group[];
-  /** Optional metadata (reserved for future tooltips). */
+  /**
+   * Human-readable name, drawn to the right of the group box (`Main board`,
+   * `Pool house`). Free-form and safe to change at any time, unlike `id`.
+   *
+   * Was tooltip-only until #30; existing configs that set it will now see it
+   * on the board as well.
+   */
   label?: string;
   // ── RCD / main breaker metadata (not rendered yet, kept for future
   //    tooltips / info dialogs). Replaces the previous free-form `spec`

@@ -313,16 +313,16 @@ const wideConfig = {
   ],
 };
 
-const wide = await mountCard(wideConfig);
-const boxOf = (label) => {
-  const t = [...wide.shadowRoot.querySelectorAll('text')].find(
+// Box geometry behind a given drawn id. The rect is matched by being centred
+// on the label rather than by DOM order, which interleaves groups, breakers
+// and floor pills.
+const boxOfIn = (card, label) => {
+  const t = [...card.shadowRoot.querySelectorAll('text')].find(
     (el) => el.textContent.trim() === label && el.getAttribute('font-weight') === 'bold',
   );
   if (!t) return null;
   const cx = parseFloat(t.getAttribute('x'));
-  // The rect is the box centred on the label; match on that rather than on
-  // DOM order, which interleaves groups, breakers and pills.
-  const rect = [...wide.shadowRoot.querySelectorAll('rect')].find((r) => {
+  const rect = [...card.shadowRoot.querySelectorAll('rect')].find((r) => {
     const x = parseFloat(r.getAttribute('x'));
     const w = parseFloat(r.getAttribute('width'));
     return Number.isFinite(x) && Number.isFinite(w) && Math.abs(x + w / 2 - cx) < 0.51;
@@ -331,6 +331,9 @@ const boxOf = (label) => {
     ? { x: parseFloat(rect.getAttribute('x')), w: parseFloat(rect.getAttribute('width')) }
     : null;
 };
+
+const wide = await mountCard(wideConfig);
+const boxOf = (label) => boxOfIn(wide, label);
 
 // SQ = 24 / CB_SQ = 20 are the floors: a one- or two-character id must render
 // at exactly the size it did before this change.
@@ -411,6 +414,90 @@ check(
 );
 
 unmountCard(wide);
+
+// ─── Board labels (#30) ───────────────────────────────────────────────────────
+// `id` stays the short designator drawn in the box; `label` carries the
+// human-readable name and is drawn beside it. The label shares its row with the
+// connector line out to the power bubble, so that line has to resume *after*
+// the text rather than run through it.
+process.stdout.write('\nBoard labels\n');
+const labelConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Labels',
+  groups: [
+    {
+      id: 'D1',
+      label: 'Main board',
+      phases: ['L1'],
+      sensor: 'sensor.main_power',
+      circuits: [
+        { id: 'A', label: 'Kitchen sockets', type: 'socket', sensor: 'sensor.kitchen_power' },
+        { id: 'B', type: 'light' },
+        {
+          id: 'C',
+          label:
+            'An extremely long circuit description that cannot possibly fit on one row',
+          type: 'power',
+        },
+      ],
+    },
+  ],
+};
+
+const labelled = await mountCard(labelConfig);
+const textNodes = () => [...labelled.shadowRoot.querySelectorAll('text')];
+const labelNode = (starts) =>
+  textNodes().find(
+    (t) => t.classList.contains('board-label') && t.textContent.trim().startsWith(starts),
+  );
+
+check('group label is drawn on the board', !!labelNode('Main board'));
+check('circuit label is drawn on the board', !!labelNode('Kitchen sockets'));
+check(
+  'a circuit without a label draws none',
+  textNodes().filter((t) => t.classList.contains('board-label')).length === 3,
+  `${textNodes().filter((t) => t.classList.contains('board-label')).length} label nodes`,
+);
+
+// Left edge of each label must clear its box, or the text would sit on top of
+// the id.
+const groupLabelX = labelNode('Main board')
+  ? parseFloat(labelNode('Main board').getAttribute('x'))
+  : null;
+const groupIdBox = boxOfIn(labelled, 'D1');
+check(
+  'group label starts clear of the group box',
+  groupLabelX !== null && groupIdBox !== null && groupLabelX >= groupIdBox.x + groupIdBox.w,
+  `box ends at ${groupIdBox && groupIdBox.x + groupIdBox.w}, label at ${groupLabelX}`,
+);
+
+// The over-long one must be cut before it reaches the bubbles (LABEL_RIGHT).
+const longLabel = labelNode('An extremely long');
+check(
+  'over-long label is elided',
+  !!longLabel && longLabel.textContent.trim().endsWith('…'),
+  longLabel ? longLabel.textContent.trim() : 'missing',
+);
+
+// Connector line must start after the label, not at the box — otherwise it
+// strikes through the text.
+const groupConn = labelled.shadowRoot.querySelector('line.bubble-conn[data-ln-for="g-D1"]');
+check(
+  'bubble connector resumes past the group label',
+  !!groupConn && groupLabelX !== null &&
+    parseFloat(groupConn.getAttribute('x1')) > groupLabelX,
+  groupConn ? `label at ${groupLabelX}, connector from ${groupConn.getAttribute('x1')}` : 'no connector',
+);
+
+// An elided label would otherwise be lost; circuitTooltip has to carry it.
+const longTitle = longLabel?.closest('g')?.querySelector('title')?.textContent ?? '';
+check(
+  'elided circuit label stays readable in the tooltip',
+  longTitle.includes('An extremely long circuit description'),
+  longTitle || 'no title',
+);
+
+unmountCard(labelled);
 
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,
