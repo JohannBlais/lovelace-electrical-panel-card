@@ -94,6 +94,15 @@ const FLOOR_FONT = 7; // floor pill
 // inside it — see the `label` fields.
 const MAX_BOX_W = 64;
 const ELLIPSIS = '…';
+// Board labels — `label` on a group or circuit — sit on the element's own row,
+// between its box and its power bubble. That row is free: a group's children
+// and a breaker's zones both hang *below* it.
+const LABEL_FONT = 8;
+const LABEL_GAP = 6; // between the box and the label
+// Where a label has to stop. The bubbles are right-anchored at PWR_X and grow
+// leftward — value text, then the saturation bar at PWR_X − 30, then the
+// background's own padding — so this keeps a label clear of the widest of them.
+const LABEL_RIGHT = PWR_X - 46;
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
 // Phase wire colours — IEC 60446. Exposed as CSS custom properties so themes
@@ -170,6 +179,9 @@ function groupTooltip(g: Group): string {
 
 function circuitTooltip(c: Circuit): string {
   const parts: string[] = [];
+  // Leads, mirroring groupTooltip — and it is how an elided label stays
+  // readable, since the drawn one may have been cut to fit the row.
+  if (c.label) parts.push(c.label);
   if (c.amp !== undefined) parts.push(`${c.amp} A`);
   if (c.poles !== undefined) parts.push(`${c.poles}P`);
   if (c.mm2 !== undefined) parts.push(`${c.mm2} mm²`);
@@ -272,19 +284,54 @@ function fitBox(
   if (wanted <= minW) return { w: minW, text };
   if (wanted <= MAX_BOX_W) return { w: wanted, text };
 
-  // Over the ceiling: shed trailing characters until the elided form fits.
-  // Linear from the end rather than a binary search — ids are a handful of
-  // characters, and the result is cached per (font, string) anyway.
-  const budget = MAX_BOX_W - 2 * BOX_PAD;
+  return {
+    w: MAX_BOX_W,
+    text: elideText(text, fontSize, 'bold', family, MAX_BOX_W - 2 * BOX_PAD),
+  };
+}
+
+/**
+ * `text` shortened with a trailing ellipsis until it fits `maxW`, or returned
+ * untouched when it already fits — or when it cannot be measured, since
+ * drawing it in full is a better failure than dropping characters blindly.
+ */
+function elideText(
+  text: string,
+  fontSize: number,
+  weight: string,
+  family: string,
+  maxW: number,
+): string {
+  const measured = measureText(text, fontSize, weight, family);
+  if (measured === undefined || measured <= maxW) return text;
+  // Linear from the end rather than a binary search: these are short strings
+  // and every candidate is cached per (font, string) anyway.
   for (let n = text.length - 1; n > 0; n--) {
     const candidate = text.slice(0, n) + ELLIPSIS;
-    const w = measureText(candidate, fontSize, 'bold', family);
-    if (w === undefined) return { w: minW, text };
-    if (w <= budget) return { w: MAX_BOX_W, text: candidate };
+    const w = measureText(candidate, fontSize, weight, family);
+    if (w === undefined) return text;
+    if (w <= maxW) return candidate;
   }
-  // Even one character plus the ellipsis overflows: let it, rather than draw an
-  // empty box. Only reachable at absurd font sizes.
-  return { w: MAX_BOX_W, text: text.slice(0, 1) + ELLIPSIS };
+  // Even one character plus the ellipsis overflows. Only reachable at absurd
+  // font sizes; drawing something beats drawing nothing.
+  return text.slice(0, 1) + ELLIPSIS;
+}
+
+/**
+ * A board label — the human-readable `label` on a group or circuit — sized to
+ * the room between `fromX` and the power bubbles, elided if it does not fit.
+ * `null` when there is no label, or when nesting has left no room at all.
+ */
+function fitLabel(
+  text: string | undefined,
+  family: string,
+  fromX: number,
+): { text: string; w: number } | null {
+  if (!text) return null;
+  const maxW = LABEL_RIGHT - fromX;
+  if (maxW <= 0) return null;
+  const drawn = elideText(text, LABEL_FONT, 'normal', family, maxW);
+  return { text: drawn, w: measureText(drawn, LABEL_FONT, 'normal', family) ?? 0 };
 }
 
 @customElement(CARD_TAG)
@@ -536,6 +583,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const t = this._t();
     const f = t.dialog.fields;
     const rows: Array<[string, string]> = [];
+    if (c.label) rows.push([f.label, c.label]);
     rows.push([f.type, c.type]);
     if (c.amp !== undefined) rows.push([f.rating, `${c.amp} A`]);
     if (c.poles !== undefined) rows.push([f.poles, `${c.poles}P`]);
@@ -979,6 +1027,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                     stroke=${colors.stroke} stroke-width="3"/>`
         : nothing;
 
+    // The label shares its row with the connector line running out to the
+    // power bubble, so the connector starts after the label rather than at the
+    // box — otherwise the line would strike straight through the text.
+    const labelX = gl.x + gl.w + LABEL_GAP;
+    const groupLabel = fitLabel(g.label, this._family, labelX);
+    const groupConnX = groupLabel ? labelX + groupLabel.w + LABEL_GAP : gl.x + gl.w;
+    // Interpolated tight against the id's </text> below rather than placed on
+    // its own line: `nothing` still emits the surrounding whitespace, which
+    // would rewrite every committed preview with blank lines and no visual
+    // change. Keeping it flush means a preview diff always means a real one.
+    const groupLabelMarkup = groupLabel
+      ? svg`<text class="board-label" x=${labelX} y=${midY + 3}
+                  text-anchor="start" dominant-baseline="central"
+                  font-size=${LABEL_FONT}>${groupLabel.text}</text>`
+      : nothing;
+
     return svg`
       ${taps}
       ${feedLine}
@@ -993,7 +1057,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         <rect x=${gl.x} y=${midY - SQ / 2} width=${gl.w} height=${SQ}
               fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
         <text x=${gl.x + gl.w / 2} y=${midY + 4} text-anchor="middle"
-              font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${gl.text}</text>
+              font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${gl.text}</text>${groupLabelMarkup}
       </g>
 
       ${
@@ -1003,7 +1067,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               x: PWR_X,
               y: midY + 3,
               fill: colors.color,
-              connX: gl.x + gl.w,
+              connX: groupConnX,
               switchEntity: g.switch,
               powerEntity: g.sensor,
               maxW: g.max_w,
@@ -1038,6 +1102,16 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const cbMidY = cl.startY + CB_SQ / 2;
     const cbCenterX = cl.x + cl.w / 2;
     const cbRight = cl.x + cl.w;
+    // Same arrangement as a group: the label occupies the breaker's own row
+    // (its zones hang below), and the bubble connector resumes past it.
+    const labelX = cbRight + LABEL_GAP;
+    const circuitLabel = fitLabel(c.label, this._family, labelX);
+    const circuitConnX = circuitLabel ? labelX + circuitLabel.w + LABEL_GAP : cbRight;
+    const circuitLabelMarkup = circuitLabel
+      ? svg`<text class="board-label" x=${labelX} y=${cbMidY}
+                  text-anchor="start" dominant-baseline="central"
+                  font-size=${LABEL_FONT}>${circuitLabel.text}</text>`
+      : nothing;
     const subX = gl.busX;
     const zones = c.zones ?? [];
     const hasZones = zones.length > 0;
@@ -1062,7 +1136,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         <rect x=${cl.x} y=${cl.startY} width=${cl.w} height=${CB_SQ}
               fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
         <text x=${cbCenterX} y=${cl.startY + CB_SQ / 2 + 4} text-anchor="middle"
-              font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${cl.text}</text>
+              font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${cl.text}</text>${circuitLabelMarkup}
       </g>
       ${
         c.sensor
@@ -1071,7 +1145,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               x: PWR_X,
               y: cbMidY + 3,
               fill: colors.color,
-              connX: cbRight,
+              connX: circuitConnX,
               switchEntity: c.switch,
               powerEntity: c.sensor,
             })
@@ -1294,6 +1368,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       .label-secondary,
       .zone-room {
         fill: var(--secondary-text-color, #718096);
+      }
+      /* Names the group or breaker it sits beside, so it reads a step stronger
+         than the zone rooms listed underneath it. */
+      .board-label {
+        fill: var(--primary-text-color, #2d3748);
       }
       .phase-label {
         fill: var(--primary-text-color);

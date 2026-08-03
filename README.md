@@ -22,6 +22,7 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 - **Three-phase aware** — `phases: [L1, L2, L3]` for 4P breakers, single phase for everything else, any combination accepted
 - **MDI icons** per circuit type with per-circuit and per-zone overrides — `mdi:fridge`, `mdi:solar-power`, anything Material Design ships
 - **Floor / room labelling** per zone with configurable colour-coded pills
+- **Short designator + readable name** — `id` is the marking on the physical panel (`Q1`, `D3`) drawn inside the box, `label` is the description (`Kitchen sockets`) drawn beside it. Boxes size themselves to their text either way.
 - **Hover tooltips + click-to-open metadata dialog** with structured RCD / breaker specs (rating, sensitivity, poles, class, cross-section, …)
 - **Theme-aware**: cable colours stay IEC 60446 across light / dark themes; everything else (text, dividers, bubbles, accents) follows the active HA theme
 - **18 built-in languages** auto-detected from `hass.locale.language`: English, French, German, Spanish, Italian, Portuguese, Dutch, Polish, Swedish, Danish, Norwegian, Finnish, Czech, Russian, Ukrainian, Japanese, Chinese (Simplified), Korean
