@@ -17,6 +17,7 @@ import {
 } from 'custom-card-helpers';
 
 import { CARD_NAME, CARD_TAG, CARD_VERSION, EDITOR_TAG } from './const.js';
+import { measureText, resetTextMetrics } from './text-metrics.js';
 // Side-effect import — registers the <electrical-panel-card-editor> element
 // so HA's card picker can use it via getConfigElement() without a separate
 // dynamic import / chunk split.
@@ -65,14 +66,34 @@ const HEADER_H = 20;
 const SQ = 24;
 const PWR_X = 350;
 const CB_SQ = 20;
-// Horizontal step between a group box and whatever hangs off its bus — its
-// own breakers, or a nested group's box. Applied once per nesting level, so
-// a group at depth d sits at ML + d × INDENT and its breakers one step right.
-const INDENT = SQ + 10;
+// Clear space between a group box and whatever hangs off its bus — its own
+// breakers, or a nested group's box. The horizontal step per nesting level is
+// `group box width + INDENT_GAP`; it used to be the constant SQ + 10, which is
+// what this still comes to for a group whose id fits the default square.
+const INDENT_GAP = 10;
 // Vertical breathing room above a nested group block, so it reads as a
 // separate board rather than another breaker row.
 const SUBGROUP_GAP = 6;
 const PH_TAP_ZONE = 54; // staggered phase taps fit in here (offsets 6/26/46)
+// Id boxes (group square, breaker square, floor pill) grow with their text.
+// SQ / CB_SQ / BW stay the *minimum* width, so every panel whose ids are short
+// — which was the only kind that rendered correctly before — is untouched.
+const BOX_PAD = 4; // clear space each side of an id once the box has to grow
+// Minimum clearance tolerated before a box grows at all. Deliberately smaller
+// than BOX_PAD: a two-character id measures ~12 against CB_SQ's 20, so asking
+// for BOX_PAD on both sides would nudge it to 20.15 and shift every x to its
+// right by a fraction of a pixel — churn in the committed previews, invisible
+// on screen. Growth should mean the text was actually crowded.
+const BOX_MIN_GAP = 2;
+const ID_FONT = 9; // group and breaker ids
+const FLOOR_FONT = 7; // floor pill
+// Past this the box stops growing and the text is elided instead. The board is
+// SVG_W (440) wide with the power bubbles anchored at PWR_X (350), and every
+// box pushes everything to its right; without a ceiling a single long id would
+// walk the zone text under the bubbles. Long names belong beside the box, not
+// inside it — see the `label` fields.
+const MAX_BOX_W = 64;
+const ELLIPSIS = '…';
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
 // Phase wire colours — IEC 60446. Exposed as CSS custom properties so themes
@@ -158,6 +179,15 @@ function circuitTooltip(c: Circuit): string {
   return parts.join(' · ');
 }
 
+/**
+ * Prefixes `tooltip` with the full id when the box had to elide it, so the
+ * complete value stays reachable on hover. A no-op when the id is drawn whole.
+ */
+function withFullId(id: string, drawn: string, tooltip: string): string {
+  if (drawn === id) return tooltip;
+  return tooltip ? `${id} · ${tooltip}` : id;
+}
+
 function zoneTooltip(z: Zone): string {
   const parts: string[] = [];
   if (z.room) parts.push(z.room);
@@ -172,6 +202,10 @@ interface CircuitLayout {
   zones: number;
   /** Left edge of the breaker box — depends on the owning group's depth. */
   x: number;
+  /** Box width: CB_SQ unless the id needed more. See boxWidth(). */
+  w: number;
+  /** Id as drawn — the raw id, or an elided form when it overran MAX_BOX_W. */
+  text: string;
 }
 interface GroupLayout {
   yOff: number;
@@ -180,6 +214,10 @@ interface GroupLayout {
   depth: number;
   /** Left edge of the group box. */
   x: number;
+  /** Box width: SQ unless the id needed more. See boxWidth(). */
+  w: number;
+  /** Id as drawn — the raw id, or an elided form when it overran MAX_BOX_W. */
+  text: string;
   /** Vertical bus feeding this group's circuits and nested groups. */
   busX: number;
   circuits: Map<string, CircuitLayout>;
@@ -201,6 +239,52 @@ interface Layout {
 /** Path of a nested group, used as its layout key and bubble id prefix. */
 function groupPath(parentPath: string | undefined, g: Group): string {
   return parentPath ? `${parentPath}/${g.id}` : g.id;
+}
+
+/**
+ * Width of the box that holds `text`, and the text as it should actually be
+ * drawn.
+ *
+ * Three outcomes, in order:
+ *   - shorter than `minW`  → `minW`, text unchanged (the pre-existing look)
+ *   - fits under MAX_BOX_W → grown to the text, text unchanged
+ *   - longer than that     → MAX_BOX_W, text elided to fit
+ *
+ * When the text cannot be measured at all — no canvas, or a webfont that has
+ * not loaded — this returns `minW` with the text untouched, i.e. exactly the
+ * old behaviour. The card re-renders once `document.fonts.ready` settles, so
+ * that state is transient rather than a wrong final answer.
+ */
+function fitBox(
+  text: string,
+  fontSize: number,
+  family: string,
+  minW: number,
+): { w: number; text: string } {
+  const measured = measureText(text, fontSize, 'bold', family);
+  if (measured === undefined) return { w: minW, text };
+  if (measured + 2 * BOX_MIN_GAP <= minW) return { w: minW, text };
+
+  // Whole pixels: the width feeds every x to the right of this box, and
+  // fractional geometry there shows up as blurred strokes and as noise in the
+  // generated preview SVGs.
+  const wanted = Math.ceil(measured + 2 * BOX_PAD);
+  if (wanted <= minW) return { w: minW, text };
+  if (wanted <= MAX_BOX_W) return { w: wanted, text };
+
+  // Over the ceiling: shed trailing characters until the elided form fits.
+  // Linear from the end rather than a binary search — ids are a handful of
+  // characters, and the result is cached per (font, string) anyway.
+  const budget = MAX_BOX_W - 2 * BOX_PAD;
+  for (let n = text.length - 1; n > 0; n--) {
+    const candidate = text.slice(0, n) + ELLIPSIS;
+    const w = measureText(candidate, fontSize, 'bold', family);
+    if (w === undefined) return { w: minW, text };
+    if (w <= budget) return { w: MAX_BOX_W, text: candidate };
+  }
+  // Even one character plus the ellipsis overflows: let it, rather than draw an
+  // empty box. Only reachable at absurd font sizes.
+  return { w: MAX_BOX_W, text: text.slice(0, 1) + ELLIPSIS };
 }
 
 @customElement(CARD_TAG)
@@ -493,9 +577,31 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     this.hass.callService('switch', 'toggle', { entity_id: entity });
   }
 
+  /**
+   * The family the SVG will actually render with.
+   *
+   * Read off the custom properties rather than the `<svg>` element, because
+   * `_computeLayout()` runs before that element exists on the first pass.
+   * Custom properties inherit down to the host, so they are readable from
+   * here on frame one. Must mirror the `font-family` chain in `styles`.
+   */
+  /** Resolved once per layout pass, then reused by the renderers. */
+  private _family = 'Arial, sans-serif';
+
+  private _fontFamily(): string {
+    const cs = getComputedStyle(this);
+    const body = cs.getPropertyValue('--ha-font-family-body').trim();
+    if (body) return body;
+    const paper = cs.getPropertyValue('--paper-font-body1_-_font-family').trim();
+    if (paper) return paper;
+    return 'Arial, sans-serif';
+  }
+
   // ── Layout ────────────────────────────────────────────────────────────────
   private _computeLayout(): Layout {
     const groups = this._config!.groups;
+    const family = this._fontFamily();
+    this._family = family;
     const byGroup = new Map<string, GroupLayout>();
     let yCur = HEADER_H + PH_TAP_ZONE;
     let phLineEnd = HEADER_H + PH_TAP_ZONE;
@@ -509,9 +615,19 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // above the breakers the parent keeps for itself. YAML mappings carry no
     // ordering between `groups:` and `circuits:`, so this has to be a rule
     // rather than something the config expresses.
-    const layoutGroup = (g: Group, path: string, depth: number, yOff: number): number => {
-      const x = ML + depth * INDENT;
-      const cbX = x + INDENT;
+    // `x` is passed down rather than derived from `depth`, because a group's
+    // children start clear of its box and that box is now only as wide as its
+    // id needs. With every id short the arithmetic collapses back to the old
+    // `ML + depth × INDENT`, since INDENT is exactly SQ + INDENT_GAP.
+    const layoutGroup = (
+      g: Group,
+      path: string,
+      depth: number,
+      x: number,
+      yOff: number,
+    ): number => {
+      const box = fitBox(g.id, ID_FONT, family, SQ);
+      const cbX = x + box.w + INDENT_GAP;
       const circuits = new Map<string, CircuitLayout>();
       let localY = yOff + GHDR;
       let lastChildMidY: number | undefined;
@@ -520,13 +636,21 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         localY += SUBGROUP_GAP;
         // The nested box sits GHDR/2 into its own block, same as any group.
         lastChildMidY = localY + GHDR / 2;
-        localY += layoutGroup(sub, groupPath(path, sub), depth + 1, localY);
+        localY += layoutGroup(sub, groupPath(path, sub), depth + 1, cbX, localY);
       }
 
       for (const c of g.circuits ?? []) {
         const zonesCount = Math.max(1, c.zones?.length ?? 0);
         const height = CB_SQ + zonesCount * ZH;
-        circuits.set(c.id, { startY: localY, height, zones: zonesCount, x: cbX });
+        const cb = fitBox(c.id, ID_FONT, family, CB_SQ);
+        circuits.set(c.id, {
+          startY: localY,
+          height,
+          zones: zonesCount,
+          x: cbX,
+          w: cb.w,
+          text: cb.text,
+        });
         lastChildMidY = localY + CB_SQ / 2;
         localY += height;
       }
@@ -537,7 +661,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         height,
         depth,
         x,
-        busX: x + SQ / 2,
+        w: box.w,
+        text: box.text,
+        busX: x + box.w / 2,
         circuits,
         lastChildMidY,
       });
@@ -547,7 +673,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     for (const g of groups) {
       yCur += GPAD;
       phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
-      yCur += layoutGroup(g, g.id, 0, yCur);
+      yCur += layoutGroup(g, g.id, 0, ML, yCur);
     }
 
     return {
@@ -859,13 +985,15 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
       <g class="meta-target" @click=${(ev: Event) => this._openGroupDialog(ev, g)}>
         ${(() => {
-          const tt = groupTooltip(g);
+          // An elided id would otherwise be unrecoverable, so it leads the
+          // tooltip whenever the box could not show it in full.
+          const tt = withFullId(g.id, gl.text, groupTooltip(g));
           return tt ? svg`<title>${tt}</title>` : nothing;
         })()}
-        <rect x=${gl.x} y=${midY - SQ / 2} width=${SQ} height=${SQ}
+        <rect x=${gl.x} y=${midY - SQ / 2} width=${gl.w} height=${SQ}
               fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
-        <text x=${gl.x + SQ / 2} y=${midY + 4} text-anchor="middle"
-              font-size="9" font-weight="bold" fill=${colors.color}>${g.id}</text>
+        <text x=${gl.x + gl.w / 2} y=${midY + 4} text-anchor="middle"
+              font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${gl.text}</text>
       </g>
 
       ${
@@ -875,7 +1003,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               x: PWR_X,
               y: midY + 3,
               fill: colors.color,
-              connX: gl.x + SQ,
+              connX: gl.x + gl.w,
               switchEntity: g.switch,
               powerEntity: g.sensor,
               maxW: g.max_w,
@@ -908,8 +1036,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   ): unknown {
     const cl = gl.circuits.get(c.id)!;
     const cbMidY = cl.startY + CB_SQ / 2;
-    const cbCenterX = cl.x + CB_SQ / 2;
-    const cbRight = cl.x + CB_SQ;
+    const cbCenterX = cl.x + cl.w / 2;
+    const cbRight = cl.x + cl.w;
     const subX = gl.busX;
     const zones = c.zones ?? [];
     const hasZones = zones.length > 0;
@@ -928,13 +1056,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       }
       <g class="meta-target" @click=${(ev: Event) => this._openCircuitDialog(ev, c)}>
         ${(() => {
-          const tt = circuitTooltip(c);
+          const tt = withFullId(c.id, cl.text, circuitTooltip(c));
           return tt ? svg`<title>${tt}</title>` : nothing;
         })()}
-        <rect x=${cl.x} y=${cl.startY} width=${CB_SQ} height=${CB_SQ}
+        <rect x=${cl.x} y=${cl.startY} width=${cl.w} height=${CB_SQ}
               fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
         <text x=${cbCenterX} y=${cl.startY + CB_SQ / 2 + 4} text-anchor="middle"
-              font-size="9" font-weight="bold" fill=${colors.color}>${c.id}</text>
+              font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${cl.text}</text>
       </g>
       ${
         c.sensor
@@ -957,7 +1085,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         // The connector stops at the start of the zone content so the line
         // never crosses the icon or room text.
         const ix0 = cbRight + 8;
-        const BW = 20;
+        const BW_MIN = 20;
         const BH = 12;
         const BR = 3;
         const ICON_SIZE = 12;
@@ -965,8 +1093,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         const fc = zone.floor
           ? floors[zone.floor] ?? { bg: '#a0aec0', fg: 'white' }
           : null;
+        // Same treatment as the id boxes: BW_MIN is a floor, not a fixed size.
+        const pill = zone.floor
+          ? fitBox(zone.floor, FLOOR_FONT, this._family, BW_MIN)
+          : { w: BW_MIN, text: '' };
         const pillX = ix0;
-        const iconX = fc ? ix0 + BW + 4 : ix0;
+        const iconX = fc ? ix0 + pill.w + 4 : ix0;
         const roomX = iconX + ICON_SIZE + ICON_GAP;
         const lineEnd = ix0;
         const iconName =
@@ -981,11 +1113,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             ${
               fc
                 ? svg`
-                    <rect x=${pillX} y=${zoneY - BH / 2 - 1} width=${BW} height=${BH}
+                    <rect x=${pillX} y=${zoneY - BH / 2 - 1} width=${pill.w} height=${BH}
                           fill=${fc.bg} rx=${BR}/>
-                    <text x=${pillX + BW / 2} y=${zoneY - 1} text-anchor="middle"
-                          dominant-baseline="central" font-size="7" font-weight="bold"
-                          fill=${fc.fg}>${zone.floor}</text>
+                    <text x=${pillX + pill.w / 2} y=${zoneY - 1} text-anchor="middle"
+                          dominant-baseline="central" font-size=${FLOOR_FONT}
+                          font-weight="bold" fill=${fc.fg}>${pill.text}</text>
                   `
                 : nothing
             }
@@ -1033,6 +1165,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     if (!this.shadowRoot) return;
     const texts = this.shadowRoot.querySelectorAll<SVGTextElement>('text.pwr-value');
     texts.forEach((t) => this._sizeBubble(t));
+  }
+
+  // The id boxes are sized from canvas measurements taken during layout, which
+  // on a cold load can happen before the theme's webfont has arrived. Those
+  // measurements are of the fallback face and generally come out narrow, so
+  // once the real fonts settle we drop the cache and lay out again.
+  //
+  // Runs once. `document.fonts.ready` resolves anew after each additional font
+  // load, but chasing every one of those would re-render on unrelated fonts
+  // elsewhere in the dashboard; the first settle is what covers the case that
+  // actually misdraws.
+  protected override firstUpdated(): void {
+    void document.fonts?.ready.then(() => {
+      resetTextMetrics();
+      this.requestUpdate();
+    });
   }
 
   // Size one bubble's background + connector line to fit its text. Pulled
