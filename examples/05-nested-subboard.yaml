@@ -10,8 +10,11 @@
 #
 #   P   — 4-pole main breaker feeding the pool sub-board (top level, taps the
 #         three trunks)
-#   ├── P3   a circuit wired straight off P, no extra protection
-#   └── R1   a 30 mA RCD *inside* the sub-board, protecting P1 and P2
+#   ├── R1   a 30 mA RCD *inside* the sub-board, protecting P1 and P2
+#   └── P3   a circuit wired straight off P, no extra protection
+#
+# Nested groups draw above the parent's own circuits, so R1 comes first on the
+# diagram even though `circuits:` is written before `groups:` in the YAML.
 #
 # Nested groups are fed by their parent's bus, so their `phases` draw no tap —
 # the value is kept because it documents which phase the sub-board runs on and

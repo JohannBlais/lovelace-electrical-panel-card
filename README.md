@@ -87,7 +87,7 @@ The full schema lives in [`docs/data-model.md`](docs/data-model.md). Key concept
 
 - **`groups[]`** is the top-level structure; each group has a `type` (`distribution` for loads — the default — or one of the production kinds), a `phases` array describing which trunks it taps, and an `accent` colour from which the renderer derives `color` / `fill` / `stroke`.
 - **`circuits[]`** under a group: one entry per breaker. Carries an icon-defining `type` (`socket` / `light` / `power`), optional `sensor` for live readings, optional `switch` for inline toggling, and a list of `zones[]`.
-- **`groups[]`** *inside* a group: a sub-board fed by that group rather than by the phase trunks. Drawn indented off the parent's bus, below the parent's own circuits, inheriting its `accent` unless it sets one.
+- **`groups[]`** *inside* a group: a sub-board fed by that group rather than by the phase trunks. Drawn indented off the parent's bus, above the parent's own circuits, inheriting its `accent` unless it sets one.
 - **`zones[]`** are the leaves: a `floor` pill (defined in `floors:`), a free-text `room`, and optionally `sensor`, `switch`, `critical`, plus icon / metadata overrides.
 - **`sensors:`** at the top level wires the card-wide totals — `total`, `grid` and the per-phase trunk readings.
 

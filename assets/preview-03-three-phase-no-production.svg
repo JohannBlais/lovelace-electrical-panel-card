@@ -75,6 +75,7 @@
       <line stroke-width="3" x1="82" y1="116" x2="82" y2="196" stroke="#3182ce"></line>
 
       
+      
       <line stroke-width="3" x1="82" y1="132" x2="104" y2="132" stroke="#3182ce"></line>
       <line stroke-width="1.5" x1="114" y1="142" x2="114" y2="175" stroke="#3182ce"></line>
       <g class="meta-target">
@@ -153,7 +154,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="36" cy="280" fill="#d69e2e"></circle>
       <line stroke-width="2" x1="36" y1="280" x2="70" y2="280" stroke="#d69e2e"></line>
@@ -168,6 +168,7 @@
 
       <line stroke-width="3" x1="82" y1="292" x2="82" y2="372" stroke="#d69e2e"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="308" x2="104" y2="308" stroke="#d69e2e"></line>
       <line stroke-width="1.5" x1="114" y1="318" x2="114" y2="351" stroke="#d69e2e"></line>
@@ -247,7 +248,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="24" cy="456" fill="#38a169"></circle>
       <line stroke-width="2" x1="24" y1="456" x2="70" y2="456" stroke="#38a169"></line>
@@ -262,6 +262,7 @@
 
       <line stroke-width="3" x1="82" y1="468" x2="82" y2="570" stroke="#38a169"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="484" x2="104" y2="484" stroke="#38a169"></line>
       <line stroke-width="1.5" x1="114" y1="494" x2="114" y2="549" stroke="#38a169"></line>
@@ -341,7 +342,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="48" cy="632" fill="#805ad5"></circle><circle r="3.5" cx="36" cy="632" fill="#805ad5"></circle><circle r="3.5" cx="24" cy="632" fill="#805ad5"></circle>
       <line stroke-width="2" x1="24" y1="632" x2="70" y2="632" stroke="#805ad5"></line>
@@ -356,6 +356,7 @@
 
       <line stroke-width="3" x1="82" y1="644" x2="82" y2="702" stroke="#805ad5"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="660" x2="104" y2="660" stroke="#805ad5"></line>
       <line stroke-width="1.5" x1="114" y1="670" x2="114" y2="681" stroke="#805ad5"></line>
@@ -419,6 +420,5 @@
           </g>
         
     
-      
     
           </svg>

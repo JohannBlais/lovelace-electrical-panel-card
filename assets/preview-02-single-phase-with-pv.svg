@@ -81,6 +81,7 @@
       <line stroke-width="3" x1="82" y1="116" x2="82" y2="326" stroke="#3182ce"></line>
 
       
+      
       <line stroke-width="3" x1="82" y1="132" x2="104" y2="132" stroke="#3182ce"></line>
       <line stroke-width="1.5" x1="114" y1="142" x2="114" y2="197" stroke="#3182ce"></line>
       <g class="meta-target">
@@ -262,7 +263,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="48" cy="388" fill="var(--energy-solar-color, #d97706)"></circle>
       <line stroke-width="2" x1="48" y1="388" x2="70" y2="388" stroke="var(--energy-solar-color, #d97706)"></line>
@@ -283,6 +283,7 @@
 
       <line stroke-width="3" x1="82" y1="400" x2="82" y2="416" stroke="var(--energy-solar-color, #d97706)"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="416" x2="104" y2="416" stroke="var(--energy-solar-color, #d97706)"></line>
       <line stroke-width="1.5" x1="114" y1="426" x2="114" y2="459" stroke="var(--energy-solar-color, #d97706)"></line>
@@ -335,6 +336,5 @@
           </g>
         
     
-      
     
           </svg>

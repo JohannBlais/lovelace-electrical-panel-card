@@ -32,7 +32,9 @@ trunks directly, stating a protection hierarchy that isn't there.
   metadata dialog.
 - One indent step per level, applied to the group box, its breakers and their
   zones. Depth is unbounded; horizontal room is the practical limit.
-- A group's own `circuits[]` render first, then its `groups[]`.
+- A group's `groups[]` render first, then its own `circuits[]`: the feed to a
+  remote board is a departure like any other, and in practice sits above the
+  breakers the parent keeps for itself.
 - A nested group inherits the parent's `accent` unless it sets its own, so a
   branch reads as one branch.
 - Bubble ids are now scoped by tree path (`g-P/R1`, `c-P/R1-P1`), so a
@@ -43,6 +45,12 @@ Groups also gained `mm2` and `cond` metadata, describing the cable feeding
 them — until now only circuits could carry a cross-section, which left the
 run into a sub-board with nowhere to be documented. Surfaced in the tooltip
 and the metadata dialog like every other spec field.
+
+`poles` widened from `2 | 4` to `1 | 2 | 3 | 4` on both groups and circuits.
+Single-pole control and lighting breakers are the norm on a sub-board, and
+motor loads are routinely 3P without a neutral; both were unexpressible.
+Runtime behaviour is unchanged — the value was only ever rendered as
+`{n}P` — so this is a type and documentation fix.
 
 Backwards compatible: existing configs render unchanged.
 

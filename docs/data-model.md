@@ -106,7 +106,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
 | `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, below this group's own circuits. |
 | `label`    | string                               | no       | _Metadata._ Reserved for future tooltips. |
-| `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (2 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
+| `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (1, 2, 3 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
 | `mm2` / `cond` | numbers                      | no       | _Metadata._ The feed cable into this group: cross-section in mm² and conductor count. Most useful on a nested group, whose feed run is its own. |
 
 ### Group types
@@ -187,7 +187,7 @@ Rendering rules:
 | Feed | A nested group hangs off its parent's vertical bus, not off the phase trunks. No tap dots are drawn for it. |
 | `phases` | Still required, still meaningful — but informational: it documents which phase the sub-board runs on and shows up in the tooltip and the metadata dialog. |
 | Indent | One step right per level, for the group box and everything under it. Depth is unbounded; each level eats horizontal room, so two or three is the practical limit. |
-| Order | A group's own `circuits[]` render first, then its `groups[]`. YAML mappings carry no ordering between the two keys, so this is fixed rather than configurable. |
+| Order | A group's `groups[]` render first, then its own `circuits[]` — a feed to a remote board is a departure like any other and in practice sits above the breakers the parent keeps. YAML mappings carry no ordering between the two keys, so this is fixed rather than configurable. |
 | Colour | A nested group with no `accent` inherits its parent's, so one branch of the diagram reads as one branch. Set `accent` to break it out. |
 | Everything else | Identical to a top-level group: `sensor`, `switch`, `max_w`, metadata, tooltip, dialog. |
 
@@ -215,7 +215,7 @@ circuits:
 | `sensor` | string (entity ID)                    | no       | Per-circuit power. Bubble appears next to the breaker box. |
 | `switch` | string (entity ID)                    | no       | Adds an inline toggle on the circuit's bubble. |
 | `zones`  | [`Zone[]`](#zones)                    | no       | Branches off the circuit. Empty/missing = breaker box drawn alone, no zones. |
-| `amp` / `poles` / `mm2` / `cond` / `pts` / `n_pts` | various | no | _Metadata._ Reserved for future tooltips. |
+| `amp` / `poles` / `mm2` / `cond` / `pts` / `n_pts` | various | no | _Metadata._ Rating in A, pole count (1, 2, 3 or 4), cross-section in mm², conductor count, and a free-text / numeric points count. Surfaced in the tooltip and the metadata dialog. |
 
 Icon resolution per zone: `Zone.icon` ⟶ `Circuit.icon` ⟶ default for `Circuit.type` ⟶ `mdi:help`.
 

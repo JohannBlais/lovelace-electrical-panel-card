@@ -81,6 +81,7 @@
       <line stroke-width="3" x1="82" y1="116" x2="82" y2="216" stroke="#38a169"></line>
 
       
+      
       <line stroke-width="3" x1="82" y1="132" x2="104" y2="132" stroke="#38a169"></line>
       <line stroke-width="1.5" x1="114" y1="142" x2="114" y2="153" stroke="#38a169"></line>
       <g class="meta-target">
@@ -204,7 +205,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="48" cy="322" fill="#3182ce"></circle>
       <line stroke-width="2" x1="48" y1="322" x2="70" y2="322" stroke="#3182ce"></line>
@@ -225,6 +225,7 @@
 
       <line stroke-width="3" x1="82" y1="334" x2="82" y2="436" stroke="#3182ce"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="350" x2="104" y2="350" stroke="#3182ce"></line>
       <line stroke-width="1.5" x1="114" y1="360" x2="114" y2="415" stroke="#3182ce"></line>
@@ -334,7 +335,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="36" cy="498" fill="#d69e2e"></circle>
       <line stroke-width="2" x1="36" y1="498" x2="70" y2="498" stroke="#d69e2e"></line>
@@ -349,6 +349,7 @@
 
       <line stroke-width="3" x1="82" y1="510" x2="82" y2="590" stroke="#d69e2e"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="526" x2="104" y2="526" stroke="#d69e2e"></line>
       <line stroke-width="1.5" x1="114" y1="536" x2="114" y2="569" stroke="#d69e2e"></line>
@@ -452,7 +453,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="48" cy="696" fill="#e53e3e"></circle>
       <line stroke-width="2" x1="48" y1="696" x2="70" y2="696" stroke="#e53e3e"></line>
@@ -473,6 +473,7 @@
 
       <line stroke-width="3" x1="82" y1="708" x2="82" y2="724" stroke="#e53e3e"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="724" x2="104" y2="724" stroke="#e53e3e"></line>
       <line stroke-width="1.5" x1="114" y1="734" x2="114" y2="789" stroke="#e53e3e"></line>
@@ -547,7 +548,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="48" cy="830" fill="#805ad5"></circle><circle r="3.5" cx="36" cy="830" fill="#805ad5"></circle><circle r="3.5" cx="24" cy="830" fill="#805ad5"></circle>
       <line stroke-width="2" x1="24" y1="830" x2="70" y2="830" stroke="#805ad5"></line>
@@ -562,6 +562,7 @@
 
       <line stroke-width="3" x1="82" y1="842" x2="82" y2="900" stroke="#805ad5"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="858" x2="104" y2="858" stroke="#805ad5"></line>
       <line stroke-width="1.5" x1="114" y1="868" x2="114" y2="879" stroke="#805ad5"></line>
@@ -625,7 +626,6 @@
           </g>
         
     
-      
     
       <circle r="3.5" cx="48" cy="962" fill="var(--energy-solar-color, #d97706)"></circle><circle r="3.5" cx="36" cy="962" fill="var(--energy-solar-color, #d97706)"></circle><circle r="3.5" cx="24" cy="962" fill="var(--energy-solar-color, #d97706)"></circle>
       <line stroke-width="2" x1="24" y1="962" x2="70" y2="962" stroke="var(--energy-solar-color, #d97706)"></line>
@@ -646,6 +646,7 @@
 
       <line stroke-width="3" x1="82" y1="974" x2="82" y2="990" stroke="var(--energy-solar-color, #d97706)"></line>
 
+      
       
       <line stroke-width="3" x1="82" y1="990" x2="104" y2="990" stroke="var(--energy-solar-color, #d97706)"></line>
       <line stroke-width="1.5" x1="114" y1="1000" x2="114" y2="1121" stroke="var(--energy-solar-color, #d97706)"></line>
@@ -778,6 +779,5 @@
           </g>
         
     
-      
     
           </svg>

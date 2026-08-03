@@ -17,6 +17,14 @@ export type GroupType =
 
 export type Phase = 'L1' | 'L2' | 'L3';
 
+/**
+ * Pole count of a breaker or RCD. 1 (single pole), 2 (P+N), 3 (three-phase,
+ * no neutral) and 4 (three-phase + N) all occur in the wild — control and
+ * lighting circuits on a sub-board are routinely single-pole, and motor
+ * loads are often 3P without a neutral.
+ */
+export type Poles = 1 | 2 | 3 | 4;
+
 export interface FloorStyle {
   bg: string;
   fg: string;
@@ -71,7 +79,7 @@ export interface Circuit {
   icon?: string;
   // ── Metadata (not rendered yet, kept for future tooltips / info dialogs)
   amp?: number;
-  poles?: 2 | 4;
+  poles?: Poles;
   /** Wire cross-section in mm². Numeric (e.g. `2.5`, `1.5`, `6`) or omitted. */
   mm2?: number;
   cond?: number;
@@ -131,7 +139,7 @@ export interface Group {
   /**
    * Nested groups fed by this one — a sub-distribution board, an RCD sitting
    * behind a main breaker, a contactor feeding its own set of circuits.
-   * Rendered as an indented group box hanging off this group's bus, below
+   * Rendered as an indented group box hanging off this group's bus, above
    * this group's own `circuits`. Nesting is unbounded, but each level costs
    * horizontal room, so two or three deep is the practical limit.
    */
@@ -145,8 +153,8 @@ export interface Group {
   amp?: number;
   /** RCD sensitivity in milliamperes (e.g. 30 for "30 mA"). */
   mA?: number;
-  /** RCD pole count (2 for single-phase, 4 for three-phase). */
-  poles?: 2 | 4;
+  /** Pole count — 1, 2 (P+N), 3 (3P) or 4 (3P+N). */
+  poles?: Poles;
   /** RCD class per IEC 60755 (typically `'A'`, `'AC'`, `'B'`, `'F'`). */
   class?: string;
   /**

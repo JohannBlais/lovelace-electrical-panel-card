@@ -502,7 +502,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
     // Lays out one group and everything below it, returns the total height
     // consumed. A group occupies GHDR for its own box row, then stacks its
-    // breakers (each CB_SQ + one ZH per zone) and finally its nested groups.
+    // nested groups, then its own breakers (each CB_SQ + one ZH per zone).
+    //
+    // Sub-boards come first because that is how panels read: the feed to a
+    // remote board is a departure like any other, and in practice it sits
+    // above the breakers the parent keeps for itself. YAML mappings carry no
+    // ordering between `groups:` and `circuits:`, so this has to be a rule
+    // rather than something the config expresses.
     const layoutGroup = (g: Group, path: string, depth: number, yOff: number): number => {
       const x = ML + depth * INDENT;
       const cbX = x + INDENT;
@@ -510,19 +516,19 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       let localY = yOff + GHDR;
       let lastChildMidY: number | undefined;
 
+      for (const sub of g.groups ?? []) {
+        localY += SUBGROUP_GAP;
+        // The nested box sits GHDR/2 into its own block, same as any group.
+        lastChildMidY = localY + GHDR / 2;
+        localY += layoutGroup(sub, groupPath(path, sub), depth + 1, localY);
+      }
+
       for (const c of g.circuits ?? []) {
         const zonesCount = Math.max(1, c.zones?.length ?? 0);
         const height = CB_SQ + zonesCount * ZH;
         circuits.set(c.id, { startY: localY, height, zones: zonesCount, x: cbX });
         lastChildMidY = localY + CB_SQ / 2;
         localY += height;
-      }
-
-      for (const sub of g.groups ?? []) {
-        localY += SUBGROUP_GAP;
-        // The nested box sits GHDR/2 into its own block, same as any group.
-        lastChildMidY = localY + GHDR / 2;
-        localY += layoutGroup(sub, groupPath(path, sub), depth + 1, localY);
       }
 
       const height = localY - yOff;
@@ -879,7 +885,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
       ${bus}
 
-      ${circuits.map((c) => this._renderCircuit(colors, c, path, gl, floors))}
       ${subGroups.map((sub, idx) =>
         this._renderGroup(
           sub,
@@ -890,6 +895,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           gl.busX,
         ),
       )}
+      ${circuits.map((c) => this._renderCircuit(colors, c, path, gl, floors))}
     `;
   }
 

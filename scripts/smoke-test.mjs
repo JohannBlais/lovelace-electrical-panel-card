@@ -258,6 +258,21 @@ check(
   bubbleIds.join(' '),
 );
 
+// Sub-boards render above the parent's own breakers. Bubble ids are the
+// unambiguous handle here — both boards have a circuit labelled "A", so
+// matching on the drawn text would pick whichever came first in the DOM.
+const bubbleY = (id) => {
+  const t = nested.shadowRoot.querySelector(`text.pwr-value[data-id="${id}"]`);
+  return t ? parseFloat(t.getAttribute('y')) : null;
+};
+const subY = bubbleY('g-P/R1');
+const ownCircuitY = bubbleY('c-P-A');
+check(
+  'nested group renders above the parent own circuits',
+  subY !== null && ownCircuitY !== null && subY < ownCircuitY,
+  `R1 at y=${subY}, P/A at y=${ownCircuitY}`,
+);
+
 const nestedDialog = await openDialogTitled(nested, 'RCD R1');
 check('clicking a nested group opens its dialog', !!nestedDialog);
 if (nestedDialog) {
