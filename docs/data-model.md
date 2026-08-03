@@ -94,7 +94,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 
 | Field      | Type                                 | Required | Description |
 | ---------- | ------------------------------------ | -------- | ----------- |
-| `id`       | string                               | yes      | Unique label drawn inside the box (e.g. `D1`). |
+| `id`       | string                               | yes      | Short designator drawn inside the box (e.g. `D1`, `HVAC`). Also this group's identity: it forms the path (`D1`, `P/R1`) that keys the layout and the power bubbles, so it need only be unique among its siblings. The box grows to fit but stops at 64px and elides past that — put descriptive text in `label`, not here. |
 | `type`     | `'distribution'` \| `'solar'` \| `'wind'` \| `'geothermal'` \| `'hydro'` | no | Defaults to `'distribution'`. Loads vs production. Visual is identical; the discriminator is for documentation, future tooling, and theming hooks. |
 | `phases`   | `('L1' \| 'L2' \| 'L3')[]`           | yes      | Phases the group runs on. `[L1]` = single-phase; `[L1, L2, L3]` = three-phase; `[]` = no tap. Top-level groups tap the trunks here; on a nested group the value is informational (see [nested groups](#nested-groups--sub-boards)). |
 | `accent`   | string (CSS colour)                  | no       | Single colour; renderer derives `color` / `stroke` / a tinted `fill` from it. When omitted, an accent is picked from a fallback palette by group index. |
@@ -105,7 +105,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
 | `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, below this group's own circuits. |
-| `label`    | string                               | no       | _Metadata._ Reserved for future tooltips. |
+| `label`    | string                               | no       | Human-readable name, drawn to the right of the box (e.g. `Main board`). Free to change at any time, unlike `id`. Elided if it would reach the power bubbles. Also leads the tooltip. |
 | `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (1, 2, 3 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
 | `mm2` / `cond` | numbers                      | no       | _Metadata._ The feed cable into this group: cross-section in mm² and conductor count. Most useful on a nested group, whose feed run is its own. |
 
@@ -209,7 +209,8 @@ circuits:
 
 | Field    | Type                                  | Required | Description |
 | -------- | ------------------------------------- | -------- | ----------- |
-| `id`     | string                                | yes      | Drawn inside the breaker box (e.g. `A`). Unique within a group. |
+| `id`     | string                                | yes      | Short designator drawn inside the breaker box — the marking on the physical panel (e.g. `A`, `Q1`, `F12`). Unique within its group, and part of the bubble key. The box grows to fit but stops at 64px and elides past that — put descriptive text in `label`, not here. |
+| `label`  | string                                | no       | Human-readable name, drawn to the right of the breaker box (e.g. `Kitchen sockets`). Free to change at any time, unlike `id`. Elided if it would reach the power bubbles. |
 | `type`   | `'socket'` \| `'light'` \| `'power'`  | yes      | Picks the **default** icon for zones in this circuit (MDI: `mdi:power-socket-eu` / `mdi:lightbulb-outline` / `mdi:lightning-bolt`). |
 | `icon`   | string (MDI name)                     | no       | Overrides the type default for all zones of this circuit. Any string accepted by `<ha-icon>` works (e.g. `mdi:solar-power`, `mdi:fire`). |
 | `sensor` | string (entity ID)                    | no       | Per-circuit power. Bubble appears next to the breaker box. |
@@ -302,7 +303,7 @@ CSS custom properties exposed by the card:
 Standard HA variables drive the chrome:
 
 - `--primary-text-color` → labels, all bubble values
-- `--secondary-text-color` → "Total" / "Grid" labels, room names
+- `--secondary-text-color` → "Total" / "Grid" labels, room names, group / circuit `label` text
 - `--ha-card-background`, `--card-background-color` → bubble fills
 - `--divider-color` → bubble borders, connector lines
 - `--ha-font-family-body` → SVG font

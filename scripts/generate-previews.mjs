@@ -46,6 +46,45 @@ function mdiName(slug) {
   );
 }
 
+// ─── Stylesheet drift guard ───────────────────────────────────────────────────
+// The stylesheet inlined in renderExample is a hand-maintained mirror of the
+// card's own CSS. It has to be hand-maintained: the card styles through
+// `var(--token, fallback)`, and a static SVG viewed outside Home Assistant has
+// no theme to resolve those against, so concrete colours are written out here.
+//
+// The failure mode is silent. Add a class to the card, forget this copy, and
+// the shape renders with the SVG default — black — while every test still
+// passes, because the card itself is styled correctly and only the baked
+// preview is wrong. That is exactly how `.board-label` first shipped black in
+// #30. So: fail the build rather than the eye.
+//
+// Two classes carry no rule on purpose:
+//   - `meta-target` groups click targets and paints nothing
+//   - `pwr-value` takes its colour from an inline `fill` (the group accent)
+const UNSTYLED_BY_DESIGN = new Set(['meta-target', 'pwr-value']);
+
+function assertEveryClassIsStyled(svgEl, styleText) {
+  const styled = new Set(
+    [...styleText.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]),
+  );
+  const missing = new Set();
+  for (const el of svgEl.querySelectorAll('[class]')) {
+    for (const name of (el.getAttribute('class') ?? '').split(/\s+/)) {
+      if (name && !styled.has(name) && !UNSTYLED_BY_DESIGN.has(name)) {
+        missing.add(name);
+      }
+    }
+  }
+  if (missing.size) {
+    throw new Error(
+      `Classes present in the generated SVG with no rule in the inlined ` +
+        `stylesheet: ${[...missing].sort().join(', ')}. Mirror the rule from ` +
+        `src/electrical-panel-card.ts into the style block in this file, or ` +
+        `add it to UNSTYLED_BY_DESIGN if it genuinely paints nothing.`,
+    );
+  }
+}
+
 // ─── <text> → <path> conversion (bake Roboto outlines into the SVG) ──────────
 // Walks every <text> in the SVG and replaces it with a <path d="…"/> using
 // the actual Roboto glyph outlines. The result renders identically in any
@@ -169,11 +208,12 @@ async function renderExample(yamlPath) {
   style.textContent = `
     .bubble-bg { fill: #ffffff; stroke: #e2e8f0; stroke-width: 0.7; }
     .bubble-conn { stroke: #cbd5e0; stroke-width: 0.5; }
-    .label-secondary, .zone-room { fill: #718096; }
+    .label-secondary, .zone-room, .board-label { fill: #718096; }
     .phase-label { fill: #1a202c; }
     .sat-track { fill: #e2e8f0; opacity: 0.5; }
   `;
   svg.insertBefore(style, svg.firstChild);
+  assertEveryClassIsStyled(svg, style.textContent);
   // Ensure xmlns attribute (jsdom strips it on serialization sometimes).
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   // Clean up
