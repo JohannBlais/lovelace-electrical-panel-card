@@ -2,7 +2,7 @@
 <svg preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 448"><style>
     .bubble-bg { fill: #ffffff; stroke: #e2e8f0; stroke-width: 0.7; }
     .bubble-conn { stroke: #cbd5e0; stroke-width: 0.5; }
-    .label-secondary, .zone-room { fill: #718096; }
+    .label-secondary, .zone-room, .board-label { fill: #718096; }
     .phase-label { fill: #1a202c; }
     .sat-track { fill: #e2e8f0; opacity: 0.5; }
   </style>
