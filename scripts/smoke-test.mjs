@@ -285,6 +285,133 @@ if (nestedDialog) {
 
 unmountCard(nested);
 
+// ─── Elastic id boxes (#30) ───────────────────────────────────────────────────
+// A box narrower than the id it holds spills text out of both sides, because
+// the label is centred. Boxes therefore grow with their text, with the old
+// fixed sizes kept as minimums. These checks pin all three outcomes: unchanged
+// when short, grown when long, capped-and-elided when absurd — plus the knock-on
+// effect that a wider group box has to push its children further right.
+process.stdout.write('\nElastic id boxes\n');
+const wideConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Wide',
+  floors: { Basement: { bg: '#38a169', fg: 'white' } },
+  groups: [
+    {
+      id: 'Distribution',
+      phases: ['L1'],
+      circuits: [
+        { id: 'Q1', type: 'power', zones: [{ room: 'Short' }] },
+        {
+          id: 'Kitchen sockets ring final',
+          type: 'socket',
+          zones: [{ floor: 'Basement', room: 'Long' }],
+        },
+      ],
+    },
+    { id: 'S', phases: ['L1'], circuits: [{ id: 'Q2', type: 'power' }] },
+  ],
+};
+
+const wide = await mountCard(wideConfig);
+const boxOf = (label) => {
+  const t = [...wide.shadowRoot.querySelectorAll('text')].find(
+    (el) => el.textContent.trim() === label && el.getAttribute('font-weight') === 'bold',
+  );
+  if (!t) return null;
+  const cx = parseFloat(t.getAttribute('x'));
+  // The rect is the box centred on the label; match on that rather than on
+  // DOM order, which interleaves groups, breakers and pills.
+  const rect = [...wide.shadowRoot.querySelectorAll('rect')].find((r) => {
+    const x = parseFloat(r.getAttribute('x'));
+    const w = parseFloat(r.getAttribute('width'));
+    return Number.isFinite(x) && Number.isFinite(w) && Math.abs(x + w / 2 - cx) < 0.51;
+  });
+  return rect
+    ? { x: parseFloat(rect.getAttribute('x')), w: parseFloat(rect.getAttribute('width')) }
+    : null;
+};
+
+// SQ = 24 / CB_SQ = 20 are the floors: a one- or two-character id must render
+// at exactly the size it did before this change.
+const shortGroup = boxOf('S');
+check(
+  'short group id keeps the default 24-wide box',
+  shortGroup !== null && shortGroup.w === 24,
+  `S box = ${JSON.stringify(shortGroup)}`,
+);
+const shortCircuit = boxOf('Q1');
+check(
+  'short breaker id keeps the default 20-wide box',
+  shortCircuit !== null && shortCircuit.w === 20,
+  `Q1 box = ${JSON.stringify(shortCircuit)}`,
+);
+
+const longGroup = boxOf('Distribution');
+check(
+  'long group id widens its box past the default',
+  longGroup !== null && longGroup.w > 24,
+  `Distribution box = ${JSON.stringify(longGroup)}`,
+);
+
+// MAX_BOX_W = 64. Past it the id is elided rather than allowed to shove the
+// zone text under the power bubbles, so the full string must be gone from the
+// SVG and an ellipsis present in its place.
+// Only the drawn <text> nodes — the full id is *expected* in the <title>, and
+// svg.textContent would sweep that up too.
+const drawnText = [...wide.shadowRoot.querySelectorAll('text')].map((t) =>
+  t.textContent.trim(),
+);
+check(
+  'over-long breaker id is elided, not drawn in full',
+  !drawnText.includes('Kitchen sockets ring final'),
+  drawnText.join(' | '),
+);
+const elided = [...wide.shadowRoot.querySelectorAll('text')].find((t) =>
+  t.textContent.trim().startsWith('Kitchen'),
+);
+check(
+  'elided id ends in an ellipsis',
+  !!elided && elided.textContent.trim().endsWith('…'),
+  elided ? elided.textContent.trim() : 'no such text node',
+);
+const elidedBox = elided ? boxOf(elided.textContent.trim()) : null;
+check(
+  'elided id box stops at the 64 ceiling',
+  elidedBox !== null && elidedBox.w === 64,
+  `box = ${JSON.stringify(elidedBox)}`,
+);
+
+// The full id would otherwise be unrecoverable once elided.
+const elidedTitle = elided?.closest('g')?.querySelector('title')?.textContent ?? '';
+check(
+  'elided id stays readable in the tooltip',
+  elidedTitle.includes('Kitchen sockets ring final'),
+  elidedTitle || 'no title',
+);
+
+// A group box that grew has to push its own breakers right, or the two overlap.
+const wideGroupBreaker = boxOf('Q1');
+check(
+  'breakers clear a widened parent group box',
+  longGroup !== null && wideGroupBreaker !== null &&
+    wideGroupBreaker.x >= longGroup.x + longGroup.w,
+  `Distribution ends at ${longGroup && longGroup.x + longGroup.w}, Q1 starts at ${wideGroupBreaker?.x}`,
+);
+
+// Same rule for the floor pill, which had its own hard-coded 20.
+const pillText = [...wide.shadowRoot.querySelectorAll('text')].find(
+  (t) => t.textContent.trim() === 'Basement',
+);
+const pillBox = pillText ? boxOf('Basement') : null;
+check(
+  'long floor name widens its pill',
+  pillBox !== null && pillBox.w > 20,
+  `Basement pill = ${JSON.stringify(pillBox)}`,
+);
+
+unmountCard(wide);
+
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,
 );

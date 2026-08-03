@@ -112,6 +112,31 @@ for (const proto of [
   if (proto) proto.getBBox = bboxStub;
 }
 
+// jsdom has no canvas either — `getContext('2d')` returns null unless the
+// `canvas` package is installed, which would drag a native build into a
+// dev-only dependency tree for one method. The card measures id text through
+// it (src/text-metrics.ts) to size the group/breaker boxes during layout, and
+// treats an absent context as "fall back to the fixed sizes". Without this
+// stub every run would take that fallback, so the elastic boxes would go
+// untested here and the previews would be drawn at the wrong widths.
+//
+// Only `font` and `measureText` are implemented, because they are all the card
+// touches. Widths come from the same Roboto faces as bboxStub, so the two
+// measurement paths agree.
+const FONT_SHORTHAND = /^(?<weight>[a-z0-9]+)\s+(?<size>[\d.]+)px\s/i;
+window.HTMLCanvasElement.prototype.getContext = function getContext(kind) {
+  if (kind !== '2d') return null;
+  return {
+    font: '10px sans-serif',
+    measureText(text) {
+      const m = FONT_SHORTHAND.exec(this.font);
+      const size = m ? parseFloat(m.groups.size) : 10;
+      const font = fontFor(m?.groups.weight);
+      return { width: font.getAdvanceWidth(String(text), size) };
+    },
+  };
+};
+
 // ─── Load the bundled card (registers <electrical-panel-card>) ────────────────
 const bundlePath = resolve(root, 'dist/electrical-panel-card.js');
 if (!existsSync(bundlePath)) {
