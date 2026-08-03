@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.18.0] — Nested groups (sub-boards)
+
+A group can now declare its own `groups[]`. Until now the schema was exactly
+three levels — group → circuit → zone — so anything behind a main breaker had
+to be flattened onto the main panel's bus: a pool house board, a workshop
+sub-panel, an RCD sitting behind a main breaker all drew as if they tapped the
+trunks directly, stating a protection hierarchy that isn't there.
+
+```yaml
+- id: P                  # main breaker, taps the trunks
+  phases: [L1, L2, L3]
+  circuits:
+    - id: P3             # wired straight off P
+      …
+  groups:
+    - id: R1             # 30 mA RCD inside the sub-board
+      phases: [L1]
+      circuits: [ … ]    # protected by R1, not just by P
+```
+
+- A nested group hangs off its parent's bus and draws no phase taps of its
+  own. Its `phases` stays required and meaningful, but informational: it
+  documents the phase the board runs on and surfaces in the tooltip and the
+  metadata dialog.
+- One indent step per level, applied to the group box, its breakers and their
+  zones. Depth is unbounded; horizontal room is the practical limit.
+- A group's own `circuits[]` render first, then its `groups[]`.
+- A nested group inherits the parent's `accent` unless it sets its own, so a
+  branch reads as one branch.
+- Bubble ids are now scoped by tree path (`g-P/R1`, `c-P/R1-P1`), so a
+  sub-board can reuse a breaker letter from the parent board. Two bubbles
+  sharing an id would previously size themselves from each other's bbox.
+
+Backwards compatible: existing configs render unchanged.
+
+New [example 05](examples/05-nested-subboard.yaml) and its preview cover the
+pattern; `docs/data-model.md` documents it under **Nested groups /
+sub-boards**.
+
 ## [0.17.5] — Restore the metadata dialog on HA 2026.3+
 
 Clicking a group, circuit or zone opened a dialog showing only the

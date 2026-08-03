@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Example 5 — Nested sub-boards
+#
+# Panels are rarely two levels deep. A main breaker often feeds a remote
+# sub-board (pool house, garage, workshop, outbuilding) which has protection
+# of its own, and the circuits down there hang off *that*, not off the main
+# panel's bus.
+#
+# `groups:` inside a group expresses exactly this. Here:
+#
+#   P   — 4-pole main breaker feeding the pool sub-board (top level, taps the
+#         three trunks)
+#   ├── P3   a circuit wired straight off P, no extra protection
+#   └── R1   a 30 mA RCD *inside* the sub-board, protecting P1 and P2
+#
+# Nested groups are fed by their parent's bus, so their `phases` draw no tap —
+# the value is kept because it documents which phase the sub-board runs on and
+# shows up in the tooltip and the metadata dialog.
+#
+# Nested groups inherit the parent's `accent` unless they set their own, so a
+# whole branch reads as one branch. Nesting is unbounded but costs horizontal
+# room per level — two or three deep is the practical limit.
+# ─────────────────────────────────────────────────────────────────────────────
+type: custom:electrical-panel-card
+title: Panel with a pool sub-board
+
+sensors:
+  total: { entity: sensor.house_total_power }
+  grid:  { entity: sensor.grid_net_power }
+  phases:
+    l1: { entity: sensor.phase_l1_power }
+    l2: { entity: sensor.phase_l2_power }
+    l3: { entity: sensor.phase_l3_power }
+
+floors:
+  L0: { bg: '#38a169', fg: white }   # Ground floor
+  L1: { bg: '#3182ce', fg: white }   # First floor
+
+groups:
+  # A conventional RCD, unchanged by nesting — most groups stay like this.
+  - id: D1
+    phases: [L1]
+    accent: '#3182ce'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    circuits:
+      - id: A
+        type: socket
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        zones:
+          - { floor: L0, room: Living room }
+          - { floor: L1, room: Bedroom }
+
+  # Main breaker feeding the pool sub-board.
+  - id: P
+    phases: [L1, L2, L3]
+    accent: '#0891b2'
+    amp: 20
+    poles: 4
+    sensor: sensor.pool_total_power
+    circuits:
+      # Wired straight off P — no RCD of its own.
+      - id: P3
+        type: power
+        amp: 16
+        poles: 2
+        mm2: 2.5
+        sensor: sensor.pool_heat_pump_power
+        zones:
+          - { floor: L0, room: Pool heat pump, icon: mdi:heat-pump }
+    groups:
+      # Sub-board RCD. Everything below it is protected by these 30 mA.
+      - id: R1
+        phases: [L1]
+        amp: 40
+        mA: 30
+        poles: 2
+        class: A
+        sensor: sensor.pool_rcd_power
+        circuits:
+          - id: P1
+            type: light
+            amp: 10
+            poles: 2
+            mm2: 1.5
+            zones:
+              - { floor: L0, room: Underwater light, icon: mdi:lightbulb-outline }
+              - { floor: L0, room: Safety cover, icon: mdi:roller-shade }
+          - id: P2
+            type: power
+            amp: 16
+            poles: 2
+            mm2: 2.5
+            sensor: sensor.pool_pump_power
+            switch: switch.pool_pump
+            zones:
+              - floor: L0
+                room: Filtration pump
+                icon: mdi:pool
+                sensor: sensor.pool_pump_power
+                switch: switch.pool_pump

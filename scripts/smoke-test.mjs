@@ -176,6 +176,91 @@ if (bare) {
 
 unmountCard(card);
 
+// ─── Nested groups ────────────────────────────────────────────────────────────
+// A sub-board dropped from the render would fail silently: the card still
+// produces a valid SVG, just without that whole branch. These checks assert
+// the branch is there, is indented (not flattened onto the parent's column),
+// and that path-scoped ids keep bubbles apart when a breaker letter is reused
+// between the parent board and the nested one.
+process.stdout.write('\nNested groups\n');
+const nestedConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Nested',
+  floors: { L0: { bg: '#38a169', fg: 'white' } },
+  groups: [
+    {
+      id: 'P',
+      phases: ['L1', 'L2'],
+      circuits: [
+        {
+          id: 'A',
+          type: 'power',
+          sensor: 'sensor.parent_a_power',
+          zones: [{ floor: 'L0', room: 'Parent load' }],
+        },
+      ],
+      groups: [
+        {
+          id: 'R1',
+          phases: ['L1'],
+          mA: 30,
+          sensor: 'sensor.subboard_power',
+          circuits: [
+            {
+              id: 'A',
+              type: 'socket',
+              sensor: 'sensor.nested_a_power',
+              zones: [{ floor: 'L0', room: 'Nested load' }],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const nested = await mountCard(nestedConfig);
+const svgText = nested.shadowRoot.querySelector('svg').textContent;
+check('nested group box is rendered', svgText.includes('R1'));
+check('nested group circuit is rendered', svgText.includes('Nested load'));
+
+// Box x positions: the nested group must sit one indent step right of its
+// parent, and its own breaker further right again.
+const boxX = (label) => {
+  const text = [...nested.shadowRoot.querySelectorAll('text')].find(
+    (t) => t.textContent.trim() === label && t.getAttribute('font-weight') === 'bold',
+  );
+  return text ? parseFloat(text.getAttribute('x')) : null;
+};
+const parentBoxX = boxX('P');
+const subBoxX = boxX('R1');
+check(
+  'nested group is indented past its parent',
+  parentBoxX !== null && subBoxX !== null && subBoxX > parentBoxX,
+  `P at x=${parentBoxX}, R1 at x=${subBoxX}`,
+);
+
+// Reused breaker letter across the two boards — path-scoped ids must keep the
+// two bubbles distinct, or one would size itself from the other's bbox.
+const bubbleIds = [...nested.shadowRoot.querySelectorAll('text.pwr-value')].map(
+  (t) => t.dataset.id,
+);
+check(
+  'reused circuit ids yield distinct bubble ids',
+  new Set(bubbleIds).size === bubbleIds.length,
+  bubbleIds.join(' '),
+);
+check(
+  'nested group bubble is present',
+  bubbleIds.includes('g-P/R1'),
+  bubbleIds.join(' '),
+);
+
+const nestedDialog = await openDialogTitled(nested, 'RCD R1');
+check('clicking a nested group opens its dialog', !!nestedDialog);
+
+unmountCard(nested);
+
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,
 );

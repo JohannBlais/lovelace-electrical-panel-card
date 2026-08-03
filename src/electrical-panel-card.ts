@@ -65,8 +65,13 @@ const HEADER_H = 20;
 const SQ = 24;
 const PWR_X = 350;
 const CB_SQ = 20;
-const CB_X = ML + SQ + 10;
-const CB_RIGHT = CB_X + CB_SQ;
+// Horizontal step between a group box and whatever hangs off its bus — its
+// own breakers, or a nested group's box. Applied once per nesting level, so
+// a group at depth d sits at ML + d × INDENT and its breakers one step right.
+const INDENT = SQ + 10;
+// Vertical breathing room above a nested group block, so it reads as a
+// separate board rather than another breaker row.
+const SUBGROUP_GAP = 6;
 const PH_TAP_ZONE = 54; // staggered phase taps fit in here (offsets 6/26/46)
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
@@ -111,8 +116,11 @@ interface ResolvedColors {
   stroke: string;
 }
 
-function resolveColors(g: Group, idx: number): ResolvedColors {
-  const accent = g.accent ?? FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
+// `parentAccent` is passed for nested groups: a sub-board inherits the colour
+// of the group feeding it unless it sets its own `accent`, so one branch of
+// the diagram reads as one branch.
+function resolveColors(g: Group, idx: number, parentAccent?: string): ResolvedColors {
+  const accent = g.accent ?? parentAccent ?? FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
   return {
     accent,
     color: g.color ?? accent,
@@ -160,18 +168,37 @@ interface CircuitLayout {
   startY: number;
   height: number;
   zones: number;
+  /** Left edge of the breaker box — depends on the owning group's depth. */
+  x: number;
 }
 interface GroupLayout {
   yOff: number;
   height: number;
+  /** Nesting level: 0 for a top-level group, +1 per `groups` step. */
+  depth: number;
+  /** Left edge of the group box. */
+  x: number;
+  /** Vertical bus feeding this group's circuits and nested groups. */
+  busX: number;
   circuits: Map<string, CircuitLayout>;
+  /**
+   * Mid-height of the last thing hanging off the bus (breaker or nested
+   * group box). Undefined when the group has no children — no bus is drawn.
+   */
+  lastChildMidY?: number;
 }
 interface Layout {
   svgW: number;
   svgH: number;
   phLineEnd: number;
   groupWidth: number;
+  /** Keyed by group path — `D1`, `X/D7`, … — so nested ids can repeat. */
   byGroup: Map<string, GroupLayout>;
+}
+
+/** Path of a nested group, used as its layout key and bubble id prefix. */
+function groupPath(parentPath: string | undefined, g: Group): string {
+  return parentPath ? `${parentPath}/${g.id}` : g.id;
 }
 
 @customElement(CARD_TAG)
@@ -253,7 +280,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const s = cfg.sensors;
     [s?.total?.entity, s?.grid?.entity, s?.phases?.l1?.entity, s?.phases?.l2?.entity, s?.phases?.l3?.entity]
       .forEach((e) => e && set.add(e));
-    for (const g of cfg.groups) {
+    const walk = (g: Group): void => {
       if (g.sensor) set.add(g.sensor);
       if (g.switch) set.add(g.switch);
       for (const c of g.circuits ?? []) {
@@ -264,7 +291,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           if (z.switch) set.add(z.switch);
         }
       }
-    }
+      (g.groups ?? []).forEach(walk);
+    };
+    cfg.groups.forEach(walk);
     this._entityCache = [...set];
     return this._entityCache;
   }
@@ -275,14 +304,26 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     if (!Array.isArray(cfg.groups) || cfg.groups.length === 0) {
       throw new Error('`groups` is required and must contain at least one group');
     }
-    cfg.groups.forEach((g, i) => {
-      if (!g.id) throw new Error(`groups[${i}]: \`id\` is required`);
-      if (!Array.isArray(g.phases)) {
-        throw new Error(
-          `groups[${i}] "${g.id}": \`phases\` must be an array (use [] for none)`,
-        );
-      }
-    });
+    // Nested groups get the same checks, reported with a path that points at
+    // the offending entry (`groups[2].groups[0]`).
+    const validate = (list: Group[], prefix: string): void => {
+      list.forEach((g, i) => {
+        const where = `${prefix}[${i}]`;
+        if (!g.id) throw new Error(`${where}: \`id\` is required`);
+        if (!Array.isArray(g.phases)) {
+          throw new Error(
+            `${where} "${g.id}": \`phases\` must be an array (use [] for none)`,
+          );
+        }
+        if (g.groups !== undefined) {
+          if (!Array.isArray(g.groups)) {
+            throw new Error(`${where} "${g.id}": \`groups\` must be an array`);
+          }
+          validate(g.groups, `${where}.groups`);
+        }
+      });
+    };
+    validate(cfg.groups, 'groups');
     this._config = cfg;
     // Invalidate config-derived caches.
     this._layoutCache = undefined;
@@ -292,16 +333,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
   public getCardSize(): number {
     if (!this._config) return 1;
-    const rows = this._config.groups.reduce(
-      (acc, g) =>
-        acc +
-        1 +
-        (g.circuits ?? []).reduce(
-          (n, c) => n + Math.max(1, c.zones?.length ?? 0),
-          0,
-        ),
-      0,
-    );
+    const countRows = (g: Group): number =>
+      1 +
+      (g.circuits ?? []).reduce((n, c) => n + Math.max(1, c.zones?.length ?? 0), 0) +
+      (g.groups ?? []).reduce((n, sub) => n + countRows(sub), 0);
+    const rows = this._config.groups.reduce((acc, g) => acc + countRows(g), 0);
     return Math.max(3, Math.ceil(rows / 4));
   }
 
@@ -460,26 +496,48 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     let yCur = HEADER_H + PH_TAP_ZONE;
     let phLineEnd = HEADER_H + PH_TAP_ZONE;
 
-    for (const g of groups) {
-      yCur += GPAD;
-      const yOff = yCur;
+    // Lays out one group and everything below it, returns the total height
+    // consumed. A group occupies GHDR for its own box row, then stacks its
+    // breakers (each CB_SQ + one ZH per zone) and finally its nested groups.
+    const layoutGroup = (g: Group, path: string, depth: number, yOff: number): number => {
+      const x = ML + depth * INDENT;
+      const cbX = x + INDENT;
       const circuits = new Map<string, CircuitLayout>();
       let localY = yOff + GHDR;
+      let lastChildMidY: number | undefined;
+
       for (const c of g.circuits ?? []) {
         const zonesCount = Math.max(1, c.zones?.length ?? 0);
         const height = CB_SQ + zonesCount * ZH;
-        circuits.set(c.id, { startY: localY, height, zones: zonesCount });
+        circuits.set(c.id, { startY: localY, height, zones: zonesCount, x: cbX });
+        lastChildMidY = localY + CB_SQ / 2;
         localY += height;
       }
-      const groupHeight =
-        GHDR +
-        (g.circuits ?? []).reduce((s, c) => {
-          const z = Math.max(1, c.zones?.length ?? 0);
-          return s + CB_SQ + z * ZH;
-        }, 0);
-      byGroup.set(g.id, { yOff, height: groupHeight, circuits });
-      phLineEnd = Math.max(phLineEnd, yOff + GHDR / 2);
-      yCur += groupHeight;
+
+      for (const sub of g.groups ?? []) {
+        localY += SUBGROUP_GAP;
+        // The nested box sits GHDR/2 into its own block, same as any group.
+        lastChildMidY = localY + GHDR / 2;
+        localY += layoutGroup(sub, groupPath(path, sub), depth + 1, localY);
+      }
+
+      const height = localY - yOff;
+      byGroup.set(path, {
+        yOff,
+        height,
+        depth,
+        x,
+        busX: x + SQ / 2,
+        circuits,
+        lastChildMidY,
+      });
+      return height;
+    };
+
+    for (const g of groups) {
+      yCur += GPAD;
+      phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
+      yCur += layoutGroup(g, g.id, 0, yCur);
     }
 
     return {
@@ -679,7 +737,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
             ${this._config.groups.map((g, idx) => {
               const colors = resolveColors(g, idx);
-              return this._renderGroup(g, colors, layout, floors);
+              return this._renderGroup(g, g.id, colors, layout, floors);
             })}
           </svg>
         </div>
@@ -741,62 +799,73 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // is identical so production groups appear with the same RCD-like box +
   // circuits + zones structure as load groups. For PV systems, each inverter
   // is naturally expressed as a zone (zones already carry their own sensor).
+  // `path` identifies the group in the layout map and prefixes its bubble ids
+  // — nested boards may legitimately reuse a breaker letter, so ids are scoped
+  // by their position in the tree rather than assumed globally unique.
+  // `feedX` is the bus x of the parent group; omitted at the top level, where
+  // the group is fed by the phase trunks instead.
   private _renderGroup(
     g: Group,
+    path: string,
     colors: ResolvedColors,
     layout: Layout,
     floors: Record<string, FloorStyle>,
+    feedX?: number,
   ): unknown {
-    const gl = layout.byGroup.get(g.id)!;
+    const gl = layout.byGroup.get(path)!;
     const midY = gl.yOff + GHDR / 2;
-    const subX = ML + SQ / 2;
     const circuits = g.circuits ?? [];
+    const subGroups = g.groups ?? [];
 
+    // Top level: one tap dot per phase, plus a feed line from the leftmost
+    // tapped trunk. Nested: a single feed line from the parent's bus — the
+    // phases are inherited, so drawing taps there would be a lie.
+    const nested = feedX !== undefined;
     const phases = g.phases;
-    const taps = phases.map(
-      (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.stroke}/>`,
-    );
+    const taps = nested
+      ? nothing
+      : phases.map(
+          (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.stroke}/>`,
+        );
     const leftmostX =
       phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
-    const tapLine =
-      phases.length > 0
-        ? svg`<line x1=${leftmostX} y1=${midY} x2=${ML} y2=${midY}
+    const feedFrom = nested ? feedX : leftmostX;
+    const feedLine =
+      nested || phases.length > 0
+        ? svg`<line x1=${feedFrom} y1=${midY} x2=${gl.x} y2=${midY}
                     stroke=${colors.stroke} stroke-width="2"/>`
         : nothing;
 
-    // Sub-bus only when there is at least one circuit.
-    let subBus: unknown = nothing;
-    if (circuits.length > 0) {
-      const lastC = circuits[circuits.length - 1];
-      const lastCl = gl.circuits.get(lastC.id)!;
-      const lastCircMid = lastCl.startY + CB_SQ / 2;
-      subBus = svg`<line x1=${subX} y1=${midY + SQ / 2} x2=${subX} y2=${lastCircMid}
-                          stroke=${colors.stroke} stroke-width="3"/>`;
-    }
+    // Bus only when something hangs off it — a breaker or a nested group.
+    const bus =
+      gl.lastChildMidY !== undefined
+        ? svg`<line x1=${gl.busX} y1=${midY + SQ / 2} x2=${gl.busX} y2=${gl.lastChildMidY}
+                    stroke=${colors.stroke} stroke-width="3"/>`
+        : nothing;
 
     return svg`
       ${taps}
-      ${tapLine}
+      ${feedLine}
 
       <g class="meta-target" @click=${(ev: Event) => this._openGroupDialog(ev, g)}>
         ${(() => {
           const tt = groupTooltip(g);
           return tt ? svg`<title>${tt}</title>` : nothing;
         })()}
-        <rect x=${ML} y=${midY - SQ / 2} width=${SQ} height=${SQ}
+        <rect x=${gl.x} y=${midY - SQ / 2} width=${SQ} height=${SQ}
               fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
-        <text x=${ML + SQ / 2} y=${midY + 4} text-anchor="middle"
+        <text x=${gl.x + SQ / 2} y=${midY + 4} text-anchor="middle"
               font-size="9" font-weight="bold" fill=${colors.color}>${g.id}</text>
       </g>
 
       ${
         g.sensor
           ? this._bubble({
-              id: `g-${g.id}`,
+              id: `g-${path}`,
               x: PWR_X,
               y: midY + 3,
               fill: colors.color,
-              connX: ML + SQ,
+              connX: gl.x + SQ,
               switchEntity: g.switch,
               powerEntity: g.sensor,
               maxW: g.max_w,
@@ -804,22 +873,34 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           : nothing
       }
 
-      ${subBus}
+      ${bus}
 
-      ${circuits.map((c) => this._renderCircuit(colors, c, gl, floors))}
+      ${circuits.map((c) => this._renderCircuit(colors, c, path, gl, floors))}
+      ${subGroups.map((sub, idx) =>
+        this._renderGroup(
+          sub,
+          groupPath(path, sub),
+          resolveColors(sub, idx, colors.accent),
+          layout,
+          floors,
+          gl.busX,
+        ),
+      )}
     `;
   }
 
   private _renderCircuit(
     colors: ResolvedColors,
     c: Circuit,
+    groupKey: string,
     gl: GroupLayout,
     floors: Record<string, FloorStyle>,
   ): unknown {
     const cl = gl.circuits.get(c.id)!;
     const cbMidY = cl.startY + CB_SQ / 2;
-    const cbCenterX = CB_X + CB_SQ / 2;
-    const subX = ML + SQ / 2;
+    const cbCenterX = cl.x + CB_SQ / 2;
+    const cbRight = cl.x + CB_SQ;
+    const subX = gl.busX;
     const zones = c.zones ?? [];
     const hasZones = zones.length > 0;
     const lastZoneY = hasZones
@@ -827,7 +908,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       : 0;
 
     return svg`
-      <line x1=${subX} y1=${cbMidY} x2=${CB_X} y2=${cbMidY}
+      <line x1=${subX} y1=${cbMidY} x2=${cl.x} y2=${cbMidY}
             stroke=${colors.stroke} stroke-width="3"/>
       ${
         hasZones
@@ -840,19 +921,19 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           const tt = circuitTooltip(c);
           return tt ? svg`<title>${tt}</title>` : nothing;
         })()}
-        <rect x=${CB_X} y=${cl.startY} width=${CB_SQ} height=${CB_SQ}
+        <rect x=${cl.x} y=${cl.startY} width=${CB_SQ} height=${CB_SQ}
               fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"/>
-        <text x=${CB_X + CB_SQ / 2} y=${cl.startY + CB_SQ / 2 + 4} text-anchor="middle"
+        <text x=${cbCenterX} y=${cl.startY + CB_SQ / 2 + 4} text-anchor="middle"
               font-size="9" font-weight="bold" fill=${colors.color}>${c.id}</text>
       </g>
       ${
         c.sensor
           ? this._bubble({
-              id: `c-${c.id}`,
+              id: `c-${groupKey}-${c.id}`,
               x: PWR_X,
               y: cbMidY + 3,
               fill: colors.color,
-              connX: CB_RIGHT,
+              connX: cbRight,
               switchEntity: c.switch,
               powerEntity: c.sensor,
             })
@@ -865,7 +946,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         //   [connector line] → [floor pill (optional)] → [type icon] → [room]
         // The connector stops at the start of the zone content so the line
         // never crosses the icon or room text.
-        const ix0 = CB_RIGHT + 8;
+        const ix0 = cbRight + 8;
         const BW = 20;
         const BH = 12;
         const BR = 3;
@@ -917,7 +998,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             ${
               zone.sensor
                 ? this._bubble({
-                    id: `z-${c.id}-${j}`,
+                    id: `z-${groupKey}-${c.id}-${j}`,
                     x: PWR_X,
                     y: zoneY + 3,
                     fill: 'var(--primary-text-color)',

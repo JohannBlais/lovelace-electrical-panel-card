@@ -84,10 +84,15 @@ export interface Group {
   /** Defaults to `'distribution'` when omitted. */
   type?: GroupType;
   /**
-   * Phase trunks the group taps into.
+   * Phases the group runs on.
    * - `[L1]` (or `[L2]`, `[L3]`): single-phase
    * - `[L1, L2, L3]`: three-phase
    * - `[]`: no phase tap (rare)
+   *
+   * Top-level groups tap the phase trunks here — one tap dot per entry.
+   * Nested groups (see `groups`) are fed by their parent's bus, not by the
+   * trunks, so their phases are informational: they surface in the tooltip
+   * and the metadata dialog but draw no tap.
    */
   phases: Phase[];
   /**
@@ -123,6 +128,14 @@ export interface Group {
    * inverter zones).
    */
   circuits?: Circuit[];
+  /**
+   * Nested groups fed by this one — a sub-distribution board, an RCD sitting
+   * behind a main breaker, a contactor feeding its own set of circuits.
+   * Rendered as an indented group box hanging off this group's bus, below
+   * this group's own `circuits`. Nesting is unbounded, but each level costs
+   * horizontal room, so two or three deep is the practical limit.
+   */
+  groups?: Group[];
   /** Optional metadata (reserved for future tooltips). */
   label?: string;
   // ── RCD / main breaker metadata (not rendered yet, kept for future
