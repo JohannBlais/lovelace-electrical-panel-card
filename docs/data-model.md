@@ -1,4 +1,4 @@
-# Data model (v0.6)
+# Data model (v0.7)
 
 Reference for the YAML configuration consumed by `custom:electrical-panel-card`.
 
@@ -6,9 +6,9 @@ The schema describes _what is on the diagram_. **Everything is a group.** A grou
 
 Groups nest: a group can declare its own `groups[]` for a sub-board fed by it rather than by the phase trunks — see [nested groups](#nested-groups--sub-boards).
 
-> v0.6 adds `Circuit.label` and draws `Group.label` on the board; v0.5 added nested groups. Every v0.4 config remains valid throughout. v0.4 is **not** backward-compatible with versions before it. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
+> v0.7 adds the `grid` and `battery` group types plus `summary` on a group and on each `sensors.*` reading; v0.6 added `Circuit.label` and drew `Group.label` on the board; v0.5 added nested groups. Every v0.4 config remains valid throughout. v0.4 is **not** backward-compatible with versions before it. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
 >
-> One behaviour change in v0.6: a `Group.label` set on an existing config used to appear only in the tooltip, and is now drawn beside the group box as well.
+> Two behaviour changes to know about. In v0.6, a `Group.label` set on an existing config used to appear only in the tooltip, and is now drawn beside the group box as well. In v0.7, the `Total` and `Grid` captions are no longer drawn when no entity is configured for them — a card that declared neither used to carry two labels naming readings it did not have.
 
 ## Top-level config
 

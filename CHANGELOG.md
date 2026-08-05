@@ -6,6 +6,64 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.20.0] — Where the power comes from
+
+A board is not always fed by one path. The installation behind #3 has four —
+grid through an external transfer switch, grid again through the inverter's
+built-in AC bypass, PV, and a battery — and the schema had no way to name the
+first two at all, let alone say which one is carrying the house right now.
+
+```yaml
+sensors:
+  total: { entity: sensor.house_load, label: House load, summary: true }
+
+groups:
+  - id: ATS
+    type: grid
+    label: Grid via transfer switch
+    phases: [L1]
+    sensor: sensor.ats_grid_input_power
+    summary: true
+
+  - id: BAT
+    type: battery
+    label: Battery
+    phases: [L1]
+    sensor: sensor.inverter_battery_power   # negative while charging
+    summary: true
+```
+
+```
+Sources
+● Grid via transfer switch      0 W
+● Battery                 −1.2 kW
+──────────────────────────────────
+  House load               2.3 kW
+```
+
+- **`grid` and `battery` join the group types.** Nothing else about a group
+  changes: the renderer was already identical across types, and a source group
+  with no `circuits` already drew as a bare box plus its bubble.
+- **`summary: true` on a group** gives it a row above the diagram — accent dot,
+  label, live reading. Nested groups qualify and inherit the accent they are
+  drawn with, so a row's dot matches its box.
+- **The same key on `sensors.total` / `sensors.grid` / a phase _moves_ that
+  reading** off the board into the foot of the table, under a rule of its own.
+  The asymmetry is deliberate: a group keeps its box either way, so its row is
+  extra information, whereas these readings exist only as their bubble and
+  drawing both would be the duplication the table exists to remove.
+- This **enumerates sources, it does not draw the paths between them.** Nothing
+  says two `grid` groups are one supply arriving by two routes, and nothing
+  marks which is live — you read that off the values, where the path carrying
+  the house is the one not at zero. A graphical view of the paths would build on
+  this data rather than replace it.
+- **Behaviour change:** `Total` and `Grid` had their captions drawn
+  unconditionally. A card declaring neither carried two labels naming readings
+  it did not have, each beside an empty bubble; those are now skipped. Boards
+  that set both are unaffected.
+- The summary table is HTML rather than SVG, so it does **not** appear in the
+  preview images under `assets/`, which serialise the diagram only.
+
 ## [0.19.0] — Names that fit
 
 The group box, the breaker box and the floor pill were each drawn at a fixed

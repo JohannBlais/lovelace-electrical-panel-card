@@ -48,7 +48,7 @@ Grab `electrical-panel-card.js` from the latest [release](https://github.com/Joh
 
 ```yaml
 resources:
-  - url: /local/electrical-panel-card/electrical-panel-card.js?v=0.19.0
+  - url: /local/electrical-panel-card/electrical-panel-card.js?v=0.20.0
     type: module
 ```
 
