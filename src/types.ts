@@ -171,6 +171,17 @@ export interface Group {
   /** Group-level toggle. Adds an inline switch to the bubble. */
   switch?: string;
   /**
+   * Lists this group in the summary table above the diagram, with its accent,
+   * its `label` (or `id`) and its live reading. Opt-in rather than inferred
+   * from `type`, so a board can summarise a main breaker or a heavy load
+   * alongside its sources — and so adding a type never silently rewrites an
+   * existing card's header.
+   *
+   * Nested groups qualify too: what matters is where power comes from, not
+   * how deep in the tree it was declared.
+   */
+  summary?: boolean;
+  /**
    * Circuits / branches under this group. Optional — a group may render
    * with just its box and group-level bubble if it has no internal
    * structure. For load groups (`type: 'distribution'`), the convention is

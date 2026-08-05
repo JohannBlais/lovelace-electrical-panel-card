@@ -125,6 +125,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `sensor`   | string (entity ID)                   | no       | Group-level live power. Renders a bubble next to the box. |
 | `max_w`    | number                               | no       | Rated power in watts. With `sensor` set, draws a [saturation bar](#saturation-bar) under the group's bubble. |
 | `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
+| `summary`  | boolean                              | no       | Lists this group in the [source summary](#source-summary) above the diagram. Nested groups qualify. |
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
 | `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, **above** this group's own circuits — see [nested groups](#nested-groups--sub-boards). |
 | `label`    | string                               | no       | Human-readable name, drawn to the right of the box (e.g. `Main board`). Free to change at any time, unlike `id`. Elided if it would reach the power bubbles. Also leads the tooltip. |
@@ -196,6 +197,42 @@ accent: 'var(--energy-solar-color, #ff9800)'
 ```
 
 Fallback palette (cycled by group index when no accent is set): `#3182ce`, `#38a169`, `#d69e2e`, `#e53e3e`, `#805ad5`, `#319795`, `#dd6b20`, `#5a67d8`.
+
+### Source summary
+
+Set `summary: true` on a group and it gains a row in a small table drawn above the diagram — its accent as a dot, its `label` (or `id`), and its live reading:
+
+```yaml
+groups:
+  - id: ATS
+    label: Grid via transfer switch
+    phases: [L1]
+    accent: '#3182ce'
+    sensor: sensor.ats_grid_input_power
+    summary: true
+
+  - id: BYP
+    label: Grid via inverter bypass
+    phases: [L1]
+    accent: '#805ad5'
+    sensor: sensor.inverter_grid_input_power
+    summary: true
+```
+
+| | |
+| --- | --- |
+| Grid via transfer switch | `0 W` |
+| Grid via inverter bypass | `2.4 kW` |
+
+That is the point of the table on a board with more than one way of being fed: the path carrying the house is the one not at zero. The card cannot say which is live — nothing reports the switch position — so it puts the readings side by side and lets you read it off.
+
+Notes:
+
+- **Opt-in, not inferred from `type`.** A `distribution` group can appear (a main breaker, a heavy load worth watching), and a source can stay out. Adding a type to your config never silently rewrites the header.
+- **Nested groups qualify.** A PV array behind a sub-board is still where the power comes from. The row inherits the same accent it is drawn with below, so the dot matches its box.
+- **Rows are listed in declaration order**, depth-first — parent before its own sub-groups.
+- **A group with `summary: true` and no `sensor`** still gets a row, reading `—`. A misconfiguration should be visible, not silently dropped.
+- **The table is HTML, not part of the SVG.** It therefore does not appear in the generated preview images under `assets/`, which serialise the diagram only.
 
 ### Phases array
 

@@ -4,6 +4,7 @@ export const ja: Translations = {
   card: {
     total: '合計',
     grid: '系統',
+    sources: '電源',
   },
   confirm: {
     toggle: '「{name}」を切り替えてもよろしいですか？',

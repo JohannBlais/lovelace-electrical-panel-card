@@ -4,6 +4,7 @@ export const ru: Translations = {
   card: {
     total: 'Всего',
     grid: 'Сеть',
+    sources: 'Источники',
   },
   confirm: {
     toggle: 'Вы уверены, что хотите переключить «{name}»?',

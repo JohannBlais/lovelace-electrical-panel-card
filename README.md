@@ -24,6 +24,7 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 - **Floor / room labelling** per zone with configurable colour-coded pills
 - **Short designator + readable name** — `id` is the marking on the physical panel (`Q1`, `D3`) drawn inside the box, `label` is the description (`Kitchen sockets`) drawn beside it. Boxes size themselves to their text either way.
 - **Saturation bars** — give a bubble a `max_w` and it gains a gauge of `current / max_w`, flipping to the error colour past 100 %. Works on the grid total, each phase trunk, and any group (PV peak, main breaker rating, subscribed limit)
+- **Source summary** — mark any group `summary: true` and it gets a row above the diagram with its accent and its live reading. On a board reachable by several paths (transfer switch, inverter bypass) the one carrying the house is the one not reading zero
 - **Hover tooltips + click-to-open metadata dialog** with structured RCD / breaker specs (rating, sensitivity, poles, class, cross-section, …)
 - **Theme-aware**: cable colours stay IEC 60446 across light / dark themes; everything else (text, dividers, bubbles, accents) follows the active HA theme
 - **18 built-in languages** auto-detected from `hass.locale.language`: English, French, German, Spanish, Italian, Portuguese, Dutch, Polish, Swedish, Danish, Norwegian, Finnish, Czech, Russian, Ukrainian, Japanese, Chinese (Simplified), Korean
@@ -103,7 +104,7 @@ language: de
 ...
 ```
 
-To add a language, drop a `xx.ts` file next to `src/translations/en.ts` exporting a `Translations` object, then register it in `DICTS` in `src/translations/index.ts`. Three strings to translate (`card.total`, `card.grid`, `confirm.toggle`) plus the dialog vocabulary (`dialog.group_title`, `dialog.circuit_title`, `dialog.close`, and the field labels under `dialog.fields`).
+To add a language, drop a `xx.ts` file next to `src/translations/en.ts` exporting a `Translations` object, then register it in `DICTS` in `src/translations/index.ts`. Four strings to translate (`card.total`, `card.grid`, `card.sources`, `confirm.toggle`) plus the dialog vocabulary (`dialog.group_title`, `dialog.circuit_title`, `dialog.close`, and the field labels under `dialog.fields`).
 
 ## Theming
 

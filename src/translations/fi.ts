@@ -4,6 +4,7 @@ export const fi: Translations = {
   card: {
     total: 'Yhteensä',
     grid: 'Verkko',
+    sources: 'Lähteet',
   },
   confirm: {
     toggle: 'Haluatko varmasti vaihtaa kohteen ”{name}”?',

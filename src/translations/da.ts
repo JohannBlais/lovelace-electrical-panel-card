@@ -4,6 +4,7 @@ export const da: Translations = {
   card: {
     total: 'Total',
     grid: 'Net',
+    sources: 'Kilder',
   },
   confirm: {
     toggle: 'Er du sikker på, at du vil skifte „{name}"?',

@@ -4,6 +4,7 @@ export const pl: Translations = {
   card: {
     total: 'Razem',
     grid: 'Sieć',
+    sources: 'Źródła',
   },
   confirm: {
     toggle: 'Czy na pewno chcesz przełączyć „{name}"?',
