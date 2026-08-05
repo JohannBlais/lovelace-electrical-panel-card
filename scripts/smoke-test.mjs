@@ -725,6 +725,21 @@ check(
 );
 unmountCard(footOnly);
 
+// A caption naming a reading that was never configured, beside an empty
+// bubble. Drawn unconditionally until now, and newly visible once a board
+// drops `sensors.grid` in favour of a `type: grid` group.
+const noMains = await mountCard({
+  type: 'custom:electrical-panel-card',
+  title: 'No mains sensors',
+  groups: [{ id: 'D1', phases: ['L1'], circuits: [{ id: 'Q1', type: 'power' }] }],
+});
+const noMainsText = noMains.shadowRoot.querySelector('svg').textContent;
+check('no "Total" caption when no total is configured', !noMainsText.includes('Total'), noMainsText.slice(0, 80));
+check('no "Grid" caption when no grid is configured', !noMainsText.includes('Grid'), noMainsText.slice(0, 80));
+// The trunks and their phase labels are the diagram, not a reading.
+check('phase labels are still drawn', noMainsText.includes('L1'), noMainsText.slice(0, 80));
+unmountCard(noMains);
+
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,
 );

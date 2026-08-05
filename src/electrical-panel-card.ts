@@ -849,6 +849,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // Kept as a JS comment rather than one in the markup: lit renders HTML
     // comments into the DOM, so anything written there ships in the bundle and
     // is baked into every preview SVG under assets/.
+    //
+    // "Total" and "Grid" are additionally skipped when no entity is configured
+    // at all. Their captions used to be drawn unconditionally, so a card that
+    // declared neither still carried two labels naming readings it did not
+    // have, each beside an empty bubble. The phase bubbles have no caption and
+    // their tap dots read as part of the trunk, so they are left alone.
     const phTapY1 = HEADER_H + 6;
     const phTapY2 = HEADER_H + 26;
     const phTapY3 = HEADER_H + 46;
@@ -930,7 +936,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
             <!-- Main totals (right column) -->
             ${
-              sensors.total?.summary
+              !sensors.total?.entity || sensors.total.summary
                 ? nothing
                 : svg`
                     <text class="label-secondary" x=${PWR_X - 55} y=${phTapY1 + 3}
@@ -946,7 +952,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                   `
             }
             ${
-              sensors.grid?.summary
+              !sensors.grid?.entity || sensors.grid.summary
                 ? nothing
                 : svg`
                     <text class="label-secondary" x=${PWR_X - 55} y=${phTapY2 + 3}
