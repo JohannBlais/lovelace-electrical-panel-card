@@ -17,7 +17,7 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 - **One-line diagram** rendered as pure SVG, scaling to any width
 - **Live power** on phase trunks, RCDs, circuits and individual zones — read straight from `hass.states`, no polling, no token
 - **Smart-plug toggles** inline on each bubble, with confirmation dialog for `critical:` loads (fridges, freezers, sump pumps, …)
-- **Production groups** alongside loads — `type: solar | wind | geothermal | hydro` rendered with the same primitives. Inverters and turbines become zones with their own sensors.
+- **Source groups** alongside loads — `type: grid | battery | solar | wind | geothermal | hydro` rendered with the same primitives. Inverters and turbines become zones with their own sensors, and a board fed by several paths (transfer switch, inverter bypass) declares one group per incoming path.
 - **Nested sub-boards** — a group can carry its own `groups[]`, so a pool house, garage or workshop board fed by a main breaker draws as an indented branch instead of being flattened into the main panel
 - **Three-phase aware** — `phases: [L1, L2, L3]` for 4P breakers, single phase for everything else, any combination accepted
 - **MDI icons** per circuit type with per-circuit and per-zone overrides — `mdi:fridge`, `mdi:solar-power`, anything Material Design ships

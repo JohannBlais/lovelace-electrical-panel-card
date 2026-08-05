@@ -3,13 +3,23 @@ import type { LovelaceCardConfig } from 'custom-card-helpers';
 export type CircuitType = 'socket' | 'light' | 'power';
 
 /**
- * What the group represents — load (default) or one of several production
- * sources. The renderer is identical across all types; the discriminator is
- * informational, drives default styling (e.g. solar accent), and lets
- * documentation and future tooling reason about the panel topology.
+ * What the group represents — a load (default) or one of the sources feeding
+ * the board. The renderer is identical across all types: the discriminator
+ * carries no styling of its own, it names the node so the metadata dialog,
+ * documentation and future tooling can reason about the panel topology. Pick
+ * an `accent` if you want a source to stand out visually.
+ *
+ * A board with more than one way of being fed — an inverter with a built-in
+ * bypass sitting behind an external transfer switch, say — declares one group
+ * per incoming path (#3). Nothing here encodes that two `grid` groups are the
+ * same upstream supply arriving by different routes, nor which route is
+ * currently live: that is read off the power values, where the path carrying
+ * the house is the one not reading zero.
  */
 export type GroupType =
   | 'distribution' // load — sub-distribution board / RCD / breaker group (default)
+  | 'grid' // source: mains, one group per incoming path
+  | 'battery' // source: storage — positive discharging, negative charging
   | 'solar' // production: photovoltaic
   | 'wind' // production: wind turbine
   | 'geothermal' // production: geothermal
@@ -51,6 +61,12 @@ export interface PhaseSensors {
 
 export interface MainSensors {
   total?: Sensor;
+  /**
+   * The single top-right "Grid" bubble — one net figure for the board.
+   * Unrelated to a group of `type: 'grid'`, which is a node on the diagram:
+   * a board fed by two separate mains paths has two such groups and still
+   * one `sensors.grid`.
+   */
   grid?: Sensor;
   phases?: PhaseSensors;
 }
