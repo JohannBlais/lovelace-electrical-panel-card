@@ -192,25 +192,26 @@ It doubles as a sanity test: if the renderer throws or yields no SVG, generation
 npm version patch --no-git-tag-version   # or minor / major
 ```
 
-That rewrites `package.json` and the lockfile without committing or tagging. Add a [`CHANGELOG.md`](CHANGELOG.md) entry for the new version, land both as a release PR, then tag the merge commit — one command at a time:
+That rewrites `package.json` and the lockfile without committing or tagging. Add a [`CHANGELOG.md`](CHANGELOG.md) entry for the new version, land both as a release PR, then tag the merge commit. Releases are cut from Windows PowerShell:
 
-```bash
+```powershell
 git checkout main
-```
-
-```bash
 git pull
-```
-
-```bash
-git tag "v$(node -p "require('./package.json').version")"
-```
-
-```bash
+$v = node -p "require('./package.json').version"
+git tag "v$v"
 git push --tags
 ```
 
-Deliberately not chained with `&&`: this repo is released from Windows PowerShell 5.1, where `&&` is not a valid statement separator and the whole line fails to parse. `$( … )` is fine there — it is only the chaining that breaks. Keep them separate if you edit this section.
+The bash equivalent, if you release from a POSIX shell:
+
+```bash
+git checkout main
+git pull
+git tag "v$(node -p "require('./package.json').version")"
+git push --tags
+```
+
+Two things to preserve if you edit this section. **No `&&`** — Windows PowerShell 5.1 rejects it as an invalid statement separator, and it is a parse error, so the whole line fails before anything runs. **Read the version into a variable first** rather than inlining `$( … )` inside a double-quoted string, which is the other construct that does not survive the trip from bash to PowerShell 5.1.
 
 Deriving the tag from `package.json` rather than typing it is the point — `release.yml` rejects a mismatch, and the pull matters because tagging a stale `main` would publish the previous commit.
 
