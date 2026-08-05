@@ -839,6 +839,16 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const t = this._t();
     // 20 px between staggered taps so the right-column "Total" / "Grid"
     // bubbles don't visually butt up against each other.
+    //
+    // Each of the five card-level readings below is skipped when it set
+    // `summary: true`, having moved into the summary table above. A phase
+    // reading takes its anchor dot with it — the dot exists to tie the bubble
+    // to its trunk and anchors nothing once the bubble is gone. The trunks
+    // themselves are the diagram and are drawn unconditionally.
+    //
+    // Kept as a JS comment rather than one in the markup: lit renders HTML
+    // comments into the DOM, so anything written there ships in the bundle and
+    // is baked into every preview SVG under assets/.
     const phTapY1 = HEADER_H + 6;
     const phTapY2 = HEADER_H + 26;
     const phTapY3 = HEADER_H + 46;
@@ -868,10 +878,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             <text class="phase-label" x=${PHASE_X.L1} y="16" text-anchor="middle"
                   font-size="7.5" font-weight="bold">L1</text>
 
-            <!-- Staggered phase taps + bubbles. A reading moved into the
-                 summary table takes its anchor dot with it: the dot exists to
-                 tie the bubble to its trunk, and anchors nothing once the
-                 bubble is gone. The trunk itself is drawn above regardless. -->
+            <!-- Staggered phase taps + bubbles -->
             ${
               phases.l1?.summary
                 ? nothing
