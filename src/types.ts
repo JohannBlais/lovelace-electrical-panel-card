@@ -51,6 +51,19 @@ export interface Sensor {
    * and each of `sensors.phases`.
    */
   max_w?: number;
+  /**
+   * Moves this reading off the diagram and into the summary table, below the
+   * source rows. Unlike `Group.summary` this relocates rather than adds: a
+   * group keeps its box on the board either way, so a row about it is extra
+   * information, whereas these readings have no existence beyond their bubble.
+   * Showing the same figure in both places is the duplication the table was
+   * meant to resolve.
+   *
+   * They land under a rule of their own because they are totals *over* the
+   * board rather than sources feeding it — a distinction the table would
+   * otherwise blur.
+   */
+  summary?: boolean;
 }
 
 export interface PhaseSensors {

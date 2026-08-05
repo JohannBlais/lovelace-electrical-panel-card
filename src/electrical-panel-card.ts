@@ -34,6 +34,7 @@ import type {
   FloorStyle,
   Group,
   Phase,
+  Sensor,
   Zone,
 } from './types.js';
 
@@ -838,6 +839,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const t = this._t();
     // 20 px between staggered taps so the right-column "Total" / "Grid"
     // bubbles don't visually butt up against each other.
+    //
+    // Each of the five card-level readings below is skipped when it set
+    // `summary: true`, having moved into the summary table above. A phase
+    // reading takes its anchor dot with it — the dot exists to tie the bubble
+    // to its trunk and anchors nothing once the bubble is gone. The trunks
+    // themselves are the diagram and are drawn unconditionally.
+    //
+    // Kept as a JS comment rather than one in the markup: lit renders HTML
+    // comments into the DOM, so anything written there ships in the bundle and
+    // is baked into every preview SVG under assets/.
+    //
+    // "Total" and "Grid" are additionally skipped when no entity is configured
+    // at all. Their captions used to be drawn unconditionally, so a card that
+    // declared neither still carried two labels naming readings it did not
+    // have, each beside an empty bubble. The phase bubbles have no caption and
+    // their tap dots read as part of the trunk, so they are left alone.
     const phTapY1 = HEADER_H + 6;
     const phTapY2 = HEADER_H + 26;
     const phTapY3 = HEADER_H + 46;
@@ -868,57 +885,87 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                   font-size="7.5" font-weight="bold">L1</text>
 
             <!-- Staggered phase taps + bubbles -->
-            <circle cx=${PHASE_X.L1} cy=${phTapY1} r="2" fill=${PHASE_COLOR.L1}/>
-            ${this._bubble({
-              id: 'phase_l1',
-              x: 150,
-              y: phTapY1,
-              fill: 'var(--primary-text-color)',
-              connX: PHASE_X.L1,
-              powerEntity: phases.l1?.entity,
-              maxW: phases.l1?.max_w,
-            })}
-            <circle cx=${PHASE_X.L2} cy=${phTapY2} r="2" fill=${PHASE_COLOR.L2}/>
-            ${this._bubble({
-              id: 'phase_l2',
-              x: 185,
-              y: phTapY2,
-              fill: 'var(--primary-text-color)',
-              connX: PHASE_X.L2,
-              powerEntity: phases.l2?.entity,
-              maxW: phases.l2?.max_w,
-            })}
-            <circle cx=${PHASE_X.L3} cy=${phTapY3} r="2" fill=${PHASE_COLOR.L3}/>
-            ${this._bubble({
-              id: 'phase_l3',
-              x: 220,
-              y: phTapY3,
-              fill: 'var(--primary-text-color)',
-              connX: PHASE_X.L3,
-              powerEntity: phases.l3?.entity,
-              maxW: phases.l3?.max_w,
-            })}
+            ${
+              phases.l1?.summary
+                ? nothing
+                : svg`
+                    <circle cx=${PHASE_X.L1} cy=${phTapY1} r="2" fill=${PHASE_COLOR.L1}/>
+                    ${this._bubble({
+                      id: 'phase_l1',
+                      x: 150,
+                      y: phTapY1,
+                      fill: 'var(--primary-text-color)',
+                      connX: PHASE_X.L1,
+                      powerEntity: phases.l1?.entity,
+                      maxW: phases.l1?.max_w,
+                    })}
+                  `
+            }
+            ${
+              phases.l2?.summary
+                ? nothing
+                : svg`
+                    <circle cx=${PHASE_X.L2} cy=${phTapY2} r="2" fill=${PHASE_COLOR.L2}/>
+                    ${this._bubble({
+                      id: 'phase_l2',
+                      x: 185,
+                      y: phTapY2,
+                      fill: 'var(--primary-text-color)',
+                      connX: PHASE_X.L2,
+                      powerEntity: phases.l2?.entity,
+                      maxW: phases.l2?.max_w,
+                    })}
+                  `
+            }
+            ${
+              phases.l3?.summary
+                ? nothing
+                : svg`
+                    <circle cx=${PHASE_X.L3} cy=${phTapY3} r="2" fill=${PHASE_COLOR.L3}/>
+                    ${this._bubble({
+                      id: 'phase_l3',
+                      x: 220,
+                      y: phTapY3,
+                      fill: 'var(--primary-text-color)',
+                      connX: PHASE_X.L3,
+                      powerEntity: phases.l3?.entity,
+                      maxW: phases.l3?.max_w,
+                    })}
+                  `
+            }
 
             <!-- Main totals (right column) -->
-            <text class="label-secondary" x=${PWR_X - 55} y=${phTapY1 + 3}
-                  text-anchor="end" font-size="7.5">${sensors.total?.label ?? t.card.total}</text>
-            ${this._bubble({
-              id: 'total',
-              x: PWR_X,
-              y: phTapY1 + 3,
-              fill: '#c53030',
-              powerEntity: sensors.total?.entity,
-              maxW: sensors.total?.max_w,
-            })}
-            <text class="label-secondary" x=${PWR_X - 55} y=${phTapY2 + 3}
-                  text-anchor="end" font-size="7.5">${sensors.grid?.label ?? t.card.grid}</text>
-            ${this._bubble({
-              id: 'grid',
-              x: PWR_X,
-              y: phTapY2 + 3,
-              powerEntity: sensors.grid?.entity,
-              maxW: sensors.grid?.max_w,
-            })}
+            ${
+              !sensors.total?.entity || sensors.total.summary
+                ? nothing
+                : svg`
+                    <text class="label-secondary" x=${PWR_X - 55} y=${phTapY1 + 3}
+                          text-anchor="end" font-size="7.5">${sensors.total?.label ?? t.card.total}</text>
+                    ${this._bubble({
+                      id: 'total',
+                      x: PWR_X,
+                      y: phTapY1 + 3,
+                      fill: '#c53030',
+                      powerEntity: sensors.total?.entity,
+                      maxW: sensors.total?.max_w,
+                    })}
+                  `
+            }
+            ${
+              !sensors.grid?.entity || sensors.grid.summary
+                ? nothing
+                : svg`
+                    <text class="label-secondary" x=${PWR_X - 55} y=${phTapY2 + 3}
+                          text-anchor="end" font-size="7.5">${sensors.grid?.label ?? t.card.grid}</text>
+                    ${this._bubble({
+                      id: 'grid',
+                      x: PWR_X,
+                      y: phTapY2 + 3,
+                      powerEntity: sensors.grid?.entity,
+                      maxW: sensors.grid?.max_w,
+                    })}
+                  `
+            }
 
             ${this._config.groups.map((g, idx) => {
               const colors = resolveColors(g, idx);
@@ -952,6 +999,27 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     return rows;
   }
 
+  // Card-level readings that asked to be relocated here. Fixed order rather
+  // than config order: `sensors` is a map, so there is nothing to preserve,
+  // and total-then-grid-then-phases is the order they already read in on the
+  // board's right-hand column.
+  private _summaryTotals(): Array<{ key: string; label: string; sensor?: string }> {
+    const s = this._config?.sensors ?? {};
+    const t = this._t();
+    const out: Array<{ key: string; label: string; sensor?: string }> = [];
+    const take = (key: string, sensor: Sensor | undefined, fallback: string): void => {
+      if (sensor?.summary) out.push({ key, label: sensor.label ?? fallback, sensor: sensor.entity });
+    };
+    take('total', s.total, t.card.total);
+    take('grid', s.grid, t.card.grid);
+    // L1/L2/L3 are IEC designators, not words — the board draws them
+    // untranslated too.
+    take('phase_l1', s.phases?.l1, 'L1');
+    take('phase_l2', s.phases?.l2, 'L2');
+    take('phase_l3', s.phases?.l3, 'L3');
+    return out;
+  }
+
   // Rendered as HTML rather than inside the SVG: the table is text in a
   // one-column-per-value grid, which the browser lays out for free and the
   // SVG would need measured by hand (see text-metrics.ts) at a fixed viewBox
@@ -959,7 +1027,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // dashboard instead of shrinking with it.
   private _renderSummary(): TemplateResult | typeof nothing {
     const rows = this._summaryRows();
-    if (rows.length === 0) return nothing;
+    const totals = this._summaryTotals();
+    if (rows.length === 0 && totals.length === 0) return nothing;
     const t = this._t();
     return html`
       <table class="source-summary">
@@ -978,6 +1047,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             `,
           )}
         </tbody>
+        ${
+          totals.length === 0
+            ? nothing
+            : html`
+                <tfoot>
+                  ${totals.map(
+                    (r) => html`
+                      <tr>
+                        <th scope="row">${r.label}</th>
+                        <td>${ElectricalPanelCard._fmt(this._power(r.sensor)) || '—'}</td>
+                      </tr>
+                    `,
+                  )}
+                </tfoot>
+              `
+        }
       </table>
     `;
   }
@@ -1435,6 +1520,20 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         color: var(--secondary-text-color);
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
+      }
+      /* Totals are aggregates over the board, not sources feeding it. A rule
+         of their own says so; the left padding matches the dot + gap of a
+         source row so both label columns start on the same line. */
+      .source-summary tfoot th,
+      .source-summary tfoot td {
+        border-top: 2px solid var(--divider-color);
+      }
+      .source-summary tfoot th {
+        padding-left: 16px;
+        color: var(--secondary-text-color);
+      }
+      .source-summary tfoot td {
+        color: var(--primary-text-color);
       }
       .source-dot {
         display: inline-block;

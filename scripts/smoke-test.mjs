@@ -622,6 +622,124 @@ const plain = await mountCard(config);
 check('no table when no group opts in', !plain.shadowRoot.querySelector('table.source-summary'));
 unmountCard(plain);
 
+// ─── Card-level totals in the summary ─────────────────────────────────────────
+// `summary: true` on a `sensors.*` reading *moves* it: unlike a group, which
+// keeps its box on the board either way, these have no existence beyond their
+// bubble, so leaving the bubble behind would recreate the duplication the table
+// exists to remove. The bubble going missing is the assertion that matters —
+// a row that renders while the old bubble stays put is the failure mode.
+process.stdout.write('\nCard-level totals in the summary\n');
+const totalsConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Totals',
+  sensors: {
+    total: { entity: 'sensor.house_total', summary: true },
+    grid: { entity: 'sensor.house_net', summary: true },
+    phases: {
+      l1: { entity: 'sensor.house_l1', summary: true },
+      // L2 stays on the board — the two paths must coexist in one config.
+      l2: { entity: 'sensor.house_l2' },
+    },
+  },
+  groups: [
+    { id: 'PV', label: 'Solaire', type: 'solar', phases: ['L1'], accent: '#d97706', sensor: 'sensor.pv', summary: true },
+  ],
+};
+
+const totalsHass = {
+  states: Object.fromEntries(
+    [
+      ['sensor.house_total', '2270'],
+      ['sensor.house_net', '-1850'],
+      ['sensor.house_l1', '640'],
+      ['sensor.house_l2', '810'],
+      ['sensor.pv', '4120'],
+    ].map(([entity, state]) => [
+      entity,
+      { entity_id: entity, state, attributes: { unit_of_measurement: 'W' } },
+    ]),
+  ),
+  locale: { language: 'en' },
+  themes: { darkMode: false },
+  callService: () => Promise.resolve(),
+};
+
+const totalsCard = await mountCard(totalsConfig, { hass: totalsHass });
+const tTable = totalsCard.shadowRoot.querySelector('table.source-summary');
+const footRows = [...(tTable?.querySelectorAll('tfoot tr') ?? [])].map((tr) => [
+  tr.querySelector('th')?.textContent.trim(),
+  tr.querySelector('td')?.textContent.trim(),
+]);
+
+check(
+  'moved readings land in the foot, in total/grid/phase order',
+  footRows.map(([l]) => l).join(' | ') === 'Total | Grid | L1',
+  footRows.map(([l]) => l).join(' | '),
+);
+check('the total carries its value', footRows[0]?.[1] === '2.3 kW', footRows[0]?.[1]);
+check('a negative net still reads negative', footRows[1]?.[1] === '−1.9 kW', footRows[1]?.[1]);
+
+// Sources stay in the body, above the rule — the foot is not a dumping ground.
+check(
+  'source rows stay in the body',
+  [...(tTable?.querySelectorAll('tbody tr th') ?? [])].map((th) => th.textContent.trim()).join() ===
+    'Solaire',
+  [...(tTable?.querySelectorAll('tbody tr th') ?? [])].map((th) => th.textContent.trim()).join(),
+);
+
+// The move, asserted from the board's side.
+const bubbleIdsPresent = new Set(
+  [...totalsCard.shadowRoot.querySelectorAll('text.pwr-value')].map((t) => t.dataset.id),
+);
+check('the moved total leaves no bubble behind', !bubbleIdsPresent.has('total'), [...bubbleIdsPresent].join(' '));
+check('the moved grid leaves no bubble behind', !bubbleIdsPresent.has('grid'), [...bubbleIdsPresent].join(' '));
+check('the moved phase leaves no bubble behind', !bubbleIdsPresent.has('phase_l1'), [...bubbleIdsPresent].join(' '));
+check('a phase that did not opt in keeps its bubble', bubbleIdsPresent.has('phase_l2'), [...bubbleIdsPresent].join(' '));
+check('the group keeps its bubble as well as its row', bubbleIdsPresent.has('g-PV'), [...bubbleIdsPresent].join(' '));
+
+// The label text beside a moved bubble has to go too, or the board keeps a
+// caption pointing at nothing.
+const boardText = totalsCard.shadowRoot.querySelector('svg').textContent;
+check('no orphaned "Total" caption on the board', !boardText.includes('Total'), boardText.slice(0, 120));
+
+// The trunks are the diagram; only the bubble's anchor dot travels with it.
+const trunkLines = totalsCard.shadowRoot.querySelectorAll('svg line[stroke-width="3"]');
+check('phase trunks are untouched by the move', trunkLines.length === 3, `${trunkLines.length} trunks`);
+
+unmountCard(totalsCard);
+
+// Totals alone, with no group opting in, must still produce the table.
+const footOnly = await mountCard({
+  type: 'custom:electrical-panel-card',
+  title: 'Foot only',
+  sensors: { total: { entity: 'sensor.house_total', summary: true } },
+  groups: [{ id: 'D1', phases: ['L1'], circuits: [{ id: 'Q1', type: 'power' }] }],
+}, { hass: totalsHass });
+check(
+  'a table with only a foot still renders',
+  !!footOnly.shadowRoot.querySelector('table.source-summary tfoot tr'),
+);
+check(
+  'and has no empty body rows',
+  footOnly.shadowRoot.querySelectorAll('table.source-summary tbody tr').length === 0,
+);
+unmountCard(footOnly);
+
+// A caption naming a reading that was never configured, beside an empty
+// bubble. Drawn unconditionally until now, and newly visible once a board
+// drops `sensors.grid` in favour of a `type: grid` group.
+const noMains = await mountCard({
+  type: 'custom:electrical-panel-card',
+  title: 'No mains sensors',
+  groups: [{ id: 'D1', phases: ['L1'], circuits: [{ id: 'Q1', type: 'power' }] }],
+});
+const noMainsText = noMains.shadowRoot.querySelector('svg').textContent;
+check('no "Total" caption when no total is configured', !noMainsText.includes('Total'), noMainsText.slice(0, 80));
+check('no "Grid" caption when no grid is configured', !noMainsText.includes('Grid'), noMainsText.slice(0, 80));
+// The trunks and their phase labels are the diagram, not a reading.
+check('phase labels are still drawn', noMainsText.includes('L1'), noMainsText.slice(0, 80));
+unmountCard(noMains);
+
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,
 );
