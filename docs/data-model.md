@@ -62,6 +62,7 @@ PV / production is just a group — declare it under `groups[]` with `type: sola
 | `entity` | string | yes      | HA entity ID. State is parsed as a number; if `unit_of_measurement` is `kW` the value is normalised to W. |
 | `label`  | string | no       | Override for the rendered label. |
 | `max_w`  | number | no       | Rated power in watts. Draws a [saturation bar](#saturation-bar) under this bubble. |
+| `summary`| boolean| no       | **Moves** this reading off the diagram into the foot of the [source summary](#source-summary). The bubble is no longer drawn. |
 
 ### Saturation bar
 
@@ -233,6 +234,31 @@ Notes:
 - **Rows are listed in declaration order**, depth-first — parent before its own sub-groups.
 - **A group with `summary: true` and no `sensor`** still gets a row, reading `—`. A misconfiguration should be visible, not silently dropped.
 - **The table is HTML, not part of the SVG.** It therefore does not appear in the generated preview images under `assets/`, which serialise the diagram only.
+
+#### Card totals in the table
+
+The card-wide readings under [`sensors:`](#main-sensors) can join the table too, with the same key on each one:
+
+```yaml
+sensors:
+  total: { entity: sensor.house_total, summary: true }
+  grid:  { entity: sensor.house_net,   summary: true }
+```
+
+```
+Sources
+● Réseau              −1.9 kW
+● Photovoltaïque       4.1 kW
+──────────────────────────────
+  Total                2.3 kW
+```
+
+Two differences from `Group.summary`, both deliberate:
+
+- **It moves the reading rather than adding a row.** A group keeps its box on the board whether or not it is summarised, so its row is extra information. A `sensors.*` reading has no existence beyond its bubble — leaving the bubble in place would recreate the very duplication the table is there to remove. Setting `summary: true` therefore stops the bubble (and its caption, and a phase reading's anchor dot) from being drawn. Phase trunks themselves are part of the diagram and stay.
+- **The rows land in the table's foot**, under a rule of their own, and carry no accent dot. They are totals *over* the board, not sources feeding it; listing them among the sources would blur a distinction worth keeping.
+
+Order in the foot is fixed — total, grid, L1, L2, L3 — matching how they read down the board's right-hand column. `sensors` is a map, so there is no declaration order to honour.
 
 ### Phases array
 
