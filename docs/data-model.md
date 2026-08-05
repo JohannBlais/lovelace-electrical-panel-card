@@ -2,7 +2,7 @@
 
 Reference for the YAML configuration consumed by `custom:electrical-panel-card`.
 
-The schema describes _what is on the diagram_. **Everything is a group.** A group has a `type` that says whether it's a load (default) or a production source (`solar`, `wind`, `geothermal`, `hydro`). Loads and productions render with the same one-line-diagram visual; production units like PV inverters or wind turbines are expressed as **zones** of a circuit, which lets each unit carry its own sensor through the standard zone mechanics.
+The schema describes _what is on the diagram_. **Everything is a group.** A group has a `type` that says whether it's a load (default) or one of the sources feeding the board (`grid`, `battery`, `solar`, `wind`, `geothermal`, `hydro`). Loads and sources render with the same one-line-diagram visual; production units like PV inverters or wind turbines are expressed as **zones** of a circuit, which lets each unit carry its own sensor through the standard zone mechanics.
 
 Groups nest: a group can declare its own `groups[]` for a sub-board fed by it rather than by the phase trunks — see [nested groups](#nested-groups--sub-boards).
 
@@ -52,6 +52,8 @@ sensors:
 | `phases` | `PhaseSensors`  | Per-phase L1/L2/L3 bubbles attached to the trunk. |
 
 PV / production is just a group — declare it under `groups[]` with `type: solar` (or `wind`, etc.).
+
+`sensors.grid` and a group of `type: grid` are different things and can coexist: the first is the one net figure for the whole board, drawn top-right; the second is a node on the diagram. A board fed by two separate mains paths has two `grid` groups and still one `sensors.grid`.
 
 ### `Sensor`
 
@@ -114,7 +116,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | Field      | Type                                 | Required | Description |
 | ---------- | ------------------------------------ | -------- | ----------- |
 | `id`       | string                               | yes      | Short designator drawn inside the box (e.g. `D1`, `HVAC`). Also this group's identity: it forms the path (`D1`, `P/R1`) that keys the layout and the power bubbles, so it need only be unique among its siblings. The box grows to fit but stops at 64px and elides past that — put descriptive text in `label`, not here. |
-| `type`     | `'distribution'` \| `'solar'` \| `'wind'` \| `'geothermal'` \| `'hydro'` | no | Defaults to `'distribution'`. Loads vs production. Visual is identical; the discriminator is for documentation, future tooling, and theming hooks. |
+| `type`     | `'distribution'` \| `'grid'` \| `'battery'` \| `'solar'` \| `'wind'` \| `'geothermal'` \| `'hydro'` | no | Defaults to `'distribution'`. Load vs source — see [group types](#group-types). Visual is identical; the discriminator is for documentation, future tooling, and theming hooks. |
 | `phases`   | `('L1' \| 'L2' \| 'L3')[]`           | yes      | Phases the group runs on. `[L1]` = single-phase; `[L1, L2, L3]` = three-phase; `[]` = no tap. Top-level groups tap the trunks here; on a nested group the value is informational (see [nested groups](#nested-groups--sub-boards)). |
 | `accent`   | string (CSS colour)                  | no       | Single colour; renderer derives `color` / `stroke` / a tinted `fill` from it. When omitted, an accent is picked from a fallback palette by group index. |
 | `color`    | string (CSS colour)                  | no       | Override for derived text colour. |
@@ -134,12 +136,50 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `type`         | Use for                                           |
 | -------------- | ------------------------------------------------- |
 | `distribution` | Default. Sub-distribution boards, RCDs, breaker groups, anything that distributes power to loads. |
+| `grid`         | Mains arriving at the board. One group per incoming path — see [multiple sources](#multiple-sources). |
+| `battery`      | Storage. Positive while discharging into the board, negative while charging. |
 | `solar`        | Photovoltaic production. Inverters become zones (each with its own `sensor`). |
 | `wind`         | Wind production. Each turbine = one zone. |
 | `geothermal`   | Geothermal production. |
 | `hydro`        | Hydroelectric production. |
 
 The renderer is identical for all types; the discriminator is informational. Pick a meaningful `accent` to differentiate visually (e.g. `var(--energy-solar-color, #d97706)` for solar).
+
+### Multiple sources
+
+A board can be fed by more than one path. A hybrid inverter with a built-in AC bypass sitting behind an external transfer switch has four, each with its own reading:
+
+```yaml
+groups:
+  - id: ATS
+    type: grid
+    label: Grid via transfer switch
+    phases: [L1]
+    sensor: sensor.ats_grid_input_power
+
+  - id: BYP
+    type: grid
+    label: Grid via inverter bypass
+    phases: [L1]
+    sensor: sensor.inverter_grid_input_power
+
+  - id: PV
+    type: solar
+    label: Solar via inverter
+    phases: [L1]
+    sensor: sensor.inverter_pv_power
+    max_w: 6000
+
+  - id: BAT
+    type: battery
+    label: Battery via inverter
+    phases: [L1]
+    sensor: sensor.inverter_battery_power   # negative while charging
+```
+
+**This enumerates the sources, it does not draw the paths between them.** Nothing above says that `ATS` and `BYP` are the same upstream supply arriving by two routes, and nothing marks which route is live: you read that off the values, where the path carrying the house is the one not at zero. A source group needs no `circuits` — a bare box and its power bubble is a valid group.
+
+Note that `max_w` measures saturation on the absolute value, so a battery charging at 2 kW and discharging at 2 kW fill the bar identically.
 
 ### Colour resolution
 
