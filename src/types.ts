@@ -34,7 +34,12 @@ export interface Sensor {
   entity: string;
   /** Optional override of the rendered label (where applicable). */
   label?: string;
-  /** Metadata: nominal/peak rating in watts. Not rendered. */
+  /**
+   * Rated power in watts. Set alongside `entity` and the bubble gains a
+   * saturation bar showing `current / max_w`, clamped at 100 % and repainted
+   * in `--error-color` beyond it. Applies to `sensors.total`, `sensors.grid`
+   * and each of `sensors.phases`.
+   */
   max_w?: number;
 }
 
@@ -91,7 +96,8 @@ export interface Circuit {
    * by `Zone.icon`. Falls back to the type default.
    */
   icon?: string;
-  // ── Metadata (not rendered yet, kept for future tooltips / info dialogs)
+  // ── Metadata. Not drawn on the diagram itself, but surfaced on hover
+  //    (circuitTooltip) and in the click-to-open metadata dialog.
   amp?: number;
   poles?: Poles;
   /** Wire cross-section in mm². Numeric (e.g. `2.5`, `1.5`, `6`) or omitted. */
@@ -173,9 +179,10 @@ export interface Group {
    * on the board as well.
    */
   label?: string;
-  // ── RCD / main breaker metadata (not rendered yet, kept for future
-  //    tooltips / info dialogs). Replaces the previous free-form `spec`
-  //    string with structured fields.
+  // ── RCD / main breaker metadata. Not drawn on the diagram itself, but
+  //    surfaced on hover (groupTooltip) and in the click-to-open metadata
+  //    dialog. Replaces the previous free-form `spec` string with structured
+  //    fields.
   /** RCD rating in amperes (e.g. 40 for a 40 A breaker). */
   amp?: number;
   /** RCD sensitivity in milliamperes (e.g. 30 for "30 mA"). */

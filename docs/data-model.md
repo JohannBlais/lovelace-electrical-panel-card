@@ -1,4 +1,4 @@
-# Data model (v0.5)
+# Data model (v0.6)
 
 Reference for the YAML configuration consumed by `custom:electrical-panel-card`.
 
@@ -6,7 +6,9 @@ The schema describes _what is on the diagram_. **Everything is a group.** A grou
 
 Groups nest: a group can declare its own `groups[]` for a sub-board fed by it rather than by the phase trunks — see [nested groups](#nested-groups--sub-boards).
 
-> v0.5 adds nested groups; every v0.4 config remains valid. v0.4 is **not** backward-compatible with versions before it. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
+> v0.6 adds `Circuit.label` and draws `Group.label` on the board; v0.5 added nested groups. Every v0.4 config remains valid throughout. v0.4 is **not** backward-compatible with versions before it. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
+>
+> One behaviour change in v0.6: a `Group.label` set on an existing config used to appear only in the tooltip, and is now drawn beside the group box as well.
 
 ## Top-level config
 
@@ -57,7 +59,24 @@ PV / production is just a group — declare it under `groups[]` with `type: sola
 | -------- | ------ | -------- | ----------- |
 | `entity` | string | yes      | HA entity ID. State is parsed as a number; if `unit_of_measurement` is `kW` the value is normalised to W. |
 | `label`  | string | no       | Override for the rendered label. |
-| `max_w`  | number | no       | _Metadata._ Peak rated power. Not rendered. |
+| `max_w`  | number | no       | Rated power in watts. Draws a [saturation bar](#saturation-bar) under this bubble. |
+
+### Saturation bar
+
+Set `max_w` alongside a sensor and the bubble gains a thin bar underneath
+showing `current / max_w`. It fills proportionally, clamps at 100 %, and
+repaints in `var(--error-color, #c53030)` once the reading exceeds the rating;
+hovering gives the exact percentage. It is drawn only when both the rating and
+a live reading are present.
+
+`max_w` is accepted in two places, and works the same in both:
+
+| On | Effect |
+| -- | ------ |
+| [`Sensor`](#sensor) — `sensors.total`, `sensors.grid`, `sensors.phases.l1/l2/l3` | Bar under the corresponding top-of-card bubble. Useful against a subscribed grid limit or a per-phase breaker rating. |
+| [`Group`](#group) — `max_w` on the group itself | Bar under the group's own bubble. Useful for a production group (PV peak Wc) or a board approaching its main breaker rating. |
+
+Circuits and zones have no `max_w`.
 
 ## Floors
 
@@ -102,9 +121,10 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `fill`     | string (CSS colour)                  | no       | Override for derived box fill. |
 | `stroke`   | string (CSS colour)                  | no       | Override for derived box stroke. |
 | `sensor`   | string (entity ID)                   | no       | Group-level live power. Renders a bubble next to the box. |
+| `max_w`    | number                               | no       | Rated power in watts. With `sensor` set, draws a [saturation bar](#saturation-bar) under the group's bubble. |
 | `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
-| `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, below this group's own circuits. |
+| `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, **above** this group's own circuits — see [nested groups](#nested-groups--sub-boards). |
 | `label`    | string                               | no       | Human-readable name, drawn to the right of the box (e.g. `Main board`). Free to change at any time, unlike `id`. Elided if it would reach the power bubbles. Also leads the tooltip. |
 | `amp` / `mA` / `poles` / `class` | numbers / string | no | _Metadata._ Structured RCD characteristics: rating in A, sensitivity in mA, pole count (1, 2, 3 or 4), IEC 60755 class (`'A'`, `'AC'`, `'B'`, `'F'`). |
 | `mm2` / `cond` | numbers                      | no       | _Metadata._ The feed cable into this group: cross-section in mm² and conductor count. Most useful on a nested group, whose feed run is its own. |
@@ -236,7 +256,7 @@ zones:
 
 | Field      | Type             | Description |
 | ---------- | ---------------- | ----------- |
-| `floor`    | string           | Key into `floors`. Renders as a coloured pill. |
+| `floor`    | string           | Key into `floors`. Renders as a coloured pill, widened to fit the text — long floor names are no longer clipped. |
 | `room`     | string           | Free-text label drawn next to the pill. |
 | `sensor`   | string (entity)  | Per-zone power. Bubble to the right. |
 | `switch`   | string (entity)  | Inline toggle on the bubble. |
