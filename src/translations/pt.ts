@@ -4,6 +4,7 @@ export const pt: Translations = {
   card: {
     total: 'Total',
     grid: 'Rede',
+    sources: 'Fontes',
   },
   confirm: {
     toggle: 'Tem a certeza de que quer comutar «{name}»?',

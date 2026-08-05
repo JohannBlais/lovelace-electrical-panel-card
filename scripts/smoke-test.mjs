@@ -499,6 +499,129 @@ check(
 
 unmountCard(labelled);
 
+// ─── Source summary (#3) ──────────────────────────────────────────────────────
+// Groups opting in with `summary: true` are listed above the diagram with their
+// live reading. The scenario below is the one from #3: a board reachable by two
+// separate mains paths, only one of which carries the house at any moment. The
+// card cannot say which — no entity reports the transfer switch position — so
+// the table has to make "this one is at zero, that one isn't" readable at a
+// glance. That is the assertion that matters here.
+process.stdout.write('\nSource summary\n');
+
+// No `type:` on the two mains rows: which types exist is a separate concern,
+// and the table keys off `summary`, not off the discriminator.
+const summaryConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Sources',
+  groups: [
+    {
+      id: 'ATS',
+      label: 'Grid via transfer switch',
+      phases: ['L1'],
+      accent: '#3182ce',
+      sensor: 'sensor.ats_power',
+      summary: true,
+    },
+    {
+      id: 'BYP',
+      label: 'Grid via inverter bypass',
+      phases: ['L1'],
+      accent: '#805ad5',
+      sensor: 'sensor.bypass_power',
+      summary: true,
+    },
+    {
+      id: 'BAT',
+      phases: ['L1'],
+      accent: '#38a169',
+      sensor: 'sensor.battery_power',
+      summary: true,
+    },
+    // Opted in but unmeasured — a misconfiguration that must stay visible
+    // rather than drop the row silently.
+    { id: 'GEN', label: 'Generator', phases: ['L1'], accent: '#d69e2e', summary: true },
+    // Not opted in: present on the board, absent from the table.
+    { id: 'D1', phases: ['L1'], sensor: 'sensor.loads_power', circuits: [{ id: 'Q1', type: 'power' }] },
+    {
+      id: 'INV',
+      phases: ['L1'],
+      accent: '#dd6b20',
+      // Nested and opted in — a PV array behind a sub-board is still a source.
+      groups: [
+        { id: 'PV', type: 'solar', label: 'Solar via inverter', phases: ['L1'], sensor: 'sensor.pv_power', summary: true },
+      ],
+    },
+  ],
+};
+
+// Pinned rather than synthesised: the whole point is the exact readings.
+const summaryHass = {
+  states: Object.fromEntries(
+    [
+      ['sensor.ats_power', '0'],
+      ['sensor.bypass_power', '2350'],
+      ['sensor.battery_power', '-1200'],
+      ['sensor.pv_power', '4120'],
+      ['sensor.loads_power', '900'],
+    ].map(([entity, state]) => [
+      entity,
+      { entity_id: entity, state, attributes: { unit_of_measurement: 'W' } },
+    ]),
+  ),
+  locale: { language: 'en' },
+  themes: { darkMode: false },
+  callService: () => Promise.resolve(),
+};
+
+const summarised = await mountCard(summaryConfig, { hass: summaryHass });
+const table = summarised.shadowRoot.querySelector('table.source-summary');
+check('summary table is rendered', !!table);
+
+const summaryRow = (label) =>
+  [...(table?.querySelectorAll('tbody tr') ?? [])].find(
+    (tr) => tr.querySelector('th')?.textContent.trim() === label,
+  );
+const rowValue = (label) => summaryRow(label)?.querySelector('td')?.textContent.trim() ?? null;
+
+check(
+  'one row per opted-in group, in declaration order',
+  [...(table?.querySelectorAll('tbody tr') ?? [])].map((tr) =>
+    tr.querySelector('th')?.textContent.trim(),
+  ).join(' | ') ===
+    'Grid via transfer switch | Grid via inverter bypass | BAT | Generator | Solar via inverter',
+  [...(table?.querySelectorAll('tbody tr') ?? [])]
+    .map((tr) => tr.querySelector('th')?.textContent.trim())
+    .join(' | '),
+);
+check('a group without a label falls back to its id', !!summaryRow('BAT'));
+check('a group that did not opt in is absent', !summaryRow('D1'));
+check('a nested group can opt in', !!summaryRow('Solar via inverter'));
+
+// The reason the table exists: the dead path reads 0 W next to the live one.
+check('an idle source reads zero', rowValue('Grid via transfer switch') === '0 W', rowValue('Grid via transfer switch'));
+check('the live path carries the house', rowValue('Grid via inverter bypass') === '2.4 kW', rowValue('Grid via inverter bypass'));
+// U+2212, the same minus the bubbles use — an ASCII hyphen here would be a
+// second convention for the same thing.
+check('a charging battery reads negative', rowValue('BAT') === '−1.2 kW', rowValue('BAT'));
+check('a summarised group with no sensor still gets a row', rowValue('Generator') === '—', rowValue('Generator'));
+
+// The dot ties the row to its box below; a nested group inherits its parent's
+// accent, so PV must show the inverter's orange rather than a palette pick.
+const dotColor = (label) => summaryRow(label)?.querySelector('.source-dot')?.style.background ?? null;
+check('the row dot carries the group accent', dotColor('Grid via transfer switch') === 'rgb(49, 130, 206)', dotColor('Grid via transfer switch'));
+check(
+  'a nested row inherits its parent accent',
+  dotColor('Solar via inverter') === 'rgb(221, 107, 32)',
+  dotColor('Solar via inverter'),
+);
+
+unmountCard(summarised);
+
+// Nothing opted in — the card must not grow an empty header.
+const plain = await mountCard(config);
+check('no table when no group opts in', !plain.shadowRoot.querySelector('table.source-summary'));
+unmountCard(plain);
+
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,
 );

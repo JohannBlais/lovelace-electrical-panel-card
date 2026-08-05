@@ -4,6 +4,7 @@ export const es: Translations = {
   card: {
     total: 'Total',
     grid: 'Red',
+    sources: 'Fuentes',
   },
   confirm: {
     toggle: '¿Estás seguro de que quieres conmutar «{name}»?',

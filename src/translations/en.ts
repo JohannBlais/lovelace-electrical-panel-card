@@ -2,6 +2,7 @@ export const en = {
   card: {
     total: 'Total',
     grid: 'Grid',
+    sources: 'Sources',
   },
   confirm: {
     // {name} is replaced with the zone label at runtime.

@@ -844,6 +844,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
     return html`
       <ha-card .header=${this._config.title ?? ''}>
+        ${this._renderSummary()}
         <div class="diagram-wrap">
           <svg
             viewBox="0 0 ${layout.svgW} ${layout.svgH}"
@@ -927,6 +928,57 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         </div>
       </ha-card>
       ${this._dialog ? this._renderDialog() : nothing}
+    `;
+  }
+
+  // ── Source summary ────────────────────────────────────────────────────────
+  // Groups that opted in with `summary: true`, in declaration order, each with
+  // the accent it is drawn with below. Nested groups are included: a PV array
+  // behind a sub-board is still where the power comes from. Colour resolution
+  // repeats the diagram's own walk — index within the sibling list, parent
+  // accent inherited — so a row's dot matches its box rather than drifting to
+  // a different palette entry.
+  private _summaryRows(): Array<{ path: string; label: string; accent: string; sensor?: string }> {
+    const rows: Array<{ path: string; label: string; accent: string; sensor?: string }> = [];
+    const walk = (list: Group[], parentPath?: string, parentAccent?: string): void => {
+      list.forEach((g, idx) => {
+        const { accent } = resolveColors(g, idx, parentAccent);
+        const path = groupPath(parentPath, g);
+        if (g.summary) rows.push({ path, label: g.label ?? g.id, accent, sensor: g.sensor });
+        walk(g.groups ?? [], path, accent);
+      });
+    };
+    walk(this._config?.groups ?? []);
+    return rows;
+  }
+
+  // Rendered as HTML rather than inside the SVG: the table is text in a
+  // one-column-per-value grid, which the browser lays out for free and the
+  // SVG would need measured by hand (see text-metrics.ts) at a fixed viewBox
+  // width. Nothing here scales with the diagram, and it wraps on a narrow
+  // dashboard instead of shrinking with it.
+  private _renderSummary(): TemplateResult | typeof nothing {
+    const rows = this._summaryRows();
+    if (rows.length === 0) return nothing;
+    const t = this._t();
+    return html`
+      <table class="source-summary">
+        <caption>${t.card.sources}</caption>
+        <tbody>
+          ${rows.map(
+            (r) => html`
+              <tr>
+                <th scope="row">
+                  <span class="source-dot" style="background:${r.accent}"></span>${r.label}
+                </th>
+                <td>
+                  ${ElectricalPanelCard._fmt(this._power(r.sensor)) || '—'}
+                </td>
+              </tr>
+            `,
+          )}
+        </tbody>
+      </table>
     `;
   }
 
@@ -1346,6 +1398,51 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       .diagram-wrap {
         max-width: 700px;
         margin: 0 auto;
+      }
+      /* Same 700px column as the diagram, so the rows line up with the board
+         underneath rather than floating at their own width. */
+      .source-summary {
+        width: 100%;
+        max-width: 700px;
+        margin: 0 auto 12px;
+        border-collapse: collapse;
+      }
+      .source-summary caption {
+        text-align: left;
+        padding-bottom: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--secondary-text-color);
+      }
+      .source-summary tr + tr th,
+      .source-summary tr + tr td {
+        border-top: 1px solid var(--divider-color);
+      }
+      .source-summary th,
+      .source-summary td {
+        padding: 6px 0;
+        font-size: 14px;
+        font-weight: 400;
+      }
+      .source-summary th {
+        text-align: left;
+        color: var(--primary-text-color);
+      }
+      /* Tabular figures so the readings form a column that can be compared
+         down the page — the whole point is spotting which source is at zero. */
+      .source-summary td {
+        text-align: right;
+        color: var(--secondary-text-color);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .source-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+        vertical-align: middle;
       }
       svg {
         display: block;

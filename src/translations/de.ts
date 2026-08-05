@@ -4,6 +4,7 @@ export const de: Translations = {
   card: {
     total: 'Gesamt',
     grid: 'Netz',
+    sources: 'Quellen',
   },
   confirm: {
     toggle: 'Möchten Sie „{name}" wirklich umschalten?',

@@ -8,6 +8,7 @@ export const zh: Translations = {
   card: {
     total: '总计',
     grid: '电网',
+    sources: '电源',
   },
   confirm: {
     toggle: '确定要切换"{name}"吗？',

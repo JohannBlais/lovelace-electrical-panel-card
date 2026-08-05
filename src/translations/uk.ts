@@ -4,6 +4,7 @@ export const uk: Translations = {
   card: {
     total: 'Усього',
     grid: 'Мережа',
+    sources: 'Джерела',
   },
   confirm: {
     toggle: 'Ви впевнені, що хочете перемкнути «{name}»?',
