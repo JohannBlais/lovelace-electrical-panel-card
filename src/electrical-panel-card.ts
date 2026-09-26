@@ -623,7 +623,18 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     ) {
       return;
     }
-    this.hass.callService('switch', 'toggle', { entity_id: entity });
+    // `homeassistant.toggle`, not `switch.toggle`. The read side (`_switch`)
+    // only looks at 'on' / 'off' and never at the domain, so any togglable
+    // entity already renders a toggle showing the correct state. Hardcoding
+    // the write domain made every one of them outside `switch.*` a no-op, and
+    // silently: a service call matching no entity reports nothing the card can
+    // see (#43). Easy to hit through the Switch as X helper, which replaces a
+    // relay's `switch.*` with a `light.*` and hides the original.
+    //
+    // HA's generic action dispatches across any domain, so `light`, `fan`,
+    // `input_boolean`, `cover`, `script` and the rest work with no allow-list
+    // here to fall behind core.
+    this.hass.callService('homeassistant', 'toggle', { entity_id: entity });
   }
 
   /**
@@ -820,7 +831,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                     fill=${togFill} rx=${th / 2} style="cursor:pointer"></rect>
               <circle cx=${knobX} cy=${sy + th / 2} r=${tr} fill="white"
                       style="pointer-events:none"></circle>
-              <rect x=${sx - 3} y=${sy - 4} width=${tw + 6} height=${th + 8}
+              <rect data-toggle-hit-for=${id} x=${sx - 3} y=${sy - 4}
+                    width=${tw + 6} height=${th + 8}
                     fill="transparent" style="cursor:pointer"
                     @click=${(ev: Event) => this._toggle(ev, switchEntity, criticalLabel)}></rect>
             `

@@ -221,7 +221,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="c-P/R1-P2" x="354" y="346" width="14" height="8" fill="#38a169" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="363.5" cy="350" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="342" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="c-P/R1-P2" x="351" y="342" width="20" height="16"></rect>
             
     
 
@@ -245,7 +245,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-P/R1-P2-0" x="354" y="367" width="14" height="8" fill="#38a169" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="363.5" cy="371" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="363" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-P/R1-P2-0" x="351" y="363" width="20" height="16"></rect>
             
     
           </g>

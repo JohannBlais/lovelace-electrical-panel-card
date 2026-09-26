@@ -740,6 +740,180 @@ check('no "Grid" caption when no grid is configured', !noMainsText.includes('Gri
 check('phase labels are still drawn', noMainsText.includes('L1'), noMainsText.slice(0, 80));
 unmountCard(noMains);
 
+// ─── Toggling across domains (#43) ────────────────────────────────────────────
+// The read path never looks at the domain, so a `light.*` or `input_boolean.*`
+// entity renders a toggle showing the correct state. The write path used to
+// hardcode `switch.toggle`, which made every one of those a no-op — silently,
+// because a service call matching no entity reports nothing back. Nothing here
+// asserted the call itself, which is why it shipped. These checks read the
+// domain and service off the recorded call rather than trusting the click.
+process.stdout.write('\nToggling across domains (#43)\n');
+
+const DOMAINS = ['switch', 'light', 'fan', 'input_boolean', 'cover'];
+
+const recordingHass = (states) => ({
+  states,
+  locale: { language: 'en' },
+  themes: { darkMode: false },
+  serviceCalls: [],
+  callService(domain, service, data) {
+    this.serviceCalls.push({ domain, service, data });
+    return Promise.resolve();
+  },
+});
+
+const toggleConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Toggles',
+  floors: { L0: { bg: '#38a169', fg: 'white' } },
+  groups: [
+    {
+      id: 'D1',
+      phases: ['L1'],
+      circuits: [
+        {
+          id: 'A',
+          type: 'socket',
+          // A toggle lives inside the power bubble, which renders only when the
+          // element has a `sensor` — so every zone here needs one.
+          zones: DOMAINS.map((d) => ({
+            floor: 'L0',
+            room: `${d} load`,
+            sensor: `sensor.${d}_power`,
+            switch: `${d}.thing`,
+          })),
+        },
+      ],
+    },
+  ],
+};
+
+const toggleHass = recordingHass(
+  Object.fromEntries([
+    ...DOMAINS.map((d) => [
+      `sensor.${d}_power`,
+      { entity_id: `sensor.${d}_power`, state: '120', attributes: { unit_of_measurement: 'W' } },
+    ]),
+    // Alternating, so the pill is exercised in both positions.
+    ...DOMAINS.map((d, i) => [
+      `${d}.thing`,
+      { entity_id: `${d}.thing`, state: i % 2 === 0 ? 'on' : 'off', attributes: {} },
+    ]),
+  ]),
+);
+
+const toggles = await mountCard(toggleConfig, { hass: toggleHass });
+
+for (const [i, d] of DOMAINS.entries()) {
+  const hit = toggles.shadowRoot.querySelector(`[data-toggle-hit-for="z-D1-A-${i}"]`);
+  if (!hit) {
+    check(`${d}.* zone exposes a clickable toggle`, false, 'hit area missing');
+    continue;
+  }
+  toggleHass.serviceCalls.length = 0;
+  click(hit);
+  await toggles.updateComplete;
+  const call = toggleHass.serviceCalls[0];
+  check(
+    `${d}.* toggle reaches a service that can act on it`,
+    !!call && call.domain === 'homeassistant' && call.service === 'toggle',
+    call ? `${call.domain}.${call.service}` : 'no service call',
+  );
+  check(
+    `${d}.* toggle targets its own entity`,
+    call?.data?.entity_id === `${d}.thing`,
+    JSON.stringify(call?.data),
+  );
+}
+
+// The read path was never domain-bound. Pin that, so a later change to the
+// write side cannot quietly narrow it back.
+const pillFill = (i) =>
+  toggles.shadowRoot.querySelector(`[data-toggle-for="z-D1-A-${i}"]`)?.getAttribute('fill');
+check(
+  'a non-switch entity reflects its state in the pill',
+  !!pillFill(1) && pillFill(1) !== pillFill(0),
+  `${pillFill(0)} (on) vs ${pillFill(1)} (off)`,
+);
+
+unmountCard(toggles);
+
+// ─── The critical-load gate ───────────────────────────────────────────────────
+// `critical: true` puts a confirm() in front of the toggle. It guards freezers
+// and sump pumps and shares the method just changed, so both answers are
+// pinned. The entity here is a `light.*` on purpose: a relay behind a Switch
+// as X helper is exactly the case that used to render this gate and then do
+// nothing either way.
+process.stdout.write('\nCritical-load confirmation\n');
+
+const criticalConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Critical',
+  floors: { L0: { bg: '#38a169', fg: 'white' } },
+  groups: [
+    {
+      id: 'D1',
+      phases: ['L1'],
+      circuits: [
+        {
+          id: 'A',
+          type: 'socket',
+          zones: [
+            {
+              floor: 'L0',
+              room: 'Freezer',
+              sensor: 'sensor.freezer_power',
+              switch: 'light.freezer_relay',
+              critical: true,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const criticalHass = recordingHass({
+  'sensor.freezer_power': {
+    entity_id: 'sensor.freezer_power',
+    state: '90',
+    attributes: { unit_of_measurement: 'W' },
+  },
+  'light.freezer_relay': { entity_id: 'light.freezer_relay', state: 'on', attributes: {} },
+});
+
+const critical = await mountCard(criticalConfig, { hass: criticalHass });
+const criticalHit = critical.shadowRoot.querySelector('[data-toggle-hit-for="z-D1-A-0"]');
+
+const realConfirm = globalThis.confirm;
+let asked = null;
+globalThis.confirm = (msg) => {
+  asked = msg;
+  return false;
+};
+click(criticalHit);
+await critical.updateComplete;
+check(
+  'a refused confirmation calls no service',
+  criticalHass.serviceCalls.length === 0,
+  JSON.stringify(criticalHass.serviceCalls),
+);
+check('the prompt names the load', (asked ?? '').includes('Freezer'), asked ?? 'never asked');
+
+globalThis.confirm = () => true;
+click(criticalHit);
+await critical.updateComplete;
+check(
+  'an accepted confirmation toggles it, domain and all',
+  criticalHass.serviceCalls.length === 1 &&
+    criticalHass.serviceCalls[0].domain === 'homeassistant' &&
+    criticalHass.serviceCalls[0].data.entity_id === 'light.freezer_relay',
+  JSON.stringify(criticalHass.serviceCalls),
+);
+globalThis.confirm = realConfirm;
+unmountCard(critical);
+
+
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,
 );

@@ -75,6 +75,12 @@ globalThis.requestAnimationFrame = window.requestAnimationFrame.bind(window);
 globalThis.cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
 globalThis.getComputedStyle = window.getComputedStyle.bind(window);
 
+// The card calls the bare global `confirm()` before toggling a `critical:` load.
+// Node has no such global and jsdom's is not in the mirror list above, so
+// without this a critical toggle throws instead of exercising the gate. Accepts
+// by default; a test that wants the refusal path assigns its own.
+globalThis.confirm = () => true;
+
 // jsdom doesn't compute SVG layout. Stub `getBBox` on every relevant
 // prototype so the live card's `updated()` lifecycle can size the bubble
 // backgrounds the same way it does in a real browser. The patch goes on
@@ -242,11 +248,21 @@ export function buildMockHass(config) {
       };
     }
   }
+  // `serviceCalls` records what the card asked Home Assistant to do. The stub
+  // used to discard the arguments, which meant the domain a toggle targets was
+  // unobservable — exactly the thing that shipped wrong in #43, where every
+  // non-`switch.*` entity rendered a working-looking toggle and called a
+  // service matching nothing.
+  const serviceCalls = [];
   return {
     states,
     locale: { language: 'en' },
     themes: { darkMode: false },
-    callService: () => Promise.resolve(),
+    serviceCalls,
+    callService: (domain, service, data) => {
+      serviceCalls.push({ domain, service, data });
+      return Promise.resolve();
+    },
   };
 }
 

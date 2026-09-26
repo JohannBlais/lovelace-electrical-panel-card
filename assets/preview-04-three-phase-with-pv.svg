@@ -121,7 +121,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D1-A-0" x="354" y="149" width="14" height="8" fill="#a0aec0" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="358.5" cy="153" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="145" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D1-A-0" x="351" y="145" width="20" height="16"></rect>
             
     
           </g>
@@ -156,7 +156,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D1-B-0" x="354" y="191" width="14" height="8" fill="#38a169" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="363.5" cy="195" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="187" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D1-B-0" x="351" y="187" width="20" height="16"></rect>
             
     
           </g>
@@ -280,7 +280,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D2-D-1" x="354" y="389" width="14" height="8" fill="#a0aec0" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="358.5" cy="393" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="385" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D2-D-1" x="351" y="385" width="20" height="16"></rect>
             
     
           </g>
@@ -304,7 +304,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D2-D-2" x="354" y="411" width="14" height="8" fill="#38a169" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="363.5" cy="415" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="407" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D2-D-2" x="351" y="407" width="20" height="16"></rect>
             
     
           </g>
@@ -339,7 +339,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D2-E-0" x="354" y="453" width="14" height="8" fill="#a0aec0" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="358.5" cy="457" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="449" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D2-E-0" x="351" y="449" width="20" height="16"></rect>
             
     
           </g>
@@ -390,7 +390,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D3-F-0" x="354" y="543" width="14" height="8" fill="#38a169" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="363.5" cy="547" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="539" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D3-F-0" x="351" y="539" width="20" height="16"></rect>
             
     
           </g>
@@ -528,7 +528,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D4-H-1" x="354" y="763" width="14" height="8" fill="#a0aec0" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="358.5" cy="767" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="759" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D4-H-1" x="351" y="759" width="20" height="16"></rect>
             
     
           </g>
@@ -552,7 +552,7 @@
       
               <rect style="cursor:pointer" data-toggle-for="z-D4-H-2" x="354" y="785" width="14" height="8" fill="#38a169" rx="4"></rect>
               <circle fill="white" style="pointer-events:none" cx="363.5" cy="789" r="3"></circle>
-              <rect fill="transparent" style="cursor:pointer" x="351" y="781" width="20" height="16"></rect>
+              <rect fill="transparent" style="cursor:pointer" data-toggle-hit-for="z-D4-H-2" x="351" y="781" width="20" height="16"></rect>
             
     
           </g>
