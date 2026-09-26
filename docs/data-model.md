@@ -125,7 +125,7 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `stroke`   | string (CSS colour)                  | no       | Override for derived box stroke. |
 | `sensor`   | string (entity ID)                   | no       | Group-level live power. Renders a bubble next to the box. |
 | `max_w`    | number                               | no       | Rated power in watts. With `sensor` set, draws a [saturation bar](#saturation-bar) under the group's bubble. |
-| `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. |
+| `switch`   | string (entity ID)                   | no       | Group-level toggle. Adds an inline switch to the bubble. Any togglable domain — see [smart-plug toggles](#smart-plug-toggles). |
 | `summary`  | boolean                              | no       | Lists this group in the [source summary](#source-summary) above the diagram. Nested groups qualify. |
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
 | `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, **above** this group's own circuits — see [nested groups](#nested-groups--sub-boards). |
@@ -337,7 +337,7 @@ circuits:
 | `type`   | `'socket'` \| `'light'` \| `'power'`  | yes      | Picks the **default** icon for zones in this circuit (MDI: `mdi:power-socket-eu` / `mdi:lightbulb-outline` / `mdi:lightning-bolt`). |
 | `icon`   | string (MDI name)                     | no       | Overrides the type default for all zones of this circuit. Any string accepted by `<ha-icon>` works (e.g. `mdi:solar-power`, `mdi:fire`). |
 | `sensor` | string (entity ID)                    | no       | Per-circuit power. Bubble appears next to the breaker box. |
-| `switch` | string (entity ID)                    | no       | Adds an inline toggle on the circuit's bubble. |
+| `switch` | string (entity ID)                    | no       | Adds an inline toggle on the circuit's bubble. Any togglable domain — see [smart-plug toggles](#smart-plug-toggles). |
 | `zones`  | [`Zone[]`](#zones)                    | no       | Branches off the circuit. Empty/missing = breaker box drawn alone, no zones. |
 | `amp` / `poles` / `mm2` / `cond` / `pts` / `n_pts` | various | no | _Metadata._ Rating in A, pole count (1, 2, 3 or 4), cross-section in mm², conductor count, and a free-text / numeric points count. Surfaced in the tooltip and the metadata dialog. |
 
@@ -362,7 +362,7 @@ zones:
 | `floor`    | string           | Key into `floors`. Renders as a coloured pill, widened to fit the text — long floor names are no longer clipped. |
 | `room`     | string           | Free-text label drawn next to the pill. |
 | `sensor`   | string (entity)  | Per-zone power. Bubble to the right. |
-| `switch`   | string (entity)  | Inline toggle on the bubble. |
+| `switch`   | string (entity)  | Inline toggle on the bubble. Any togglable domain — see [smart-plug toggles](#smart-plug-toggles). |
 | `critical` | boolean          | When `true` and `switch` is set, toggling shows a confirmation dialog using `room` as the load name. |
 | `icon`     | string (MDI name) | Overrides `Circuit.icon` and the type default for this single zone. |
 
@@ -459,7 +459,11 @@ Set `phases: [L1, L2, L3]` on a group. Three tap dots render on the trunks; the 
 
 ### Smart-plug toggles
 
-Any element (group / circuit / zone) with both `sensor` and `switch` shows a small toggle inside its power bubble. Clicking calls `switch.toggle` on the entity.
+Any element (group / circuit / zone) with both `sensor` and `switch` shows a small toggle inside its power bubble. `sensor` is required — the toggle is drawn inside the bubble, and no bubble is drawn without a reading, so `switch` on its own renders nothing.
+
+**Any togglable domain works, not just `switch.*`.** Clicking calls Home Assistant's generic [`homeassistant.toggle`](https://www.home-assistant.io/integrations/homeassistant/), which dispatches to the entity's own domain — so `switch`, `light`, `fan`, `input_boolean`, `cover`, `script` and anything else HA can toggle are all accepted. State is read straight off the entity and only `on` / `off` are recognised; an entity in any other state renders the toggle in its off position.
+
+This matters with the **Switch as X** helper, which turns a relay's `switch.*` into a `light.*` and hides the original: pointing the config at the visible entity is the natural move, and it used to produce a toggle that showed the right state and did nothing at all when clicked (#43).
 
 ## Live-update mechanism (internal)
 
