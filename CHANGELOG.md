@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.20.1] — Toggles that actually toggle
+
+The `switch` field was read without caring about the domain and written with it
+hardcoded. `_switch()` looks only at `on` / `off`, so any togglable entity drew a
+toggle showing the correct position; `_toggle()` then called `switch.toggle`, so
+outside `switch.*` clicking it did nothing — and said nothing, because a service
+call matching no entity raises no error the card can see.
+
+```yaml
+- floor: L0
+  room: Pool lights
+  sensor: sensor.pool_lights_power
+  switch: light.pool_lights     # rendered, never acted — now works
+```
+
+- Toggling now calls
+  [`homeassistant.toggle`](https://www.home-assistant.io/integrations/homeassistant/),
+  which dispatches across any domain, so `switch`, `light`, `fan`,
+  `input_boolean`, `cover`, `script` and anything else Home Assistant can toggle
+  all work. Deriving the domain from the entity id was the alternative, and was
+  rejected: it holds an implicit allow-list of domains whose service happens to
+  be named `toggle`, and calls a non-existent one for any that isn't.
+- The likely way in was the **Switch as X** helper, which turns a relay's
+  `switch.*` into a `light.*` and hides the original — so pointing the config at
+  the entity you can actually see was what broke it (#43).
+- One fix covers all three levels: group, circuit and zone go through the same
+  method.
+- The reason this shipped is that nothing asserted the service call — the test
+  harness discarded `callService`'s arguments, leaving the targeted domain
+  unobservable. It records them now, and the suite pins five domains plus both
+  answers to the `critical:` confirmation dialog, which guards freezers and sump
+  pumps and had no coverage at all.
+- Documentation: the toggle section named `switch.toggle` outright while the
+  three `switch` field tables said nothing about domains. All four now agree, and
+  the section states that `sensor` is required for a toggle to appear — a
+  separate gap now tracked as #45.
+
+Build tooling was bumped alongside (#42, dev dependencies only).
+
 ## [0.20.0] — Where the power comes from
 
 A board is not always fed by one path. The installation behind #3 has four —
