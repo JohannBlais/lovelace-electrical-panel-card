@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.20.2] — Switches with nothing to measure
+
+`switch` was accepted on a group, a circuit and a zone independently of
+`sensor`, but the toggle is drawn by the power bubble, and the bubble was only
+drawn for an element with a reading. A `switch` on its own rendered nothing at
+all — no toggle, no error, nothing on the console.
+
+```yaml
+- floor: L0
+  room: Garden relay
+  switch: switch.garden_relay   # no sensor — used to render nothing, now toggles
+```
+
+- An element with a `switch` and no `sensor` now draws its toggle on its own,
+  at all three levels. That is the realistic case for a contactor, a relay, an
+  unmetered plug or an `input_boolean` used as a manual override: things with
+  nothing to measure, and exactly the ones you would want to switch from the
+  panel. No reading is shown in its place — a `0 W` placeholder would be a
+  figure the installation does not have.
+- The toggle sits where it always does, so it lines up in the same column as
+  every metered one, and the connector runs from the row straight into it. The
+  same applies when a `sensor` is configured but not reporting: the toggle used
+  to be left floating with its connector hidden, and now stays wired to its
+  row.
+- **More info** on a group or circuit dialog falls back to the `switch` when
+  there is no `sensor`, as the zone dialog already did — a switch-only group or
+  circuit previously offered none.
+- Rejecting the config in `setConfig()` was the alternative, and was not taken:
+  it would have turned configs that load today into cards that refuse to.
+- 14 new smoke-test checks pin the toggle, its service call and its connector
+  at each level, plus the unchanged neighbours (#45).
+
 ## [0.20.1] — Toggles that actually toggle
 
 The `switch` field was read without caring about the domain and written with it
