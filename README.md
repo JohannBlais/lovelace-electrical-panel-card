@@ -16,7 +16,7 @@ If you've ever wished your HA dashboard could show the panel the way the electri
 
 - **One-line diagram** rendered as pure SVG, scaling to any width
 - **Live power** on phase trunks, RCDs, circuits and individual zones — read straight from `hass.states`, no polling, no token
-- **Smart-plug toggles** inline on each bubble, with confirmation dialog for `critical:` loads (fridges, freezers, sump pumps, …). Any togglable entity works — `switch`, `light`, `fan`, `input_boolean`, `cover` — so a relay behind a *Switch as X* helper can be pointed at directly
+- **Smart-plug toggles** inline on each bubble — or on their own for a load with nothing to meter (contactor, relay, unmetered plug) — with confirmation dialog for `critical:` loads (fridges, freezers, sump pumps, …). Any togglable entity works — `switch`, `light`, `fan`, `input_boolean`, `cover` — so a relay behind a *Switch as X* helper can be pointed at directly
 - **Source groups** alongside loads — `type: grid | battery | solar | wind | geothermal | hydro` rendered with the same primitives. Inverters and turbines become zones with their own sensors, and a board fed by several paths (transfer switch, inverter bypass) declares one group per incoming path.
 - **Nested sub-boards** — a group can carry its own `groups[]`, so a pool house, garage or workshop board fed by a main breaker draws as an indented branch instead of being flattened into the main panel
 - **Three-phase aware** — `phases: [L1, L2, L3]` for 4P breakers, single phase for everything else, any combination accepted

@@ -181,7 +181,10 @@ export interface Group {
    * subscribed grid limit.
    */
   max_w?: number;
-  /** Group-level toggle. Adds an inline switch to the bubble. */
+  /**
+   * Group-level toggle. Inline in the bubble after the reading, or on its own
+   * when there is no `sensor`.
+   */
   switch?: string;
   /**
    * Lists this group in the summary table above the diagram, with its accent,
