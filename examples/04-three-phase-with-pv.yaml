@@ -15,6 +15,8 @@
 #    (`Circuit.icon: mdi:solar-power` on the inverter circuit)
 #  - 6 microinverters expressed as zones of the PV → INV circuit; the group's
 #    `sensor:` shows the system total in the header bubble
+#  - `max_w` on the PV group draws a saturation bar under that bubble:
+#    current production against the array's rated output
 # ─────────────────────────────────────────────────────────────────────────────
 type: custom:electrical-panel-card
 title: Home electrical panel
@@ -207,6 +209,7 @@ groups:
     phases: [L1, L2, L3]
     accent: 'var(--energy-solar-color, #d97706)'
     sensor: sensor.envoy_solar_production
+    max_w: 2400   # 6 microinverters × 400 W
     circuits:
       - id: INV
         type: power

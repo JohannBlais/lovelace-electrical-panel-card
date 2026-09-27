@@ -58,10 +58,11 @@ function mdiName(slug) {
 // preview is wrong. That is exactly how `.board-label` first shipped black in
 // #30. So: fail the build rather than the eye.
 //
-// Two classes carry no rule on purpose:
+// Three classes carry no rule on purpose:
 //   - `meta-target` groups click targets and paints nothing
 //   - `pwr-value` takes its colour from an inline `fill` (the group accent)
-const UNSTYLED_BY_DESIGN = new Set(['meta-target', 'pwr-value']);
+//   - `sat-fill` likewise: the bubble's colour, or the error colour past 100 %
+const UNSTYLED_BY_DESIGN = new Set(['meta-target', 'pwr-value', 'sat-fill']);
 
 function assertEveryClassIsStyled(svgEl, styleText) {
   const styled = new Set(
@@ -80,7 +81,8 @@ function assertEveryClassIsStyled(svgEl, styleText) {
       `Classes present in the generated SVG with no rule in the inlined ` +
         `stylesheet: ${[...missing].sort().join(', ')}. Mirror the rule from ` +
         `src/electrical-panel-card.ts into the style block in this file, or ` +
-        `add it to UNSTYLED_BY_DESIGN if it genuinely paints nothing.`,
+        `add it to UNSTYLED_BY_DESIGN if it needs no rule — it paints nothing, ` +
+        `or takes its colour from an inline attribute.`,
     );
   }
 }
