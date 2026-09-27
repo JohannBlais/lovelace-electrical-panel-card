@@ -774,8 +774,8 @@ const toggleConfig = {
         {
           id: 'A',
           type: 'socket',
-          // A toggle lives inside the power bubble, which renders only when the
-          // element has a `sensor` — so every zone here needs one.
+          // Each zone carries a reading as well, so the toggle is exercised in
+          // the common metered layout; the switch-only one is covered by #45.
           zones: DOMAINS.map((d) => ({
             floor: 'L0',
             room: `${d} load`,
@@ -912,6 +912,164 @@ check(
 );
 globalThis.confirm = realConfirm;
 unmountCard(critical);
+
+// ─── A switch with no sensor (#45) ────────────────────────────────────────────
+// The toggle is drawn by the power bubble, and the bubble used to be gated on
+// `sensor` — so a `switch` on its own was accepted and rendered nothing, at all
+// three levels. The realistic case is a load with nothing to measure: a
+// contactor, a relay, a plug without metering. Each level is asserted through
+// the recorded service call, and the connector is checked to reach the toggle,
+// since without a reading beside it a toggle is otherwise tied to no row.
+process.stdout.write('\nA switch with no sensor (#45)\n');
+
+const switchOnlyConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Switch only',
+  floors: { L0: { bg: '#38a169', fg: 'white' } },
+  groups: [
+    {
+      id: 'D1',
+      phases: ['L1'],
+      switch: 'switch.main_contactor',
+      circuits: [
+        {
+          id: 'A',
+          type: 'socket',
+          switch: 'switch.circuit_a',
+          zones: [
+            { floor: 'L0', room: 'Zone B', switch: 'switch.plug_b' },
+            { floor: 'L0', room: 'Zone C', sensor: 'sensor.plug_c_power', switch: 'switch.plug_c' },
+            { floor: 'L0', room: 'Zone D', sensor: 'sensor.plug_d_power', switch: 'switch.plug_d' },
+            { floor: 'L0', room: 'Zone E' },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const switchOnlyHass = recordingHass({
+  'switch.main_contactor': { entity_id: 'switch.main_contactor', state: 'on', attributes: {} },
+  'switch.circuit_a': { entity_id: 'switch.circuit_a', state: 'off', attributes: {} },
+  'switch.plug_b': { entity_id: 'switch.plug_b', state: 'on', attributes: {} },
+  'switch.plug_c': { entity_id: 'switch.plug_c', state: 'on', attributes: {} },
+  'switch.plug_d': { entity_id: 'switch.plug_d', state: 'on', attributes: {} },
+  'sensor.plug_c_power': {
+    entity_id: 'sensor.plug_c_power',
+    state: '120',
+    attributes: { unit_of_measurement: 'W' },
+  },
+  // Configured but not reporting: the one state that already drew a toggle
+  // with no reading beside it before #45, and so shares its connector rule.
+  'sensor.plug_d_power': {
+    entity_id: 'sensor.plug_d_power',
+    state: 'unavailable',
+    attributes: {},
+  },
+});
+
+const switchOnly = await mountCard(switchOnlyConfig, { hass: switchOnlyHass });
+const q = (sel) => switchOnly.shadowRoot.querySelector(sel);
+
+const LEVELS = [
+  ['group', 'g-D1', 'switch.main_contactor'],
+  ['circuit', 'c-D1-A', 'switch.circuit_a'],
+  ['zone', 'z-D1-A-0', 'switch.plug_b'],
+];
+
+for (const [level, id, entity] of LEVELS) {
+  const hit = q(`[data-toggle-hit-for="${id}"]`);
+  if (!hit) {
+    check(`a ${level} with only a switch renders a toggle`, false, 'hit area missing');
+    continue;
+  }
+  switchOnlyHass.serviceCalls.length = 0;
+  click(hit);
+  await switchOnly.updateComplete;
+  const call = switchOnlyHass.serviceCalls[0];
+  check(
+    `a ${level} with only a switch toggles its entity`,
+    !!call && call.service === 'toggle' && call.data?.entity_id === entity,
+    call ? `${call.domain}.${call.service} ${JSON.stringify(call.data)}` : 'no service call',
+  );
+  // No sensor means no figure to show — a placeholder like "0 W" would be a
+  // reading the installation does not have.
+  check(
+    `a ${level} with only a switch shows no reading`,
+    (q(`text.pwr-value[data-id="${id}"]`)?.textContent ?? '').trim() === '' &&
+      q(`rect[data-bg-for="${id}"]`)?.getAttribute('visibility') === 'hidden',
+    q(`text.pwr-value[data-id="${id}"]`)?.textContent,
+  );
+}
+
+// The connector runs from the row to the toggle's own left edge, at the height
+// of its centre — a wire into the switch rather than a line ending in the air.
+const connectorReachesToggle = (id) => {
+  const ln = q(`line[data-ln-for="${id}"]`);
+  const tog = q(`rect[data-toggle-for="${id}"]`);
+  if (!ln || !tog) return { ok: false, detail: `line ${!!ln}, toggle ${!!tog}` };
+  const midY = parseFloat(tog.getAttribute('y')) + parseFloat(tog.getAttribute('height')) / 2;
+  const ok =
+    ln.getAttribute('visibility') === 'visible' &&
+    parseFloat(ln.getAttribute('x2')) === parseFloat(tog.getAttribute('x')) &&
+    parseFloat(ln.getAttribute('y1')) === midY &&
+    parseFloat(ln.getAttribute('y2')) === midY;
+  return {
+    ok,
+    detail: `visibility=${ln.getAttribute('visibility')} x2=${ln.getAttribute('x2')} ` +
+      `y=${ln.getAttribute('y1')}/${ln.getAttribute('y2')}, toggle x=${tog.getAttribute('x')} mid=${midY}`,
+  };
+};
+for (const [level, id] of LEVELS) {
+  const { ok, detail } = connectorReachesToggle(id);
+  check(`a ${level} with only a switch is wired to its toggle`, ok, detail);
+}
+{
+  const { ok, detail } = connectorReachesToggle('z-D1-A-2');
+  check('an unavailable sensor keeps the toggle wired to its row', ok, detail);
+}
+
+// Neighbours unchanged: a metered zone keeps its reading and its bubble, and a
+// zone with neither key still draws no bubble at all.
+check(
+  'a zone with sensor and switch still shows its reading',
+  q('text.pwr-value[data-id="z-D1-A-1"]')?.textContent.trim() === '120 W' &&
+    q('rect[data-bg-for="z-D1-A-1"]')?.getAttribute('visibility') === 'visible',
+  q('text.pwr-value[data-id="z-D1-A-1"]')?.textContent,
+);
+check(
+  'a zone with neither sensor nor switch draws no bubble',
+  !q('[data-id="z-D1-A-3"]') && !q('[data-toggle-for="z-D1-A-3"]'),
+);
+
+// More-info from the metadata dialog falls back to the switch, as the zone
+// dialog already did — otherwise a switch-only group or circuit offers none.
+for (const [title, entity] of [
+  ['RCD D1', 'switch.main_contactor'],
+  ['Circuit A', 'switch.circuit_a'],
+]) {
+  const dlg = await openDialogTitled(switchOnly, title);
+  const moreInfo = dlg?.querySelector('ha-button[slot="secondaryAction"]');
+  if (!moreInfo) {
+    check(`"${title}" dialog offers more-info for its switch`, false, dlg ? 'button missing' : 'dialog missing');
+    continue;
+  }
+  let received = null;
+  const listener = (ev) => {
+    received = ev.detail;
+  };
+  switchOnly.addEventListener('hass-more-info', listener);
+  click(moreInfo);
+  await switchOnly.updateComplete;
+  switchOnly.removeEventListener('hass-more-info', listener);
+  check(
+    `"${title}" dialog offers more-info for its switch`,
+    received?.entityId === entity,
+    `got ${JSON.stringify(received)}`,
+  );
+}
+
+unmountCard(switchOnly);
 
 
 process.stdout.write(

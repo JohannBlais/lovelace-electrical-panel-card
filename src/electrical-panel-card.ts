@@ -556,7 +556,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     this._dialog = {
       title: formatI18n(t.dialog.group_title, { id: g.id }),
       rows,
-      entity: g.sensor,
+      entity: g.sensor ?? g.switch,
     };
   }
 
@@ -599,7 +599,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     this._dialog = {
       title: formatI18n(t.dialog.circuit_title, { id: c.id }),
       rows,
-      entity: c.sensor,
+      entity: c.sensor ?? c.switch,
     };
   }
 
@@ -746,6 +746,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   }
 
   // ── Bubble: power text + optional toggle + optional connector line ────────
+  // Drawn for an element with a `sensor`, a `switch`, or both. With a switch
+  // alone the text stays empty and the toggle stands on its own: its position
+  // never depended on the text, so it lines up with every other toggle (#45).
   private _bubble(args: {
     id: string;
     x: number;
@@ -1210,7 +1213,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       </g>
 
       ${
-        g.sensor
+        g.sensor || g.switch
           ? this._bubble({
               id: `g-${path}`,
               x: PWR_X,
@@ -1288,7 +1291,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${cl.text}</text>${circuitLabelMarkup}
       </g>
       ${
-        c.sensor
+        c.sensor || c.switch
           ? this._bubble({
               id: `c-${groupKey}-${c.id}`,
               x: PWR_X,
@@ -1361,7 +1364,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                 : nothing
             }
             ${
-              zone.sensor
+              zone.sensor || zone.switch
                 ? this._bubble({
                     id: `z-${groupKey}-${c.id}-${j}`,
                     x: PWR_X,
@@ -1425,9 +1428,22 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
     const bg = this.shadowRoot.querySelector<SVGRectElement>(`rect[data-bg-for="${id}"]`);
     const ln = this.shadowRoot.querySelector<SVGLineElement>(`line[data-ln-for="${id}"]`);
+    const tog = this.shadowRoot.querySelector<SVGRectElement>(`rect[data-toggle-for="${id}"]`);
     if (!txt) {
       bg?.setAttribute('visibility', 'hidden');
-      ln?.setAttribute('visibility', 'hidden');
+      // A toggle with no reading beside it — a `switch` with no `sensor`, or
+      // one whose sensor is unavailable — keeps its connector, run into the
+      // toggle itself. Hidden, the toggle floats in the bubble column tied to
+      // no row, which on a dense board is a guess (#45).
+      if (ln && tog) {
+        const cy = Number(tog.getAttribute('y')) + Number(tog.getAttribute('height')) / 2;
+        ln.setAttribute('x2', tog.getAttribute('x') ?? '');
+        ln.setAttribute('y1', String(cy));
+        ln.setAttribute('y2', String(cy));
+        ln.setAttribute('visibility', 'visible');
+      } else {
+        ln?.setAttribute('visibility', 'hidden');
+      }
       this._bubbleTextCache.set(id, txt);
       return;
     }
@@ -1451,8 +1467,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     }
     const px = 5;
     const py = 3;
-    const hasToggle = !!this.shadowRoot.querySelector(`rect[data-toggle-for="${id}"]`);
-    const extraW = hasToggle ? 20 : 0;
+    const extraW = tog ? 20 : 0;
     if (bg) {
       bg.setAttribute('x', String(bbox.x - px));
       bg.setAttribute('y', String(bbox.y - py));
