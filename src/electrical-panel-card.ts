@@ -104,10 +104,6 @@ const LABEL_GAP = 6; // between the box and the label
 // leftward — value text, then the saturation bar at PWR_X − 30, then the
 // background's own padding — so this keeps a label clear of the widest of them.
 const LABEL_RIGHT = PWR_X - 46;
-// Zone connectors start on one shared column, so a circuit's zones read as a
-// list. A zone whose own content reaches past it — a few levels down a nested
-// board — starts its connector clear of that content instead.
-const ZONE_CONN_X = 270;
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
 // Phase wire colours — IEC 60446. Exposed as CSS custom properties so themes
@@ -1353,8 +1349,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         // Bounded like a board label, and for the same reason: the row's
         // bubble sits at the end of it. zoneTooltip leads with the full name.
         const room = fitLabel(zone.room, this._family, roomX);
+        // And wired like one: the connector resumes just past whatever the row
+        // draws — the name, or the icon when there is none — so it neither
+        // strikes through the name nor leaves a gap before it.
         const contentEnd = room ? roomX + room.w : iconX + ICON_SIZE;
-        const zoneConnX = Math.max(ZONE_CONN_X, contentEnd + LABEL_GAP);
+        const zoneConnX = contentEnd + LABEL_GAP;
         const lineEnd = ix0;
         const iconName =
           zone.icon ?? c.icon ?? TYPE_DEFAULT_ICON[c.type] ?? 'mdi:help';

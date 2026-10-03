@@ -502,9 +502,10 @@ unmountCard(labelled);
 // ─── Zone rows down a deep board (#53) ────────────────────────────────────────
 // A zone's room name sits after its floor pill and icon, which move right with
 // every nesting level, while its bubble stays in the right-hand column. The
-// name used to be drawn whole and its connector to start at a fixed x, so a few
-// levels down the connector struck through the name and the name ran under its
-// own bubble. One board with zones at depths 0, 2, 3 and 4 covers each stage.
+// name used to be drawn whole and its connector to start at a fixed x: well
+// after a short name, leaving a gap, and a few levels down inside a long one,
+// striking through it while the name ran under its own bubble. One board with
+// zones at depths 0, 2, 3 and 4 covers each stage.
 process.stdout.write('\nZone rows down a deep board (#53)\n');
 
 const zoneCircuit = (id, ...rooms) => ({
@@ -615,13 +616,16 @@ check(
   `icon ends at ${shed.iconEnd}, connector from ${shed.connX}`,
 );
 
-// Names that fit leave their connectors on the shared column — which is every
-// zone on a board short of this depth, so those boards draw as before.
-check(
-  'zones whose names fit keep one connector column',
-  kitchen.connX === hall.connX && hall.roomEnd !== null && hall.roomEnd < hall.connX,
-  `${zoneDetail(kitchen)}; ${zoneDetail(hall)}`,
-);
+// A short name is wired like a board label: the connector resumes one
+// LABEL_GAP (6) past the text rather than at a column of its own.
+for (const [depth, z] of [['depth 0', kitchen], ['depth 2', hall]]) {
+  const gap = z.roomEnd === null ? NaN : z.connX - z.roomEnd;
+  check(
+    `a short ${depth} room name leads straight into its connector`,
+    gap >= 0 && gap <= 6.01,
+    zoneDetail(z),
+  );
+}
 
 unmountCard(deep);
 
