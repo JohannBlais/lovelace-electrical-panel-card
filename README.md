@@ -93,6 +93,7 @@ The full schema lives in [`docs/data-model.md`](docs/data-model.md). Key concept
 - **`groups[]`** *inside* a group: a sub-board fed by that group rather than by the phase trunks. Drawn indented off the parent's bus, above the parent's own circuits, inheriting its `accent` unless it sets one.
 - **`zones[]`** are the leaves: a `floor` pill (defined in `floors:`), a free-text `room`, and optionally `sensor`, `switch`, `critical`, plus icon / metadata overrides.
 - **`sensors:`** at the top level wires the card-wide totals — `total`, `grid` and the per-phase trunk readings.
+- **`max_width`** (px, default 700) lets the card grow on a wide dashboard. Past 700 px the board widens instead of scaling, so text keeps its size and the extra width goes to labels — what a deep tree of sub-boards runs short of. Narrower screens are unaffected. See [board width](docs/data-model.md#board-width).
 
 ## Languages
 

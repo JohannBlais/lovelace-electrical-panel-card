@@ -24,6 +24,10 @@ const TOP_SCHEMA = [
       },
     },
   },
+  {
+    name: 'max_width',
+    selector: { number: { min: 300, step: 10, mode: 'box', unit_of_measurement: 'px' } },
+  },
 ];
 
 @customElement(EDITOR_TAG)
@@ -41,6 +45,7 @@ export class ElectricalPanelCardEditor extends LitElement implements LovelaceCar
     const topData = {
       title: this._config.title ?? '',
       language: this._config.language ?? '',
+      max_width: this._config.max_width,
     };
     // Pull the nested structures into a YAML payload. We round-trip the whole
     // thing through ha-yaml-editor so users keep full schema control without
@@ -78,19 +83,22 @@ export class ElectricalPanelCardEditor extends LitElement implements LovelaceCar
     `;
   }
 
-  // ha-form's computeLabel sees the schema entry; we just title-case the name.
+  // ha-form's computeLabel sees the schema entry; we just title-case the name
+  // (`max_width` → "Max width").
   private readonly _computeLabel = (schema: { name: string }): string => {
-    return schema.name.charAt(0).toUpperCase() + schema.name.slice(1);
+    const words = schema.name.replace(/_/g, ' ');
+    return words.charAt(0).toUpperCase() + words.slice(1);
   };
 
   private _topChanged(ev: CustomEvent): void {
     ev.stopPropagation();
     if (!this._config) return;
-    const v = ev.detail.value as { title?: string; language?: string };
+    const v = ev.detail.value as { title?: string; language?: string; max_width?: number };
     const next: ElectricalPanelCardConfig = {
       ...this._config,
       title: v.title || undefined,
       language: v.language || undefined,
+      max_width: v.max_width || undefined,
     };
     this._fire(next);
   }
@@ -104,6 +112,7 @@ export class ElectricalPanelCardEditor extends LitElement implements LovelaceCar
       type: this._config.type,
       ...(this._config.title !== undefined && { title: this._config.title }),
       ...(this._config.language !== undefined && { language: this._config.language }),
+      ...(this._config.max_width !== undefined && { max_width: this._config.max_width }),
       ...v,
     } as ElectricalPanelCardConfig;
     this._fire(next);
