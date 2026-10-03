@@ -16,6 +16,7 @@ Groups nest: a group can declare its own `groups[]` for a sub-board fed by it ra
 type: custom:electrical-panel-card
 title: Electrical panel
 language: en        # optional override; auto-detected from hass.locale otherwise
+max_width: 1300     # optional — how wide the card may get, in px (default 700)
 sensors:            # optional — main / phase / grid totals
   ...
 floors:             # optional — visual style for floor pills
@@ -29,9 +30,26 @@ groups:             # required — at least one
 | `type`     | `'custom:electrical-panel-card'`            | yes      | Lovelace card type. |
 | `title`    | string                                      | no       | Optional `<ha-card>` header. Omit for no header. |
 | `language` | `'en'` \| `'fr'` (BCP 47 primary subtag)    | no       | Language override. Falls back to `hass.locale.language`, then English. |
+| `max_width` | number (CSS px)                            | no       | How wide the card may get on screen. Default `700`. See [board width](#board-width). |
 | `sensors`  | [`MainSensors`](#main-sensors)              | no       | Top-of-card live readings. |
 | `floors`   | `Record<string, FloorStyle>`                | no       | Floor pill styles. |
 | `groups`   | [`Group[]`](#groups)                        | **yes**  | One entry per visual group. At least one required. |
+
+### Board width
+
+By default the card is at most 700 px wide, and the board inside it is scaled to fit. On a wide dashboard (a panel view, a wide section) that leaves blank space on both sides, while the labels of a deep tree are cut short: each nesting level moves a row's label to the right, but the power bubbles stay in place, so the room left for the label shrinks with every level.
+
+`max_width` raises that cap:
+
+```yaml
+max_width: 1300
+```
+
+Above 700 px the board stops scaling and widens instead. Text keeps the size it has on a 700 px card, the power bubbles keep their distance from the right edge, and all the width gained goes to the labels and room names. At 1300 px that is 377 more units for every label, on a default board that leaves 204 for a top-level group's label and 34 fewer per level below it.
+
+Below 700 px nothing changes: on a phone or in a narrow column the board is drawn exactly as it would be without the key, so one setting serves every screen a dashboard is opened on. A value of 700 or less only lowers the cap.
+
+The value is a number of CSS pixels. `1300px`, `80%` and other strings are refused with an error.
 
 ## Main sensors
 
@@ -309,7 +327,7 @@ Rendering rules:
 | ---- | ------ |
 | Feed | A nested group hangs off its parent's vertical bus, not off the phase trunks. No tap dots are drawn for it. |
 | `phases` | Still required, still meaningful — but informational: it documents which phase the sub-board runs on and shows up in the tooltip and the metadata dialog. |
-| Indent | One step right per level, for the group box and everything under it. Depth is unbounded; each level eats horizontal room, so two or three is the practical limit. |
+| Indent | One step right per level, for the group box and everything under it. Depth is unbounded; each level eats horizontal room, so two or three is the practical limit at the default width. Deeper trees want [`max_width`](#board-width). |
 | Order | A group's `groups[]` render first, then its own `circuits[]` — a feed to a remote board is a departure like any other and in practice sits above the breakers the parent keeps. YAML mappings carry no ordering between the two keys, so this is fixed rather than configurable. |
 | Colour | A nested group with no `accent` inherits its parent's, so one branch of the diagram reads as one branch. Set `accent` to break it out. |
 | Everything else | Identical to a top-level group: `sensor`, `switch`, `max_w`, metadata, tooltip, dialog. |
@@ -360,7 +378,7 @@ zones:
 | Field      | Type             | Description |
 | ---------- | ---------------- | ----------- |
 | `floor`    | string           | Key into `floors`. Renders as a coloured pill, widened to fit the text — long floor names are no longer clipped. |
-| `room`     | string           | Free-text label drawn next to the pill. |
+| `room`     | string           | Free-text label drawn next to the pill. Bounded like a group or circuit `label`: elided before the power bubbles, or left out when nesting leaves no room. The full name stays in the tooltip. |
 | `sensor`   | string (entity)  | Per-zone power. Bubble to the right. |
 | `switch`   | string (entity)  | Inline toggle on the bubble — or on its own when there is no `sensor`. Any togglable domain — see [smart-plug toggles](#smart-plug-toggles). |
 | `critical` | boolean          | When `true` and `switch` is set, toggling shows a confirmation dialog using `room` as the load name. |
@@ -494,5 +512,6 @@ groups:
 - `groups` is a non-empty array.
 - Each group has an `id` and a `phases` array — nested groups included, reported with a path (`groups[1].groups[0]`).
 - A group's `groups`, when present, is an array.
+- `max_width`, when present, is a positive number.
 
 Anything else is accepted as-is. Unknown fields are ignored without warnings.

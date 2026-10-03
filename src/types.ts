@@ -211,7 +211,8 @@ export interface Group {
    * behind a main breaker, a contactor feeding its own set of circuits.
    * Rendered as an indented group box hanging off this group's bus, above
    * this group's own `circuits`. Nesting is unbounded, but each level costs
-   * horizontal room, so two or three deep is the practical limit.
+   * horizontal room, so two or three deep is the practical limit on a card
+   * of the default width — deeper trees want `max_width`.
    */
   groups?: Group[];
   /**
@@ -254,6 +255,17 @@ export interface ElectricalPanelCardConfig extends LovelaceCardConfig {
    * falls back to English.
    */
   language?: string;
+  /**
+   * How wide the card may get on screen, in CSS pixels. Defaults to 700.
+   *
+   * Up to 700 px the board is scaled to fit, as it always has been. Above
+   * that, the board stops scaling and widens instead: text keeps the size it
+   * has at 700 px and the extra width goes to the labels and room names,
+   * which is what a deep tree runs short of (#53). The power bubbles stay at
+   * the same distance from the right edge. A narrower container — a phone, a
+   * masonry column — draws exactly as it would without the key.
+   */
+  max_width?: number;
   sensors?: MainSensors;
   floors?: Record<string, FloorStyle>;
   groups: Group[];

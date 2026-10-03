@@ -629,7 +629,222 @@ for (const [depth, z] of [['depth 0', kitchen], ['depth 2', hall]]) {
 
 unmountCard(deep);
 
-// ─── Source summary (#3) ──────────────────────────────────────────────────────
+// ─── Board width (#53) ────────────────────────────────────────────────────────
+// `max_width` lets the card grow past 700 px. Past that point the board stops
+// scaling and gains width instead, so text keeps its size and the room goes to
+// the labels. The width it gains comes from the container, measured through a
+// ResizeObserver — which jsdom lacks, and could not feed without layout anyway,
+// so this stand-in records what the card observes and lets each check report a
+// container width of its choosing.
+process.stdout.write('\nBoard width (#53)\n');
+
+const observers = [];
+globalThis.ResizeObserver = class {
+  constructor(callback) {
+    this.callback = callback;
+    this.targets = new Set();
+    observers.push(this);
+  }
+  observe(el) {
+    this.targets.add(el);
+  }
+  unobserve(el) {
+    this.targets.delete(el);
+  }
+  disconnect() {
+    this.targets.clear();
+  }
+};
+const observed = (card) => {
+  const wrap = card.shadowRoot.querySelector('.diagram-wrap');
+  return observers.filter((o) => o.targets.has(wrap));
+};
+const resizeTo = async (card, px) => {
+  const wrap = card.shadowRoot.querySelector('.diagram-wrap');
+  for (const o of observed(card)) o.callback([{ target: wrap, contentRect: { width: px } }], o);
+  await card.updateComplete;
+};
+
+// A circuit four boards down with a label and a room name that both overrun at
+// the default width.
+const widthConfig = (extra = {}) => ({
+  type: 'custom:electrical-panel-card',
+  title: 'Board width',
+  ...extra,
+  sensors: { total: { entity: 'sensor.total_power' } },
+  floors: { L0: { bg: '#38a169', fg: 'white' } },
+  groups: [
+    {
+      id: 'M',
+      label: 'Main board',
+      phases: ['L1'],
+      sensor: 'sensor.main_power',
+      summary: true,
+      groups: [{ id: 'S1', phases: ['L1'], groups: [{ id: 'S2', phases: ['L1'], groups: [
+        {
+          id: 'S3',
+          phases: ['L1'],
+          circuits: [
+            {
+              id: 'A',
+              label: 'Workbench sockets under the window',
+              type: 'socket',
+              sensor: 'sensor.bench_power',
+              zones: [{ floor: 'L0', room: 'Workshop, back wall', sensor: 'sensor.bench_0_power' }],
+            },
+          ],
+        },
+      ] }] }],
+    },
+  ],
+});
+
+const viewBoxW = (card) =>
+  parseFloat(card.shadowRoot.querySelector('svg').getAttribute('viewBox').split(' ')[2]);
+const benchLabel = (card) =>
+  [...card.shadowRoot.querySelectorAll('text.board-label')]
+    .find((t) => t.textContent.startsWith('Workbench'))?.textContent.trim();
+const benchRoom = (card) =>
+  card.shadowRoot.querySelector('text.zone-room')?.textContent.trim();
+// Distance from the board's right edge to the "Total" reading: the bubble
+// column's margin, which has to survive the board widening.
+const totalMargin = (card) =>
+  viewBoxW(card) -
+  parseFloat(card.shadowRoot.querySelector('text.pwr-value[data-id="total"]').getAttribute('x'));
+
+// Without the key: nothing is measured, nothing is styled inline, and the board
+// is the 440-unit one every committed preview shows.
+const defaultBoard = await mountCard(widthConfig());
+const defaultMargin = totalMargin(defaultBoard);
+check('without max_width the board is 440 units wide', viewBoxW(defaultBoard) === 440, `${viewBoxW(defaultBoard)}`);
+check('without max_width nothing is observed', observed(defaultBoard).length === 0);
+check(
+  'without max_width the container keeps the stylesheet cap',
+  !defaultBoard.shadowRoot.querySelector('.diagram-wrap').hasAttribute('style'),
+  defaultBoard.shadowRoot.querySelector('.diagram-wrap').getAttribute('style'),
+);
+check(
+  'at the default width the deep label and room name are elided',
+  !!benchLabel(defaultBoard)?.endsWith('…') && !!benchRoom(defaultBoard)?.endsWith('…'),
+  `"${benchLabel(defaultBoard)}" / "${benchRoom(defaultBoard)}"`,
+);
+unmountCard(defaultBoard);
+
+// With it, on a wide dashboard: the reporter's case.
+const wide1300 = await mountCard(widthConfig({ max_width: 1300 }));
+check(
+  'max_width caps the diagram and the summary at its value',
+  wide1300.shadowRoot.querySelector('.diagram-wrap').getAttribute('style') === 'max-width: 1300px' &&
+    wide1300.shadowRoot.querySelector('table.source-summary')?.getAttribute('style') ===
+      'max-width: 1300px',
+);
+check('max_width observes the container', observed(wide1300).length === 1);
+
+await resizeTo(wide1300, 1300);
+const w1300 = viewBoxW(wide1300);
+check('a 1300 px container widens the board to 817 units', w1300 === 817, `${w1300}`);
+// Same px per unit as a 440-unit board at 700 px, so every glyph is drawn at
+// the size it has on a default card at full width.
+check(
+  'the wider board keeps the default text scale',
+  Math.abs(1300 / w1300 - 700 / 440) < 0.002,
+  `${(1300 / w1300).toFixed(4)} px/unit against ${(700 / 440).toFixed(4)}`,
+);
+check(
+  'the bubbles keep their distance from the right edge',
+  totalMargin(wide1300) === defaultMargin,
+  `${totalMargin(wide1300)} against ${defaultMargin}`,
+);
+check(
+  'the deep label and room name are drawn whole',
+  benchLabel(wide1300) === 'Workbench sockets under the window' &&
+    benchRoom(wide1300) === 'Workshop, back wall',
+  `"${benchLabel(wide1300)}" / "${benchRoom(wide1300)}"`,
+);
+// The bubble backgrounds were sized for the old positions; a relayout that
+// kept that sizing would leave every pill behind its reading.
+{
+  const text = wide1300.shadowRoot.querySelector('text.pwr-value[data-id="total"]');
+  const bg = wide1300.shadowRoot.querySelector('rect[data-bg-for="total"]');
+  const expected = text.getBBox().x - 5;
+  check(
+    'bubble backgrounds follow their readings to the new column',
+    Math.abs(parseFloat(bg.getAttribute('x')) - expected) < 0.01,
+    `background at ${bg.getAttribute('x')}, reading starts at ${expected + 5}`,
+  );
+}
+
+// The same card on a phone: the board must not shrink its text to fit a width
+// it does not have. Below 700 px it is the default board, scaled as ever.
+await resizeTo(wide1300, 380);
+check('a narrow container draws the default 440-unit board', viewBoxW(wide1300) === 440, `${viewBoxW(wide1300)}`);
+// A card in a hidden tab measures zero; keep the last real width.
+await resizeTo(wide1300, 1300);
+await resizeTo(wide1300, 0);
+check('a zero-width measurement is ignored', viewBoxW(wide1300) === 817, `${viewBoxW(wide1300)}`);
+
+// Dropping the key from a live card puts it back on the default board at once.
+wide1300.setConfig(widthConfig());
+await wide1300.updateComplete;
+check(
+  'removing max_width restores the default board and stops observing',
+  viewBoxW(wide1300) === 440 && observed(wide1300).length === 0,
+  `${viewBoxW(wide1300)}, ${observed(wide1300).length} observer(s)`,
+);
+unmountCard(wide1300);
+
+// A cap at or below 700 px leaves nothing to grow into.
+const narrowCap = await mountCard(widthConfig({ max_width: 500 }));
+check('a max_width under 700 px observes nothing', observed(narrowCap).length === 0);
+unmountCard(narrowCap);
+
+// Pixels only. `1300px` is what a user is likely to write first; it has to
+// fail with a message that says what to write instead.
+for (const bad of ['1300px', 0, -5]) {
+  let message = '';
+  try {
+    window.document.createElement('electrical-panel-card').setConfig(widthConfig({ max_width: bad }));
+  } catch (err) {
+    message = err.message;
+  }
+  check(
+    `max_width: ${JSON.stringify(bad)} is refused with a usable message`,
+    message.includes('max_width') && message.includes('1300'),
+    message || 'accepted',
+  );
+}
+
+delete globalThis.ResizeObserver;
+
+// The visual editor rebuilds the config from its form and its YAML block, each
+// owning some top-level keys. A key neither of them carried over would vanish
+// on the first edit, silently — which is what max_width did before the form
+// learnt it.
+{
+  const editor = window.document.createElement('electrical-panel-card-editor');
+  window.document.body.appendChild(editor);
+  editor.setConfig(widthConfig({ max_width: 1300 }));
+  await editor.updateComplete;
+  let fired = null;
+  editor.addEventListener('config-changed', (ev) => {
+    fired = ev.detail.config;
+  });
+  const form = editor.shadowRoot.querySelector('ha-form');
+  check('the editor form shows max_width', form?.data?.max_width === 1300, JSON.stringify(form?.data));
+  editor.shadowRoot.querySelector('ha-yaml-editor').dispatchEvent(
+    new window.CustomEvent('value-changed', {
+      detail: { value: { groups: [{ id: 'B', phases: [] }] }, isValid: true },
+    }),
+  );
+  check('a YAML edit keeps max_width', fired?.max_width === 1300, JSON.stringify(fired));
+  form.dispatchEvent(
+    new window.CustomEvent('value-changed', { detail: { value: { title: 'Board width' } } }),
+  );
+  check('clearing the field removes max_width', fired?.max_width === undefined, JSON.stringify(fired));
+  editor.remove();
+}
+
+// ─── Source summary (#3)──────────────────────────────────────────────────────
 // Groups opting in with `summary: true` are listed above the diagram with their
 // live reading. The scenario below is the one from #3: a board reachable by two
 // separate mains paths, only one of which carries the house at any moment. The

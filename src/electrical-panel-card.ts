@@ -58,14 +58,23 @@ console.info(
 });
 
 // ─── Visual constants ─────────────────────────────────────────────────────────
+// Board width in user units — the whole board unless `max_width` lets it grow,
+// and the floor when it does. See boardWidth().
 const SVG_W = 440;
+// The card's on-screen cap in CSS px when `max_width` is not set: the 700 px it
+// has always had. It also fixes the scale a wider board is drawn at.
+const DEFAULT_MAX_WIDTH = 700;
 const ML = 70;
 const GPAD = 12;
 const GHDR = 36;
 const ZH = 22;
 const HEADER_H = 20;
 const SQ = 24;
-const PWR_X = 350;
+// The power bubbles are anchored this far in from the board's right edge —
+// x = 350 at SVG_W. Kept as a margin rather than an x because the board can
+// widen, and the bubbles, and everything that stops short of them, move with
+// its right edge.
+const PWR_MARGIN = 90;
 const CB_SQ = 20;
 // Clear space between a group box and whatever hangs off its bus — its own
 // breakers, or a nested group's box. The horizontal step per nesting level is
@@ -89,7 +98,7 @@ const BOX_MIN_GAP = 2;
 const ID_FONT = 9; // group and breaker ids
 const FLOOR_FONT = 7; // floor pill
 // Past this the box stops growing and the text is elided instead. The board is
-// SVG_W (440) wide with the power bubbles anchored at PWR_X (350), and every
+// as little as SVG_W (440) wide with the power bubbles at x = 350, and every
 // box pushes everything to its right; without a ceiling a single long id would
 // walk the zone text under the bubbles. Long names belong beside the box, not
 // inside it — see the `label` fields.
@@ -100,10 +109,24 @@ const ELLIPSIS = '…';
 // and a breaker's zones both hang *below* it.
 const LABEL_FONT = 8;
 const LABEL_GAP = 6; // between the box and the label
-// Where a label has to stop. The bubbles are right-anchored at PWR_X and grow
-// leftward — value text, then the saturation bar at PWR_X − 30, then the
-// background's own padding — so this keeps a label clear of the widest of them.
-const LABEL_RIGHT = PWR_X - 46;
+// Where a label has to stop, measured left from the bubbles' x. The bubbles are
+// right-anchored there and grow leftward — value text, then the saturation bar
+// 30 short of it, then the background's own padding — so this keeps a label
+// clear of the widest of them.
+const LABEL_CLEARANCE = 46;
+
+/**
+ * Width of the board, in user units, for a container `px` CSS pixels wide.
+ *
+ * Up to DEFAULT_MAX_WIDTH this is SVG_W, scaled to fit — the board as it has
+ * always been drawn. Past it the scale stays where DEFAULT_MAX_WIDTH left it
+ * and the board gains units instead, so the text keeps its size and the extra
+ * width goes to the labels (#53). Whole units, so a sub-pixel resize does not
+ * lay the board out again.
+ */
+function boardWidth(px: number): number {
+  return Math.max(SVG_W, Math.round((px * SVG_W) / DEFAULT_MAX_WIDTH));
+}
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
 // Phase wire colours — IEC 60446. Exposed as CSS custom properties so themes
@@ -126,8 +149,9 @@ const TYPE_DEFAULT_ICON: Record<string, string> = {
 // a <foreignObject> as though the SVG were unscaled: it skips the viewBox
 // transform and draws at one user unit per CSS pixel. HA's <ha-svg-icon> is
 // `position: relative` on its :host, so wherever the board is not drawn at
-// exactly SVG_W pixels the zone icons drift off their rows — further the lower
-// they sit on the board (#52). Chromium draws them where they belong.
+// exactly one user unit per pixel the zone icons drift off their rows —
+// further the lower they sit on the board (#52). Chromium draws them where
+// they belong.
 //
 // That rule lives inside <ha-icon>'s shadow root, beyond the reach of this
 // card's styles, so this sheet is adopted into each icon's root, where a rule
@@ -260,6 +284,10 @@ interface GroupLayout {
 interface Layout {
   svgW: number;
   svgH: number;
+  /** x the power bubbles are right-anchored at: PWR_MARGIN in from svgW. */
+  pwrX: number;
+  /** Where a label or a room name has to stop. */
+  labelRight: number;
   phLineEnd: number;
   groupWidth: number;
   /** Keyed by group path — `D1`, `X/D7`, … — so nested ids can repeat. */
@@ -337,17 +365,18 @@ function elideText(
 
 /**
  * A board label — the human-readable `label` on a group or circuit, or a
- * zone's `room` — sized to the space between `fromX` and the power bubbles,
- * elided if it does not fit.
+ * zone's `room` — sized to the space between `fromX` and `toX`, where the
+ * power bubbles begin, elided if it does not fit.
  * `null` when there is no label, or when nesting has left no room at all.
  */
 function fitLabel(
   text: string | undefined,
   family: string,
   fromX: number,
+  toX: number,
 ): { text: string; w: number } | null {
   if (!text) return null;
-  const maxW = LABEL_RIGHT - fromX;
+  const maxW = toX - fromX;
   if (maxW <= 0) return null;
   const drawn = elideText(text, LABEL_FONT, 'normal', family, maxW);
   return { text: drawn, w: measureText(drawn, LABEL_FONT, 'normal', family) ?? 0 };
@@ -379,6 +408,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // Pending until HA defines <ha-icon>; see _staticIcons().
   private _iconsDefined?: Promise<void>;
 
+  // Board width in user units: SVG_W unless `max_width` lets the board grow
+  // past DEFAULT_MAX_WIDTH, in which case it follows the container. See
+  // _observeWidth().
+  @state() private _boardW = SVG_W;
+  private _resizeObserver?: ResizeObserver;
+  private _observedWrap?: Element;
+
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('hass')) {
       const darkMode = !!(this.hass?.themes as { darkMode?: boolean } | undefined)?.darkMode;
@@ -390,7 +426,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // update on every `hass` property change (which fires for every state in
   // the system), but most of those are unrelated to this card's entities.
   protected override shouldUpdate(changed: PropertyValues): boolean {
-    if (changed.has('_config') || changed.has('_dialog') || changed.has('dark')) {
+    if (
+      changed.has('_config') ||
+      changed.has('_dialog') ||
+      changed.has('dark') ||
+      changed.has('_boardW')
+    ) {
       return true;
     }
     if (changed.has('hass')) {
@@ -478,11 +519,87 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       });
     };
     validate(cfg.groups, 'groups');
+    // A number of CSS pixels. A string like `1300px` is refused rather than
+    // parsed: accepting it would invite `80%` or `50em`, which a pixel cap
+    // cannot honour.
+    if (
+      cfg.max_width !== undefined &&
+      (typeof cfg.max_width !== 'number' || !Number.isFinite(cfg.max_width) || cfg.max_width <= 0)
+    ) {
+      throw new Error('`max_width` must be a number of pixels, e.g. `max_width: 1300`');
+    }
     this._config = cfg;
     // Invalidate config-derived caches.
     this._layoutCache = undefined;
     this._entityCache = undefined;
     this._bubbleTextCache.clear();
+    // A board that can no longer grow goes back to SVG_W at once; one that
+    // can is measured again after the next render.
+    if (!this._fluid()) this._boardW = SVG_W;
+    this._observedWrap = undefined;
+    this._resizeObserver?.disconnect();
+  }
+
+  /** The card's on-screen cap in CSS px. */
+  private _maxWidth(): number {
+    return this._config?.max_width ?? DEFAULT_MAX_WIDTH;
+  }
+
+  // Inline override of the stylesheet's 700px cap, shared by the diagram and
+  // the summary table so the two keep one column. No attribute at all when
+  // the key is unset.
+  private _maxWidthStyle(): string | typeof nothing {
+    const w = this._config?.max_width;
+    return w === undefined ? nothing : `max-width: ${w}px`;
+  }
+
+  /**
+   * Whether the board widens with its container. Only past DEFAULT_MAX_WIDTH:
+   * up to it the board is SVG_W at any size, so a card without `max_width`
+   * measures nothing and draws exactly as it always has.
+   */
+  private _fluid(): boolean {
+    return this._maxWidth() > DEFAULT_MAX_WIDTH && typeof ResizeObserver !== 'undefined';
+  }
+
+  // Watches the diagram's container while the board is fluid. Called after
+  // every render and on reconnection — HA detaches and re-attaches cards when
+  // it rebuilds a view, and the container element may be a new one.
+  private _observeWidth(): void {
+    const wrap = this._fluid()
+      ? (this.shadowRoot?.querySelector('.diagram-wrap') ?? undefined)
+      : undefined;
+    if (wrap === this._observedWrap) return;
+    this._resizeObserver?.disconnect();
+    this._observedWrap = wrap;
+    if (!wrap) return;
+    this._resizeObserver ??= new ResizeObserver(([entry]) => {
+      // Zero while the card sits in a hidden tab; keep the last real width
+      // rather than collapse the board and widen it again on return.
+      const px = entry?.contentRect.width ?? 0;
+      if (px > 0) this._setBoardWidth(boardWidth(px));
+    });
+    this._resizeObserver.observe(wrap);
+  }
+
+  private _setBoardWidth(w: number): void {
+    if (w === this._boardW) return;
+    this._boardW = w;
+    // Everything anchored to the bubbles moves, so the layout and the bubble
+    // sizes measured at the old positions are both stale.
+    this._layoutCache = undefined;
+    this._bubbleTextCache.clear();
+  }
+
+  public override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this._observeWidth();
+  }
+
+  public override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._resizeObserver?.disconnect();
+    this._observedWrap = undefined;
   }
 
   public getCardSize(): number {
@@ -756,11 +873,15 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       yCur += layoutGroup(g, g.id, 0, ML, yCur);
     }
 
+    const svgW = this._boardW;
+    const pwrX = svgW - PWR_MARGIN;
     return {
-      svgW: SVG_W,
+      svgW,
       svgH: yCur + 24,
+      pwrX,
+      labelRight: pwrX - LABEL_CLEARANCE,
       phLineEnd,
-      groupWidth: SVG_W - ML - 4,
+      groupWidth: svgW - ML - 4,
       byGroup,
     };
   }
@@ -897,7 +1018,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     return html`
       <ha-card .header=${this._config.title ?? ''}>
         ${this._renderSummary()}
-        <div class="diagram-wrap">
+        <div class="diagram-wrap" style=${this._maxWidthStyle()}>
           <svg
             viewBox="0 0 ${layout.svgW} ${layout.svgH}"
             preserveAspectRatio="xMidYMid meet"
@@ -974,11 +1095,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               !sensors.total?.entity || sensors.total.summary
                 ? nothing
                 : svg`
-                    <text class="label-secondary" x=${PWR_X - 55} y=${phTapY1 + 3}
+                    <text class="label-secondary" x=${layout.pwrX - 55} y=${phTapY1 + 3}
                           text-anchor="end" font-size="7.5">${sensors.total?.label ?? t.card.total}</text>
                     ${this._bubble({
                       id: 'total',
-                      x: PWR_X,
+                      x: layout.pwrX,
                       y: phTapY1 + 3,
                       fill: '#c53030',
                       powerEntity: sensors.total?.entity,
@@ -990,11 +1111,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               !sensors.grid?.entity || sensors.grid.summary
                 ? nothing
                 : svg`
-                    <text class="label-secondary" x=${PWR_X - 55} y=${phTapY2 + 3}
+                    <text class="label-secondary" x=${layout.pwrX - 55} y=${phTapY2 + 3}
                           text-anchor="end" font-size="7.5">${sensors.grid?.label ?? t.card.grid}</text>
                     ${this._bubble({
                       id: 'grid',
-                      x: PWR_X,
+                      x: layout.pwrX,
                       y: phTapY2 + 3,
                       powerEntity: sensors.grid?.entity,
                       maxW: sensors.grid?.max_w,
@@ -1066,7 +1187,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     if (rows.length === 0 && totals.length === 0) return nothing;
     const t = this._t();
     return html`
-      <table class="source-summary">
+      <table class="source-summary" style=${this._maxWidthStyle()}>
         <caption>${t.card.sources}</caption>
         <tbody>
           ${rows.map(
@@ -1203,7 +1324,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // power bubble, so the connector starts after the label rather than at the
     // box — otherwise the line would strike straight through the text.
     const labelX = gl.x + gl.w + LABEL_GAP;
-    const groupLabel = fitLabel(g.label, this._family, labelX);
+    const groupLabel = fitLabel(g.label, this._family, labelX, layout.labelRight);
     const groupConnX = groupLabel ? labelX + groupLabel.w + LABEL_GAP : gl.x + gl.w;
     // Interpolated tight against the id's </text> below rather than placed on
     // its own line: `nothing` still emits the surrounding whitespace, which
@@ -1236,7 +1357,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         g.sensor || g.switch
           ? this._bubble({
               id: `g-${path}`,
-              x: PWR_X,
+              x: layout.pwrX,
               y: midY + 3,
               fill: colors.color,
               connX: groupConnX,
@@ -1259,7 +1380,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           gl.busX,
         ),
       )}
-      ${circuits.map((c) => this._renderCircuit(colors, c, path, gl, floors))}
+      ${circuits.map((c) => this._renderCircuit(colors, c, path, gl, layout, floors))}
     `;
   }
 
@@ -1268,6 +1389,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     c: Circuit,
     groupKey: string,
     gl: GroupLayout,
+    layout: Layout,
     floors: Record<string, FloorStyle>,
   ): unknown {
     const cl = gl.circuits.get(c.id)!;
@@ -1277,7 +1399,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // Same arrangement as a group: the label occupies the breaker's own row
     // (its zones hang below), and the bubble connector resumes past it.
     const labelX = cbRight + LABEL_GAP;
-    const circuitLabel = fitLabel(c.label, this._family, labelX);
+    const circuitLabel = fitLabel(c.label, this._family, labelX, layout.labelRight);
     const circuitConnX = circuitLabel ? labelX + circuitLabel.w + LABEL_GAP : cbRight;
     const circuitLabelMarkup = circuitLabel
       ? svg`<text class="board-label" x=${labelX} y=${cbMidY + 4}
@@ -1314,7 +1436,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         c.sensor || c.switch
           ? this._bubble({
               id: `c-${groupKey}-${c.id}`,
-              x: PWR_X,
+              x: layout.pwrX,
               y: cbMidY + 3,
               fill: colors.color,
               connX: circuitConnX,
@@ -1348,7 +1470,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         const roomX = iconX + ICON_SIZE + ICON_GAP;
         // Bounded like a board label, and for the same reason: the row's
         // bubble sits at the end of it. zoneTooltip leads with the full name.
-        const room = fitLabel(zone.room, this._family, roomX);
+        const room = fitLabel(zone.room, this._family, roomX, layout.labelRight);
         // And wired like one: the connector resumes just past whatever the row
         // draws — the name, or the icon when there is none — so it neither
         // strikes through the name nor leaves a gap before it.
@@ -1395,7 +1517,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               zone.sensor || zone.switch
                 ? this._bubble({
                     id: `z-${groupKey}-${c.id}-${j}`,
-                    x: PWR_X,
+                    x: layout.pwrX,
                     y: zoneY + 3,
                     fill: 'var(--primary-text-color)',
                     connX: zoneConnX,
@@ -1420,6 +1542,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const texts = this.shadowRoot.querySelectorAll<SVGTextElement>('text.pwr-value');
     texts.forEach((t) => this._sizeBubble(t));
     this._staticIcons();
+    this._observeWidth();
   }
 
   // Adopt STATIC_ICON into every zone icon's shadow root. An icon rendered
@@ -1556,12 +1679,14 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       ha-card {
         padding: 8px;
       }
+      /* DEFAULT_MAX_WIDTH. \`max_width\` overrides it inline. */
       .diagram-wrap {
         max-width: 700px;
         margin: 0 auto;
       }
-      /* Same 700px column as the diagram, so the rows line up with the board
-         underneath rather than floating at their own width. */
+      /* Same column as the diagram — 700px, or \`max_width\` — so the rows
+         line up with the board underneath rather than floating at their own
+         width. */
       .source-summary {
         width: 100%;
         max-width: 700px;
