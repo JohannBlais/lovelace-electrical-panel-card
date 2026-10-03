@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.20.3-beta.1] — Icons that stay on their rows (pre-release)
+
+A pre-release: HACS offers it only to installations that turned pre-releases
+on for this card, and everyone else stays on 0.20.2. It carries the fix below
+so that it can be confirmed on an iOS device before 0.20.3.
+
+In Safari and in every browser on iOS — the Home Assistant companion app
+included — the zone icons drifted off their rows: down and to the right on a
+phone, up and to the left on a card wider than 440 px, and further the lower
+they sat on the board. Chromium-based browsers drew them correctly.
+
+- The cause is a WebKit bug. A positioned element inside an SVG
+  `<foreignObject>` is painted as though the SVG were unscaled, and Home
+  Assistant's icon element is `position: relative`, so each icon was drawn at
+  one board unit per CSS pixel rather than at the board's actual scale.
+- The card now resets that one rule inside each zone icon, which puts the
+  icons back where Chromium draws them. Nothing else about the icons changes,
+  and no config key is involved.
+- Checked against Playwright's WebKit build. Before, every icon sat exactly
+  where an unscaled draw puts it, up to 65 px off on a 430 px card; after, it
+  is within 0.6 px of its slot, the same as Chromium (#52).
+- Tags with a pre-release suffix are now published as GitHub pre-releases,
+  which is what keeps this one out of everyone else's updates (#55).
+
 ## [0.20.2] — Switches with nothing to measure
 
 `switch` was accepted on a group, a circuit and a zone independently of
