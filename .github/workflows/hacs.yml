@@ -9,6 +9,9 @@ on:
     # Weekly check — catches schema drift if HACS tightens its rules.
     - cron: '0 4 * * 1'
 
+permissions:
+  contents: read
+
 jobs:
   hacs:
     name: HACS Action
