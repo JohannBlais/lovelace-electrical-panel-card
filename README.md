@@ -219,6 +219,18 @@ Deriving the tag from `package.json` rather than typing it is the point — `rel
 
 One constraint on version numbers: HACS derives its cache-busting `hacstag` by stripping every non-digit from the tag, so `v0.17.5` becomes `0175`. Two releases whose digits collapse to the same string (`0.17.5` and `0.1.75`, or `1.0` and `0.10`) would leave users on a stale cached bundle. Ordinary patch and minor bumps are safe.
 
+### Pre-releases
+
+A beta goes through the same steps with a pre-release version:
+
+```bash
+npm version 0.20.3-beta.1 --no-git-tag-version
+```
+
+`release.yml` publishes any tag containing a hyphen as a GitHub pre-release. That flag is what HACS goes by: it offers a pre-release only to users who turned pre-releases on for this card — the *Pre-release* switch entity HACS creates for it, disabled by default — or who pick it under *Redownload → Need a different version?*. Everyone else stays on the latest stable release, and so does the release badge above. The flag comes from the `release.yml` of the tagged commit, so a beta must be cut from a commit that already has it.
+
+Once the beta is confirmed, `npm version patch --no-git-tag-version` takes `0.20.3-beta.1` to `0.20.3` and the release proceeds as above. The `hacstag`s stay distinct (`02031`, then `0203`).
+
 ## License
 
 [MIT](LICENSE) © Johann Blais
