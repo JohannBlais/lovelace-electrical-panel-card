@@ -499,6 +499,132 @@ check(
 
 unmountCard(labelled);
 
+// ─── Zone rows down a deep board (#53) ────────────────────────────────────────
+// A zone's room name sits after its floor pill and icon, which move right with
+// every nesting level, while its bubble stays in the right-hand column. The
+// name used to be drawn whole and its connector to start at a fixed x, so a few
+// levels down the connector struck through the name and the name ran under its
+// own bubble. One board with zones at depths 0, 2, 3 and 4 covers each stage.
+process.stdout.write('\nZone rows down a deep board (#53)\n');
+
+const zoneCircuit = (id, ...rooms) => ({
+  id,
+  type: 'socket',
+  zones: rooms.map((room, j) => ({
+    floor: 'L0',
+    room,
+    sensor: `sensor.${id.toLowerCase()}_${j}_power`,
+  })),
+});
+const deepConfig = {
+  type: 'custom:electrical-panel-card',
+  title: 'Deep board',
+  floors: { L0: { bg: '#38a169', fg: 'white' } },
+  groups: [
+    {
+      id: 'M',
+      phases: ['L1'],
+      circuits: [zoneCircuit('A', 'Kitchen')],
+      groups: [
+        {
+          id: 'S1',
+          phases: ['L1'],
+          groups: [
+            {
+              id: 'R1',
+              phases: ['L1'],
+              circuits: [zoneCircuit('B', 'Hall', 'Living room by the bay window')],
+              groups: [
+                {
+                  id: 'S2',
+                  phases: ['L1'],
+                  circuits: [zoneCircuit('C', 'Workshop bench')],
+                  groups: [
+                    { id: 'R2', phases: ['L1'], circuits: [zoneCircuit('D', 'Garden shed')] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const deep = await mountCard(deepConfig);
+// Everything drawn on one zone row, found from its bubble id.
+const zoneRow = (id) => {
+  const conn = deep.shadowRoot.querySelector(`line.bubble-conn[data-ln-for="${id}"]`);
+  const row = conn?.closest('g');
+  const room = row?.querySelector('text.zone-room');
+  const icon = row?.querySelector('foreignObject');
+  const bg = deep.shadowRoot.querySelector(`rect[data-bg-for="${id}"]`);
+  const box = room?.getBBox();
+  return {
+    connX: conn ? parseFloat(conn.getAttribute('x1')) : NaN,
+    roomText: room ? room.textContent.trim() : null,
+    roomEnd: box ? box.x + box.width : null,
+    iconEnd: icon
+      ? parseFloat(icon.getAttribute('x')) + parseFloat(icon.getAttribute('width'))
+      : NaN,
+    bubbleX: bg ? parseFloat(bg.getAttribute('x')) : NaN,
+    tooltip: row?.querySelector('title')?.textContent ?? '',
+  };
+};
+const kitchen = zoneRow('z-M-A-0');
+const hall = zoneRow('z-M/S1/R1-B-0');
+const living = zoneRow('z-M/S1/R1-B-1');
+const workshop = zoneRow('z-M/S1/R1/S2-C-0');
+const shed = zoneRow('z-M/S1/R1/S2/R2-D-0');
+const zoneDetail = (z) =>
+  `"${z.roomText}" ends at ${z.roomEnd?.toFixed(1)}, ` +
+  `connector from ${z.connX}, bubble from ${z.bubbleX.toFixed(1)}`;
+
+for (const [depth, z] of [['depth 2', living], ['depth 3', workshop]]) {
+  check(
+    `a ${depth} room name stops short of its bubble`,
+    z.roomEnd !== null && z.roomEnd <= z.bubbleX,
+    zoneDetail(z),
+  );
+  check(
+    `a ${depth} connector starts after the room name`,
+    z.roomEnd !== null && z.connX >= z.roomEnd,
+    zoneDetail(z),
+  );
+}
+check('an over-long room name is elided', !!living.roomText?.endsWith('…'), zoneDetail(living));
+check(
+  'an elided room name stays readable in the tooltip',
+  living.tooltip.includes('Living room by the bay window'),
+  living.tooltip || 'no title',
+);
+
+// Four levels down there is no room for the name at all before the bubbles.
+// It is left to the tooltip, as a board label is, and the connector has to
+// clear the icon instead.
+check('a room name with no space left is not drawn', shed.roomText === null, zoneDetail(shed));
+check(
+  'an undrawn room name stays readable in the tooltip',
+  shed.tooltip.includes('Garden shed'),
+  shed.tooltip || 'no title',
+);
+check(
+  'a connector clears the zone icon',
+  shed.connX >= shed.iconEnd,
+  `icon ends at ${shed.iconEnd}, connector from ${shed.connX}`,
+);
+
+// Names that fit leave their connectors on the shared column — which is every
+// zone on a board short of this depth, so those boards draw as before.
+check(
+  'zones whose names fit keep one connector column',
+  kitchen.connX === hall.connX && hall.roomEnd !== null && hall.roomEnd < hall.connX,
+  `${zoneDetail(kitchen)}; ${zoneDetail(hall)}`,
+);
+
+unmountCard(deep);
+
 // ─── Source summary (#3) ──────────────────────────────────────────────────────
 // Groups opting in with `summary: true` are listed above the diagram with their
 // live reading. The scenario below is the one from #3: a board reachable by two

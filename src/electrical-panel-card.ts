@@ -104,6 +104,10 @@ const LABEL_GAP = 6; // between the box and the label
 // leftward — value text, then the saturation bar at PWR_X − 30, then the
 // background's own padding — so this keeps a label clear of the widest of them.
 const LABEL_RIGHT = PWR_X - 46;
+// Zone connectors start on one shared column, so a circuit's zones read as a
+// list. A zone whose own content reaches past it — a few levels down a nested
+// board — starts its connector clear of that content instead.
+const ZONE_CONN_X = 270;
 
 const PHASE_X: Record<Phase, number> = { L3: 24, L2: 36, L1: 48 };
 // Phase wire colours — IEC 60446. Exposed as CSS custom properties so themes
@@ -336,8 +340,9 @@ function elideText(
 }
 
 /**
- * A board label — the human-readable `label` on a group or circuit — sized to
- * the room between `fromX` and the power bubbles, elided if it does not fit.
+ * A board label — the human-readable `label` on a group or circuit, or a
+ * zone's `room` — sized to the space between `fromX` and the power bubbles,
+ * elided if it does not fit.
  * `null` when there is no label, or when nesting has left no room at all.
  */
 function fitLabel(
@@ -1345,6 +1350,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         const pillX = ix0;
         const iconX = fc ? ix0 + pill.w + 4 : ix0;
         const roomX = iconX + ICON_SIZE + ICON_GAP;
+        // Bounded like a board label, and for the same reason: the row's
+        // bubble sits at the end of it. zoneTooltip leads with the full name.
+        const room = fitLabel(zone.room, this._family, roomX);
+        const contentEnd = room ? roomX + room.w : iconX + ICON_SIZE;
+        const zoneConnX = Math.max(ZONE_CONN_X, contentEnd + LABEL_GAP);
         const lineEnd = ix0;
         const iconName =
           zone.icon ?? c.icon ?? TYPE_DEFAULT_ICON[c.type] ?? 'mdi:help';
@@ -1374,11 +1384,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               </div>
             </foreignObject>
             ${
-              zone.room
+              room
                 ? svg`
                     <text class="zone-room" x=${roomX} y=${zoneY - 1}
                           text-anchor="start" dominant-baseline="central"
-                          font-size="8">${zone.room}</text>
+                          font-size=${LABEL_FONT}>${room.text}</text>
                   `
                 : nothing
             }
@@ -1389,7 +1399,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                     x: PWR_X,
                     y: zoneY + 3,
                     fill: 'var(--primary-text-color)',
-                    connX: 270,
+                    connX: zoneConnX,
                     switchEntity: zone.switch,
                     criticalLabel: zone.critical ? zone.room : undefined,
                     powerEntity: zone.sensor,
