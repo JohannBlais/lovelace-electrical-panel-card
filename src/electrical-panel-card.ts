@@ -336,8 +336,9 @@ function elideText(
 }
 
 /**
- * A board label — the human-readable `label` on a group or circuit — sized to
- * the room between `fromX` and the power bubbles, elided if it does not fit.
+ * A board label — the human-readable `label` on a group or circuit, or a
+ * zone's `room` — sized to the space between `fromX` and the power bubbles,
+ * elided if it does not fit.
  * `null` when there is no label, or when nesting has left no room at all.
  */
 function fitLabel(
@@ -1345,6 +1346,14 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
         const pillX = ix0;
         const iconX = fc ? ix0 + pill.w + 4 : ix0;
         const roomX = iconX + ICON_SIZE + ICON_GAP;
+        // Bounded like a board label, and for the same reason: the row's
+        // bubble sits at the end of it. zoneTooltip leads with the full name.
+        const room = fitLabel(zone.room, this._family, roomX);
+        // And wired like one: the connector resumes just past whatever the row
+        // draws — the name, or the icon when there is none — so it neither
+        // strikes through the name nor leaves a gap before it.
+        const contentEnd = room ? roomX + room.w : iconX + ICON_SIZE;
+        const zoneConnX = contentEnd + LABEL_GAP;
         const lineEnd = ix0;
         const iconName =
           zone.icon ?? c.icon ?? TYPE_DEFAULT_ICON[c.type] ?? 'mdi:help';
@@ -1374,11 +1383,11 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               </div>
             </foreignObject>
             ${
-              zone.room
+              room
                 ? svg`
                     <text class="zone-room" x=${roomX} y=${zoneY - 1}
                           text-anchor="start" dominant-baseline="central"
-                          font-size="8">${zone.room}</text>
+                          font-size=${LABEL_FONT}>${room.text}</text>
                   `
                 : nothing
             }
@@ -1389,7 +1398,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                     x: PWR_X,
                     y: zoneY + 3,
                     fill: 'var(--primary-text-color)',
-                    connX: 270,
+                    connX: zoneConnX,
                     switchEntity: zone.switch,
                     criticalLabel: zone.critical ? zone.room : undefined,
                     powerEntity: zone.sensor,
