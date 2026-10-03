@@ -122,6 +122,23 @@ const TYPE_DEFAULT_ICON: Record<string, string> = {
   power: 'mdi:lightning-bolt',
 };
 
+// WebKit (Safari, and every browser on iOS) paints a positioned element inside
+// a <foreignObject> as though the SVG were unscaled: it skips the viewBox
+// transform and draws at one user unit per CSS pixel. HA's <ha-svg-icon> is
+// `position: relative` on its :host, so wherever the board is not drawn at
+// exactly SVG_W pixels the zone icons drift off their rows — further the lower
+// they sit on the board (#52). Chromium draws them where they belong.
+//
+// That rule lives inside <ha-icon>'s shadow root, beyond the reach of this
+// card's styles, so this sheet is adopted into each icon's root, where a rule
+// on the element wins over its own :host rule. Nothing in the icon relies on
+// the relative positioning.
+const STATIC_ICON = css`
+  ha-svg-icon {
+    position: static;
+  }
+`;
+
 // No built-in floor presets — defining "some but not others" is confusing,
 // and the right identifier scheme depends on the user's installation. Sample
 // floor maps live in the README and docs/data-model.md. Zones referencing a
@@ -358,6 +375,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // Per-bubble bbox memo keyed by data-id; skips getBBox + setAttribute calls
   // when the displayed text hasn't changed since the last render.
   private _bubbleTextCache: Map<string, string> = new Map();
+  // Pending until HA defines <ha-icon>; see _staticIcons().
+  private _iconsDefined?: Promise<void>;
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('hass')) {
@@ -1391,6 +1410,27 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     if (!this.shadowRoot) return;
     const texts = this.shadowRoot.querySelectorAll<SVGTextElement>('text.pwr-value');
     texts.forEach((t) => this._sizeBubble(t));
+    this._staticIcons();
+  }
+
+  // Adopt STATIC_ICON into every zone icon's shadow root. An icon rendered
+  // before HA has defined <ha-icon> has no root yet; it gets one when the
+  // definition upgrades it, so wait for that and pass over them all again.
+  private _staticIcons(): void {
+    const sheet = STATIC_ICON.styleSheet; // undefined without adoptedStyleSheets
+    if (!sheet || !this.shadowRoot) return;
+    for (const icon of this.shadowRoot.querySelectorAll('ha-icon.zone-icon')) {
+      const root = icon.shadowRoot;
+      if (!root) {
+        this._iconsDefined ??= customElements
+          .whenDefined('ha-icon')
+          .then(() => this._staticIcons());
+        continue;
+      }
+      if (!root.adoptedStyleSheets.includes(sheet)) {
+        root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
+      }
+    }
   }
 
   // The id boxes are sized from canvas measurements taken during layout, which
