@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.21.0-beta.1] — Room for deep trees (pre-release)
+
+A pre-release: HACS offers it only to installations that turned pre-releases
+on for this card, and everyone else stays on 0.20.2. It carries the changes
+below so they can be tried on a real five-level board (#53) before 0.21.0. It
+also carries the icon fix from 0.20.3-beta.1, which never reached a stable
+release: 0.21.0 will be the first one to have it.
+
+The card was capped at 700 px, and the board inside it was always the same
+width, scaled to fit. Every nesting level moves a row's label to the right
+while the power bubbles stay put, so a few boards down the labels were cut
+short — even on a dashboard with width to spare.
+
+```yaml
+type: custom:electrical-panel-card
+max_width: 1300
+groups:
+  - …
+```
+
+- **`max_width`**, in CSS pixels, raises that cap (#53). Above 700 px the
+  board stops scaling and widens instead: text keeps the size it has on a
+  700 px card, the power bubbles keep their distance from the right edge, and
+  all the width gained goes to the labels and room names. At 1300 px that is
+  377 more units for every label, on a board that gives a top-level group's
+  label 204.
+- **Nothing changes below 700 px.** On a phone or in a narrow column the board
+  is drawn exactly as it would be without the key, so one value serves every
+  screen a dashboard is opened on. A value wider than the screen simply means
+  "as wide as there is room".
+- One key rather than the two proposed in #53 (a board width plus a container
+  cap): the two only work as a pair matched to one screen, and a wider board
+  in a narrow container shrinks every glyph — to 3.8 px on a phone, for the
+  values in the issue.
+- The value is a number: `max_width: 1300`. `1300px`, `80%` and other strings
+  are refused with an error saying what to write. The visual editor has a
+  *Max width* field for it.
+- **Room names stay clear of their bubble** (#58). A zone's `room` is now
+  bounded like a group or circuit `label`: elided before the power bubbles, or
+  left to the tooltip when nesting leaves no room at all. It used to be drawn
+  whole, so a few levels down its connector struck through it and a long name
+  ran under its own bubble.
+- **Behaviour change:** a zone's connector now starts right after its room
+  name, as a group's or a circuit's does after its label, instead of at a
+  fixed column that left a gap after short names. Every board with metered
+  zones looks slightly different, and three of the five preview images
+  changed accordingly. A long room name on a zone without a bubble is also
+  elided now, where it used to run on to the edge of the board.
+- The [data model](docs/data-model.md) moves to v0.8 for `max_width`. Every
+  v0.7 config is valid as it is.
+
 ## [0.20.3-beta.1] — Icons that stay on their rows (pre-release)
 
 A pre-release: HACS offers it only to installations that turned pre-releases
