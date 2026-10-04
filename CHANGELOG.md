@@ -6,13 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
-## [0.21.0-beta.1] — Room for deep trees (pre-release)
+## [0.21.0] — Room for deep trees
 
-A pre-release: HACS offers it only to installations that turned pre-releases
-on for this card, and everyone else stays on 0.20.2. It carries the changes
-below so they can be tried on a real five-level board (#53) before 0.21.0. It
-also carries the icon fix from 0.20.3-beta.1, which never reached a stable
-release: 0.21.0 will be the first one to have it.
+The first stable release since 0.20.2. It carries the changes below, first
+published as 0.21.0-beta.1, with nothing user-facing added since. Coming from
+0.20.2, it also brings the fix for zone icons drifting off their rows in Safari
+and on iOS, the companion app included (#52): it was published only in
+0.20.3-beta.1, whose entry below has the details.
 
 The card was capped at 700 px, and the board inside it was always the same
 width, scaled to fit. Every nesting level moves a row's label to the right
