@@ -390,10 +390,10 @@ groups:
 | Main board | The root, drawn as soon as one group has `feeds`. It taps the trunks on every phase one of its inputs declares. The trunks, their L1 / L2 / L3 captions and the phase readings start on its row. Its label is translated (`Main board`, `Tableau principal`, …). |
 | House load | What enters the main board is the house load, so `sensors.total` is drawn in the main board's bubble rather than in the top-right corner. Its `label` leads the box's tooltip. With `summary: true` it stays in the [table](#card-totals-in-the-table) and the box has no bubble: either way the figure appears once. |
 | Rows | Box, `label` and bubble as on the board: `sensor`, `switch`, `max_w`, the tooltip and the metadata dialog all work. |
-| Circuits | A group keeps its `circuits` and `groups` — a PV array's micro-inverters as zones, an inverter's backup circuits. They hang below its box as on the board, and the next row starts after them. The collector the group feeds runs to the left of its box, its circuits to the right, so the two never cross. When the group is idle, they fade with it. |
+| Circuits | A group keeps its `circuits` and `groups` — a PV array's micro-inverters as zones, an inverter's backup circuits — but not in the tree, which stays one row per group so the readings stay at the top of the card. They are drawn on the board as a block of their own, at the group's place in `groups`: its box and label, then its circuits as usual. The block has no tap on the trunks, since the tree already says where the group connects, and no reading, since the tree row shows it. |
 | Height | A row of 30 per group, plus one for the main board. The same groups no longer take a row of 48 each on the board. |
 
-A PV array on micro-inverters, wired straight to the board, keeps them as zones in the tree:
+A PV array on micro-inverters, wired straight to the board, gets a row in the tree for its total and a block on the board for its micro-inverters. Declared last, the block lands at the bottom of the board:
 
 ```yaml
   - id: PV

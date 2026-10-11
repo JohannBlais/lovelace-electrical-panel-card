@@ -1706,15 +1706,18 @@ unmountCard(supplied);
   unmountCard(inTable);
 }
 
-// A supply group keeps its circuits: a PV array on micro-inverters, wired
-// straight to the main board, with each inverter a metered zone. They hang
-// below its box as on the board, the next row waits for them, and the
-// collector they feed passes to the left without crossing them.
+// A supply group with circuits — a PV array on micro-inverters — splits in
+// two. The tree keeps one row for it, with its reading, so the readings stay
+// at the top of the card. Its circuits come down to the board as a block of
+// their own, at the group's place in `groups`, with no tap on the trunks (the
+// tree already says where it connects) and no reading (the tree has it).
 {
   const pvConfig = {
     type: 'custom:electrical-panel-card',
     groups: [
       { id: 'GRID', type: 'grid', phases: ['L1'], sensor: 'sensor.grid', feeds: 'board' },
+      { id: 'BAT', type: 'battery', phases: ['L1'], sensor: 'sensor.bat', feeds: 'board' },
+      { id: 'D1', phases: ['L1'], circuits: [{ id: 'A', type: 'socket' }] },
       {
         id: 'PV',
         type: 'solar',
@@ -1733,53 +1736,63 @@ unmountCard(supplied);
           },
         ],
       },
-      { id: 'BAT', type: 'battery', phases: ['L1'], sensor: 'sensor.bat', feeds: 'board' },
-      { id: 'D1', phases: ['L1'], circuits: [{ id: 'A', type: 'socket' }] },
     ],
   };
   const day = { 'sensor.grid': '200', 'sensor.pv': '1500', 'sensor.mi1': '500', 'sensor.mi2': '510', 'sensor.mi3': '490', 'sensor.bat': '0' };
   const pvCard = await mountCard(pvConfig, { hass: supplyHass(day) });
-  const box = (id) => {
-    const text = [...pvCard.shadowRoot.querySelectorAll('text')].find(
-      (t) => t.textContent.trim() === id && t.getAttribute('font-weight') === 'bold',
-    );
-    const rect = text?.previousElementSibling;
-    return rect ? { x: parseFloat(rect.getAttribute('x')), y: parseFloat(rect.getAttribute('y')), w: parseFloat(rect.getAttribute('width')), rect } : null;
-  };
-  const pv = box('PV');
-  const mi = box('MI');
-  check(
-    "a supply group's circuit hangs below its box, one indent right",
-    pv && mi && mi.y > pv.y && mi.x === pv.x + pv.w + 10,
-    pv && mi ? `PV at (${pv.x}, ${pv.y}), MI at (${mi.x}, ${mi.y})` : 'box missing',
+  const boxes = (id) =>
+    [...pvCard.shadowRoot.querySelectorAll('text')]
+      .filter((t) => t.textContent.trim() === id && t.getAttribute('font-weight') === 'bold')
+      .map((t) => {
+        const rect = t.previousElementSibling;
+        return { x: parseFloat(rect.getAttribute('x')), y: parseFloat(rect.getAttribute('y')), w: parseFloat(rect.getAttribute('width')) };
+      })
+      .sort((a, b) => a.y - b.y);
+  const trunk = [...pvCard.shadowRoot.querySelectorAll('line')].find(
+    (l) => l.getAttribute('x1') === '48' && l.getAttribute('x2') === '48' && l.getAttribute('stroke-width') === '3',
   );
-  const lastZoneY = parseFloat(pvCard.shadowRoot.querySelector('text.pwr-value[data-id="z-PV-MI-2"]')?.getAttribute('y'));
+  const trunkTop = parseFloat(trunk?.getAttribute('y1'));
+  const trunkEnd = parseFloat(trunk?.getAttribute('y2'));
+  const [pvRow, pvBlock] = boxes('PV');
   check(
-    "a supply group's zones keep their readings",
-    pvCard.shadowRoot.querySelector('text.pwr-value[data-id="z-PV-MI-0"]')?.textContent.trim() === '500 W' && !Number.isNaN(lastZoneY),
+    'a supply group with circuits is drawn twice: a row in the tree, a block on the board',
+    pvRow && pvBlock && pvRow.y < trunkTop && pvBlock.y > trunkTop,
+    `PV boxes at ${boxes('PV').map((b) => b.y).join(', ')}, trunk top ${trunkTop}`,
+  );
+  const rowsAbove = [...boxes('GRID'), ...boxes('PV'), ...boxes('BAT')].filter((b) => b.y < trunkTop).sort((a, b) => a.y - b.y);
+  check(
+    'its tree row is one row tall, circuits or not',
+    rowsAbove.length === 3 && rowsAbove[1].y - rowsAbove[0].y === 30 && rowsAbove[2].y - rowsAbove[1].y === 30,
+    rowsAbove.map((b) => b.y).join(', '),
+  );
+  const mi = boxes('MI')[0];
+  check(
+    'its circuits hang off the board block',
+    mi && pvBlock && mi.y > pvBlock.y && mi.x === pvBlock.x + pvBlock.w + 10,
+    mi && pvBlock ? `block at (${pvBlock.x}, ${pvBlock.y}), MI at (${mi.x}, ${mi.y})` : 'box missing',
   );
   check(
-    'the next row waits for the circuits',
-    box('BAT') && box('BAT').y > lastZoneY,
-    `BAT box at ${box('BAT')?.y}, last zone reading at ${lastZoneY}`,
+    'the block takes the group\'s place in `groups`',
+    boxes('D1')[0] && pvBlock && boxes('D1')[0].y < pvBlock.y,
   );
-  const collector = pvCard.shadowRoot.querySelector('g[data-collector="board"] line');
+  const blockMid = pvBlock ? pvBlock.y + 12 : NaN;
   check(
-    'the collector passes left of the circuits',
-    collector && parseFloat(collector.getAttribute('x1')) < pv.x,
-    `collector at ${collector?.getAttribute('x1')}, PV box at ${pv?.x}`,
+    'the block taps no trunk and does not stretch them',
+    ![...pvCard.shadowRoot.querySelectorAll('circle')].some((c) => parseFloat(c.getAttribute('cy')) === blockMid) &&
+      trunkEnd < blockMid,
+    `trunks end at ${trunkEnd}, block row at ${blockMid}`,
+  );
+  check(
+    'the reading is drawn once, on the tree row',
+    pvCard.shadowRoot.querySelectorAll('text.pwr-value[data-id="g-PV"]').length === 1 &&
+      parseFloat(pvCard.shadowRoot.querySelector('text.pwr-value[data-id="g-PV"]').getAttribute('y')) < trunkTop,
+  );
+  check(
+    'the micro-inverters keep their readings',
+    pvCard.shadowRoot.querySelector('text.pwr-value[data-id="z-PV-MI-0"]')?.textContent.trim() === '500 W' &&
+      pvCard.shadowRoot.querySelectorAll('text.pwr-value[data-id^="z-PV-MI-"]').length === 3,
   );
   unmountCard(pvCard);
-
-  const night = await mountCard(pvConfig, { hass: supplyHass({ ...day, 'sensor.pv': '0', 'sensor.mi1': '0', 'sensor.mi2': '0', 'sensor.mi3': '0' }) });
-  const miRect = [...night.shadowRoot.querySelectorAll('text')]
-    .find((t) => t.textContent.trim() === 'MI' && t.getAttribute('font-weight') === 'bold')?.previousElementSibling;
-  check(
-    'an idle supply group fades with its circuits',
-    miRect?.closest('g[opacity]')?.getAttribute('opacity') === '0.42',
-    miRect?.closest('g[opacity]')?.getAttribute('opacity'),
-  );
-  unmountCard(night);
 }
 
 // A card without `feeds` keeps its trunks where they have always started.

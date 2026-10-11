@@ -123,9 +123,9 @@ const LABEL_CLEARANCE = 46;
 // start from.
 const BOARD_TARGET = 'board';
 const BOARD_ICON = 'mdi:home-lightning-bolt-outline';
-// A supply row is a box. Between two boxes it leaves SUBGROUP_GAP, the room a
-// nested board gets above its own box; a group's circuits, when it has any,
-// add their own height below it (see _layoutSupply).
+// A supply row is a box, whatever the group carries: its circuits are drawn
+// on the board instead (see _computeLayout). Between two boxes it leaves
+// SUBGROUP_GAP, the room a nested board gets above its own box.
 const SUPPLY_ROW = SQ + SUBGROUP_GAP;
 // Above the first box. The phase captions no longer sit at the top of the
 // board, so this only keeps that box off the card's edge.
@@ -1076,7 +1076,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // Without a supply tree the trunks start at HEADER_H, captioned at 16, as
     // they always have. With one they start at the main board's row, the last
     // of the tree, and everything the header carried moves down with them.
-    const supply = this._layoutSupply(family, layoutGroup);
+    const supply = this._layoutSupply(family);
     const board = supply.length > 0 ? supply[supply.length - 1] : undefined;
     const trunkTop = board ? board.midY : HEADER_H;
     const phaseLabelY = board ? trunkTop - SUPPLY_CAPTION_GAP : 16;
@@ -1084,10 +1084,17 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     let yCur = tapTop + PH_TAP_ZONE;
     let phLineEnd = tapTop + PH_TAP_ZONE;
 
+    // A group with `feeds` is a single row in the supply tree. If it has
+    // circuits or sub-boards — a PV array's micro-inverters, an inverter's
+    // backup circuits — they come down here as a block of their own, at the
+    // group's place in `groups`, so the tree stays one row per path and the
+    // readings people open the card for stay at the top. That block taps no
+    // trunk, so it does not stretch them either.
     for (const g of groups) {
-      if (g.feeds !== undefined) continue; // drawn in the supply tree instead
+      const detail = g.feeds !== undefined;
+      if (detail && !g.circuits?.length && !g.groups?.length) continue;
       yCur += GPAD;
-      phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
+      if (!detail) phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
       yCur += layoutGroup(g, g.id, 0, ML, yCur);
     }
 
@@ -1114,17 +1121,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // every input above the thing it feeds and its last input right on top of
   // it. Inputs sit one step right of what they feed, the step a nested group
   // takes from its parent, so that collector never crosses a box.
-  //
-  // A group that keeps circuits or sub-boards — a PV array with its
-  // micro-inverters as zones, an inverter with its backup circuits — has them
-  // laid out below its box exactly as on the board, by the board's own
-  // `layoutGroup`, and the next row starts SUBGROUP_GAP after them. They hang
-  // to the right of the group's box, the collector it feeds runs to the left
-  // of it, so the two never meet.
-  private _layoutSupply(
-    family: string,
-    layoutGroup: (g: Group, path: string, depth: number, x: number, yOff: number) => number,
-  ): SupplyRow[] {
+  private _layoutSupply(family: string): SupplyRow[] {
     const groups = this._config!.groups;
     if (!groups.some((g) => g.feeds !== undefined)) return [];
     const rows: SupplyRow[] = [];
@@ -1141,17 +1138,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       return row;
     };
     place(BOARD_TARGET, undefined, -1, ML);
-    let y = SUPPLY_TOP;
-    for (const r of rows) {
-      r.midY = y + SUPPLY_ROW / 2;
-      y += SUPPLY_ROW;
-      if (r.g && (r.g.circuits?.length || r.g.groups?.length)) {
-        // layoutGroup centres the box in a GHDR block; centre that block on
-        // the row, and the children start where they would on the board.
-        const yOff = r.midY - GHDR / 2;
-        y = yOff + layoutGroup(r.g, r.g.id, 0, r.x, yOff) + SUBGROUP_GAP;
-      }
-    }
+    rows.forEach((r, i) => {
+      r.midY = SUPPLY_TOP + i * SUPPLY_ROW + SUPPLY_ROW / 2;
+    });
     return rows;
   }
 
@@ -1312,7 +1301,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             <text class="phase-label" x=${PHASE_X.L2} y=${layout.phaseLabelY} text-anchor="middle"
                   font-size="7.5" font-weight="bold">L2</text>
             <text class="phase-label" x=${PHASE_X.L1} y=${layout.phaseLabelY} text-anchor="middle"
-                  font-size="7.5" font-weight="bold">L1</text>${this._renderSupply(layout, floors)}
+                  font-size="7.5" font-weight="bold">L1</text>${this._renderSupply(layout)}
 
             <!-- Staggered phase taps + bubbles -->
             ${
@@ -1400,9 +1389,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             }
 
             ${this._config.groups.map((g, idx) => {
-              if (g.feeds !== undefined) return nothing;
+              // A group with `feeds` is drawn in the supply tree; only its
+              // circuits, if it has any, come down here — see _renderGroup.
+              const detail = g.feeds !== undefined;
+              if (detail && !g.circuits?.length && !g.groups?.length) return nothing;
               const colors = resolveColors(g, idx);
-              return this._renderGroup(g, g.id, colors, layout, floors);
+              return this._renderGroup(g, g.id, colors, layout, floors, undefined, detail);
             })}
           </svg>
         </div>
@@ -1456,7 +1448,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
   // Drawn in three passes so nothing is painted over a box: the collectors and
   // the stubs into them, then the main board's tap into the trunks, then the
   // rows themselves. Every line carries its state in `data-flow`.
-  private _renderSupply(layout: Layout, floors: Record<string, FloorStyle>): unknown {
+  private _renderSupply(layout: Layout): unknown {
     const rows = layout.supply;
     if (rows.length === 0) return nothing;
     const t = this._t();
@@ -1595,23 +1587,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     `;
 
     // Group rows: the same box, label and bubble as on the board, and the same
-    // dialog on click. Circuits and sub-boards hang off a bus below the box,
-    // drawn by the board's own renderers from the layout _layoutSupply made.
-    // An idle row recedes, children included — a PV array at night takes its
-    // micro-inverters with it; an unknown one keeps full strength but a
-    // dotted outline, like its line.
-    const children = (g: Group, colors: ResolvedColors, midY: number): unknown => {
-      const gl = layout.byGroup.get(g.id);
-      if (!gl || gl.lastChildMidY === undefined) return nothing;
-      return svg`
-        <line x1=${gl.busX} y1=${midY + SQ / 2} x2=${gl.busX} y2=${gl.lastChildMidY}
-              stroke=${colors.stroke} stroke-width="3"/>
-        ${(g.groups ?? []).map((sub, idx) =>
-          this._renderGroup(sub, groupPath(g.id, sub), resolveColors(sub, idx, colors.accent), layout, floors, gl.busX),
-        )}
-        ${(g.circuits ?? []).map((c) => this._renderCircuit(colors, c, g.id, gl, layout, floors))}
-      `;
-    };
+    // dialog on click. An idle row recedes; an unknown one keeps full strength
+    // but a dotted outline, like its line.
     const groupRows = rows
       .filter((r) => r.g)
       .map((r) => {
@@ -1652,7 +1629,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                   })
                 : nothing
             }
-            ${children(g, colors, r.midY)}
           </g>
         `;
       });
@@ -1814,6 +1790,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     layout: Layout,
     floors: Record<string, FloorStyle>,
     feedX?: number,
+    /**
+     * The circuits of a group drawn in the supply tree. Its row up there
+     * carries the connection and the reading, so this block has neither: no
+     * tap on the trunks, which would draw a departure that does not exist,
+     * and no bubble, which would show the reading a second time.
+     */
+    detail = false,
   ): unknown {
     const gl = layout.byGroup.get(path)!;
     const midY = gl.yOff + GHDR / 2;
@@ -1825,7 +1808,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // phases are inherited, so drawing taps there would be a lie.
     const nested = feedX !== undefined;
     const phases = g.phases;
-    const taps = nested
+    const taps = nested || detail
       ? nothing
       : phases.map(
           (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.stroke}/>`,
@@ -1834,7 +1817,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
     const feedFrom = nested ? feedX : leftmostX;
     const feedLine =
-      nested || phases.length > 0
+      !detail && (nested || phases.length > 0)
         ? svg`<line x1=${feedFrom} y1=${midY} x2=${gl.x} y2=${midY}
                     stroke=${colors.stroke} stroke-width="2"/>`
         : nothing;
@@ -1880,7 +1863,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       </g>
 
       ${
-        g.sensor || g.switch
+        !detail && (g.sensor || g.switch)
           ? this._bubble({
               id: `g-${path}`,
               x: layout.pwrX,

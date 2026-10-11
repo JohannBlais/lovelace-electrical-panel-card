@@ -9,9 +9,10 @@
 #  - `feeds: INV` connects the battery to its inverter, which carries it on
 #    to the board.
 #
-# A source keeps its circuits in the tree: the PV array's micro-inverters
-# hang below its box as zones, each with its own reading, exactly as they
-# would on the board.
+# A source with circuits splits in two. The tree keeps one row per source,
+# with its reading, so the figures people open the card for stay at the top.
+# The PV array's micro-inverters come down to the board as a block of their
+# own, at the array's place in `groups` — here the last, so the bottom.
 #
 # Each path is drawn live (solid, in its accent, with an arrow), idle
 # (dashed and faded, under `idle_below_w`, 10 W by default) or unknown
@@ -38,23 +39,6 @@ groups:
     accent: '#3182ce'
     sensor: sensor.grid_power           # positive = import
     feeds: board
-
-  - id: PV
-    type: solar
-    label: Solar array
-    phases: [L1, L2, L3]
-    accent: 'var(--energy-solar-color, #d97706)'
-    sensor: sensor.pv_array_power
-    max_w: 6000
-    feeds: board                        # micro-inverters, AC-coupled
-    circuits:
-      - id: MI
-        type: power
-        icon: mdi:solar-power
-        zones:
-          - { room: "Micro-inverter #1", sensor: sensor.pv_unit_1_power }
-          - { room: "Micro-inverter #2", sensor: sensor.pv_unit_2_power }
-          - { room: "Micro-inverter #3", sensor: sensor.pv_unit_3_power }
 
   - id: BAT
     type: battery
@@ -103,3 +87,22 @@ groups:
         type: power
         amp: 20
         poles: 4
+
+  - id: PV
+    type: solar
+    label: Solar array
+    phases: [L1, L2, L3]
+    accent: 'var(--energy-solar-color, #d97706)'
+    sensor: sensor.pv_array_power
+    max_w: 6000
+    feeds: board                        # micro-inverters, AC-coupled
+    # Declared last: the tree shows the array's total, and its
+    # micro-inverters come down to the bottom of the board.
+    circuits:
+      - id: MI
+        type: power
+        icon: mdi:solar-power
+        zones:
+          - { room: "Micro-inverter #1", sensor: sensor.pv_unit_1_power }
+          - { room: "Micro-inverter #2", sensor: sensor.pv_unit_2_power }
+          - { room: "Micro-inverter #3", sensor: sensor.pv_unit_3_power }
