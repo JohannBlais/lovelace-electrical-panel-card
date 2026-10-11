@@ -1661,6 +1661,51 @@ unmountCard(supplied);
   unmountCard(withPhases);
 }
 
+// What enters the main board is the house load: under a supply tree
+// `sensors.total` leaves the top-right corner for the main board's row — and
+// is still drawn once only, so `summary` keeps it in the table instead.
+{
+  const withTotal = (total) => ({
+    type: 'custom:electrical-panel-card',
+    sensors: { total },
+    groups: [
+      { id: 'GRID', type: 'grid', phases: ['L1'], sensor: 'sensor.grid', feeds: 'board' },
+      { id: 'D1', phases: ['L1'], circuits: [{ id: 'A', type: 'socket' }] },
+    ],
+  });
+  const states = { 'sensor.grid': '3000', 'sensor.house': '3000' };
+  const onBoard = await mountCard(withTotal({ entity: 'sensor.house', label: 'Charge maison' }), { hass: supplyHass(states) });
+  const boardRow = [...onBoard.shadowRoot.querySelectorAll('text.board-label')]
+    .find((t) => t.textContent.trim() === 'Main board')?.parentElement;
+  const boardRect = boardRow?.querySelector('rect');
+  const midY = boardRect ? parseFloat(boardRect.getAttribute('y')) + 12 : NaN;
+  const totalText = onBoard.shadowRoot.querySelector('text.pwr-value[data-id="total"]');
+  check(
+    'the total is drawn on the main board row',
+    totalText?.textContent.trim() === '3.0 kW' && parseFloat(totalText.getAttribute('y')) === midY + 3 && boardRow.contains(totalText),
+    `${totalText?.textContent} at y ${totalText?.getAttribute('y')}, board row ${midY}`,
+  );
+  check(
+    'the total leaves the top-right corner, caption included',
+    onBoard.shadowRoot.querySelectorAll('text.pwr-value[data-id="total"]').length === 1 &&
+      ![...onBoard.shadowRoot.querySelectorAll('text.label-secondary')].some((t) => t.textContent.trim() === 'Charge maison'),
+  );
+  check(
+    "the total's caption leads the main board tooltip",
+    boardRow?.querySelector('title')?.textContent === 'Main board · Charge maison',
+    boardRow?.querySelector('title')?.textContent,
+  );
+  unmountCard(onBoard);
+
+  const inTable = await mountCard(withTotal({ entity: 'sensor.house', label: 'Charge maison', summary: true }), { hass: supplyHass(states) });
+  check(
+    '`summary: true` keeps the total in the table, off the main board',
+    !inTable.shadowRoot.querySelector('text.pwr-value[data-id="total"]') &&
+      inTable.shadowRoot.querySelector('table.source-summary tfoot th')?.textContent.trim() === 'Charge maison',
+  );
+  unmountCard(inTable);
+}
+
 // A card without `feeds` keeps its trunks where they have always started.
 {
   const plain = await mountCard(config);

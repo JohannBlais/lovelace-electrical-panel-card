@@ -1351,7 +1351,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
             <!-- Main totals (right column) -->
             ${
-              !sensors.total?.entity || sensors.total.summary
+              // Under a supply tree the total is the main board's reading,
+              // drawn on its row by _renderSupply rather than here.
+              !sensors.total?.entity || sensors.total.summary || layout.supply.length > 0
                 ? nothing
                 : svg`
                     <text class="label-secondary" x=${layout.pwrX - 55} y=${phTapY1 + 3}
@@ -1536,11 +1538,17 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           </g>
         `;
 
+    // What enters the main board is the house load, so `sensors.total` is drawn
+    // on this row rather than in the top-right corner — still in one place
+    // only, and not at all when `summary` has moved it into the table. The row
+    // already has a label, so the total's own caption leads the tooltip.
     const boardLabelX = board.x + board.w + LABEL_GAP;
     const boardLabel = fitLabel(t.card.main_board, this._family, boardLabelX, layout.labelRight);
+    const total = this._config?.sensors?.total;
+    const showTotal = !!total?.entity && !total.summary;
     const boardRow = svg`
       <g>
-        <title>${t.card.main_board}</title>
+        <title>${showTotal ? `${t.card.main_board} · ${total!.label ?? t.card.total}` : t.card.main_board}</title>
         <rect x=${board.x} y=${board.midY - SQ / 2} width=${board.w} height=${SQ}
               fill=${CARD_BG} stroke=${NEUTRAL} stroke-width="1.8" rx="2"/>
         <foreignObject x=${cx(board) - 6} y=${board.midY - 6} width="12" height="12"
@@ -1553,6 +1561,19 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
           boardLabel
             ? svg`<text class="board-label" x=${boardLabelX} y=${board.midY + 4}
                         text-anchor="start" font-size=${LABEL_FONT}>${boardLabel.text}</text>`
+            : nothing
+        }
+        ${
+          showTotal
+            ? this._bubble({
+                id: 'total',
+                x: layout.pwrX,
+                y: board.midY + 3,
+                fill: '#c53030',
+                connX: boardLabel ? boardLabelX + boardLabel.w + LABEL_GAP : board.x + board.w,
+                powerEntity: total!.entity,
+                maxW: total!.max_w,
+              })
             : nothing
         }
       </g>

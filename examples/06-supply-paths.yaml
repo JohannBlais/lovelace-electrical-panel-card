@@ -14,10 +14,16 @@
 # the reading: positive runs toward the board, so a battery charging or a
 # grid taking an export points back up its path.
 #
+# The house load (`sensors.total`) is what enters the main board, so it is
+# drawn in the main board's bubble rather than in the top-right corner.
+#
 # The board underneath is an ordinary group and does not change.
 # ─────────────────────────────────────────────────────────────────────────────
 type: custom:electrical-panel-card
 title: Home electrical panel
+
+sensors:
+  total: { entity: sensor.house_total_power, label: House load }
 
 groups:
   - id: GRID

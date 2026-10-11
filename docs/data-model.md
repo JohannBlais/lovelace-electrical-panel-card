@@ -67,7 +67,7 @@ sensors:
 
 | Field    | Type            | Description |
 | -------- | --------------- | ----------- |
-| `total`  | `Sensor`        | Top-right "Total" bubble. |
+| `total`  | `Sensor`        | Top-right "Total" bubble — or, under a [supply tree](#supply-paths), the main board's. |
 | `grid`   | `Sensor`        | Top-right "Grid" bubble (positive = import). |
 | `phases` | `PhaseSensors`  | Per-phase L1/L2/L3 bubbles attached to the trunk. |
 
@@ -388,6 +388,7 @@ groups:
 | ---- | ------ |
 | Layout | The board's nesting, upside down. A group's inputs sit above it, one indent step to the right, and join a collector that drops into the top of its box. Inputs are stacked in declaration order. |
 | Main board | The root, drawn as soon as one group has `feeds`. It taps the trunks on every phase one of its inputs declares. The trunks, their L1 / L2 / L3 captions and the phase readings start on its row. Its label is translated (`Main board`, `Tableau principal`, …). |
+| House load | What enters the main board is the house load, so `sensors.total` is drawn in the main board's bubble rather than in the top-right corner. Its `label` leads the box's tooltip. With `summary: true` it stays in the [table](#card-totals-in-the-table) and the box has no bubble: either way the figure appears once. |
 | Rows | Box, `label` and bubble as on the board: `sensor`, `switch`, `max_w`, the tooltip and the metadata dialog all work. |
 | Height | A row of 30 per group, plus one for the main board. The same groups no longer take a row of 48 each on the board. |
 
