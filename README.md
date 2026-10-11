@@ -164,15 +164,25 @@ npm run build:dev
 | Console banner | `v<version>` | `v<version>-dev` |
 | Mirror folder | `www/electrical-panel-card/` | `www/electrical-panel-card-dev/` |
 
-Register the dev bundle as a second Lovelace resource (Settings → Dashboards → ⋮ → Resources):
+Register the dev build as a second Lovelace resource (Settings → Dashboards → ⋮ → Resources), as a JavaScript module:
 
 ```
-/local/electrical-panel-card-dev/electrical-panel-card.js?v=1
+/local/electrical-panel-card-dev/electrical-panel-card.js
 ```
 
 Then point a scratch dashboard at `type: custom:electrical-panel-card-dev` while your real dashboards keep running the stable HACS build. The separate mirror folder matters: sharing one folder would let a plain `npm run build` silently replace the dev bundle with a normally-tagged one, breaking the registered resource.
 
-The 31-day cache on `/local` bites hardest here, where the file changes on every rebuild: a `watch:dev` loop writes a new bundle that the browser then refuses to fetch. Keep DevTools open with **Disable cache** ticked for the whole session — editing the resource's `?v=` after each rebuild works too, but you would be doing it every few minutes.
+The 31-day cache on `/local` would bite hardest here, where the file changes on every rebuild, so that URL is not the bundle. It is a loader that never changes. The dev build writes three files to the mirror folder:
+
+| File | Changes | Role |
+| --- | --- | --- |
+| `electrical-panel-card.js` | never | The registered resource. Fetches `build.json` uncached, then imports the bundle with its build id as `?v=`. |
+| `build.json` | every build | `{ "build": "<id>" }`, the first 12 hex digits of a SHA-256 of the bundle. |
+| `electrical-panel-card.bundle.js` | every build | The card itself. |
+
+A rebuild that changes the code changes the bundle's URL, so a plain page reload picks it up, under `watch:dev` too. One that changes nothing keeps the URL, and the browser keeps its cached copy. The resource URL needs no `?v=` and never has to be edited.
+
+When moving to the loader, a browser that cached the old bundle at the resource URL keeps serving it for up to 31 days. One hard reload (Ctrl+F5) after the first build with the loader replaces it.
 
 ## Previews
 

@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
@@ -83,9 +84,44 @@ if (!skipMirror) {
   // plain `npm run build` silently replaces the dev bundle with a
   // normally-tagged one, breaking the registered dev resource.
   haCardDir = `${haWwwCandidate}/electrical-panel-card${devTag ? '-dev' : ''}`;
-  // eslint-disable-next-line no-console
-  console.log(`[rollup] mirroring bundle to ${haCardDir}/electrical-panel-card.js`);
 }
+
+// The dev mirror never puts the bundle at the URL Home Assistant loads.
+// /local is served with a 31-day cache, so a bundle at a fixed URL goes stale
+// on the first rebuild, and the registered resource would need a new `?v=`
+// after every one. Instead, that URL gets a loader whose content never changes.
+// The bundle sits next to it, and each build records a hash of it in
+// build.json. The loader fetches that file uncached and imports the bundle
+// with the hash as `?v=`, so the bundle's URL changes whenever its code does.
+const mirrorFile = haCardDir && `${haCardDir}/electrical-panel-card${devTag ? '.bundle' : ''}.js`;
+if (mirrorFile) {
+  // eslint-disable-next-line no-console
+  console.log(`[rollup] mirroring bundle to ${mirrorFile}`);
+}
+
+const DEV_LOADER = `// Written by \`npm run build:dev\`. Do not edit: the next build overwrites it.
+// Home Assistant serves /local with a 31-day cache, so this loader never
+// changes; build.json, fetched uncached, gives the bundle a new URL per build.
+fetch(new URL('build.json', import.meta.url), { cache: 'no-store' })
+  .then((response) => response.json())
+  .then(({ build }) =>
+    import(new URL(\`electrical-panel-card.bundle.js?v=\${build}\`, import.meta.url).href),
+  )
+  .catch((error) => console.error('[electrical-panel-card-dev] loader failed:', error));
+`;
+
+const devLoader = () => ({
+  name: 'dev-loader',
+  writeBundle(options, bundle) {
+    if (!devTag || options.file !== mirrorFile) return;
+    const chunk = Object.values(bundle).find((output) => output.type === 'chunk');
+    const build = createHash('sha256').update(chunk.code).digest('hex').slice(0, 12);
+    writeFileSync(`${haCardDir}/build.json`, `${JSON.stringify({ build })}\n`);
+    writeFileSync(`${haCardDir}/electrical-panel-card.js`, DEV_LOADER);
+    // eslint-disable-next-line no-console
+    console.log(`[rollup] dev loader → electrical-panel-card.bundle.js?v=${build}`);
+  },
+});
 
 const baseOutput = {
   format: 'es',
@@ -97,9 +133,10 @@ export default {
   input: 'src/electrical-panel-card.ts',
   output: [
     { ...baseOutput, file: 'dist/electrical-panel-card.js' },
-    ...(haCardDir ? [{ ...baseOutput, file: `${haCardDir}/electrical-panel-card.js` }] : []),
+    ...(mirrorFile ? [{ ...baseOutput, file: mirrorFile }] : []),
   ],
   plugins: [
+    devLoader(),
     // Ahead of typescript() so it rewrites the original .ts source.
     rewriteIdentity(),
     resolve({ browser: true }),
