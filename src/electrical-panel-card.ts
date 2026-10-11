@@ -93,9 +93,11 @@ const SUBGROUP_GAP = 6;
 const PH_STEP = 10;
 const PH_STAGGER = 40;
 const PH_BUBBLE_X = 150; // L1's reading; L2 and L3 follow PH_STAGGER apart
-// Room for the staircase (taps at 6, 16, 26) and for the Grid reading beside
-// it, level with L3 at 29, whose saturation bar ends 8 below that.
-const PH_TAP_ZONE = 38;
+// Where the board starts, below the staircase (taps at 6, 16, 26). The first
+// group's box sits GPAD + 6 further down, at 44: 7 clear of the lowest thing
+// the header can draw — the Grid reading, level with L3 at 29, whose
+// saturation bar ends 8 below that — and 10.5 clear of its bubble alone.
+const PH_TAP_ZONE = 26;
 // Id boxes (group square, breaker square, floor pill) grow with their text.
 // SQ / CB_SQ / BW stay the *minimum* width, so every panel whose ids are short
 // — which was the only kind that rendered correctly before — is untouched.

@@ -1429,7 +1429,7 @@ process.stdout.write('\nPhase readings\n');
       type: 'custom:electrical-panel-card',
       sensors: {
         total: { entity: 'sensor.total' },
-        grid: { entity: 'sensor.grid' },
+        grid: { entity: 'sensor.grid', max_w: 6000 },
         phases: { l1: { entity: 'sensor.l1' }, l2: { entity: 'sensor.l2' }, l3: { entity: 'sensor.l3' } },
       },
       groups: [{ id: 'D1', phases: ['L1'], circuits: [{ id: 'A', type: 'socket' }] }],
@@ -1472,6 +1472,22 @@ process.stdout.write('\nPhase readings\n');
       `${upper} ends at ${bg(upper).right.toFixed(1)}, ${lower} starts at ${bg(lower).left.toFixed(1)}`,
     );
   }
+  // The board starts right under the header: the first box clears the lowest
+  // thing the header can draw, Grid's saturation bar, without leaving the
+  // empty band it used to.
+  {
+    const d1 = [...phased.shadowRoot.querySelectorAll('text')].find(
+      (t) => t.textContent.trim() === 'D1' && t.getAttribute('font-weight') === 'bold',
+    );
+    const boxTop = parseFloat(d1?.previousElementSibling?.getAttribute('y'));
+    const satBottom = y('grid') + 8;
+    check(
+      'the first group starts just below the header',
+      boxTop - satBottom >= 4 && boxTop - satBottom <= 10,
+      `box top ${boxTop}, Grid saturation bar ends at ${satBottom}`,
+    );
+  }
+
   unmountCard(phased);
 }
 
