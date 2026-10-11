@@ -1624,6 +1624,43 @@ unmountCard(supplied);
   unmountCard(direct);
 }
 
+// Phase readings sit just under the trunk top, to the right of the trunks —
+// which, under a supply tree, is where the main board's box and label are.
+// The first live test had all three readings and the L1 bubble landed on the
+// label, its connector running along the bottom of the box.
+{
+  const withPhases = await mountCard(
+    {
+      type: 'custom:electrical-panel-card',
+      sensors: {
+        phases: { l1: { entity: 'sensor.l1' }, l2: { entity: 'sensor.l2' }, l3: { entity: 'sensor.l3' } },
+      },
+      groups: [
+        { id: 'GRID', type: 'grid', phases: ['L1', 'L2', 'L3'], sensor: 'sensor.grid', feeds: 'board' },
+        { id: 'D1', phases: ['L1'], circuits: [{ id: 'A', type: 'socket' }] },
+      ],
+    },
+    { hass: supplyHass({ 'sensor.grid': '3000', 'sensor.l1': '1100', 'sensor.l2': '756', 'sensor.l3': '1200' }) },
+  );
+  const boardBox = [...withPhases.shadowRoot.querySelectorAll('text.board-label')]
+    .find((t) => t.textContent.trim() === 'Main board')
+    ?.parentElement?.querySelector('rect');
+  const boxBottom = boardBox ? parseFloat(boardBox.getAttribute('y')) + parseFloat(boardBox.getAttribute('height')) : NaN;
+  const l1Bg = withPhases.shadowRoot.querySelector('rect[data-bg-for="phase_l1"]');
+  const l1Line = withPhases.shadowRoot.querySelector('line[data-ln-for="phase_l1"]');
+  check(
+    'the L1 reading starts below the main board box',
+    parseFloat(l1Bg?.getAttribute('y')) > boxBottom,
+    `bubble top ${l1Bg?.getAttribute('y')}, box bottom ${boxBottom}`,
+  );
+  check(
+    'the L1 connector runs below the main board box',
+    parseFloat(l1Line?.getAttribute('y1')) > boxBottom,
+    `connector at ${l1Line?.getAttribute('y1')}, box bottom ${boxBottom}`,
+  );
+  unmountCard(withPhases);
+}
+
 // A card without `feeds` keeps its trunks where they have always started.
 {
   const plain = await mountCard(config);

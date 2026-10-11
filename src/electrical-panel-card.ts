@@ -133,9 +133,11 @@ const SUPPLY_TOP = 6;
 // their top end. The captions go this far above it: at the 4 they are given
 // above HEADER_H, they would touch the dot.
 const SUPPLY_CAPTION_GAP = 8;
-// And the staggered phase taps start this far below it, for the same reason:
-// at 6 in, the L1 tap would land on the dot.
-const SUPPLY_TAP_GAP = 8;
+// And the staggered phase taps start this far below it. The box is on that row
+// now, and its label runs out to the right, where the phase readings sit: the
+// L1 reading is drawn 6 into the tap zone and its bubble reaches 9 above that,
+// so starting the zone 5 past the box's bottom edge leaves 2 between them.
+const SUPPLY_TAP_GAP = SQ / 2 + 5;
 // What a path reads, in absolute watts, before it is drawn live. `idle_below_w`
 // overrides it.
 const DEFAULT_IDLE_BELOW_W = 10;
