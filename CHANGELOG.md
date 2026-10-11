@@ -6,11 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
-## [0.22.0-beta.1] — How the power gets in (pre-release)
+## [0.22.0] — How the power gets in
 
-A pre-release: HACS offers it only to installations that turned pre-releases
-on for this card, and everyone else stays on 0.21.0. It carries the supply
-paths of #41, so they can be tried on real boards before 0.22.0.
+The first stable release since 0.21.0. It carries the changes below, first
+published as 0.22.0-beta.1 and tried on a real three-phase board with a
+micro-inverter PV array, with nothing user-facing added since.
 
 0.20.0 listed a board's sources in a table, and said nothing of how they
 connect or which one carries the house: you read that off the values. A
@@ -70,6 +70,10 @@ groups:
   and `idle_below_w`. Every v0.8 config is valid as it is. Example 06 shows a
   grid, a PV array on micro-inverters and a battery inverter on one main
   board.
+- For contributors: `npm run build:dev` now gives each build its own bundle
+  URL, so Home Assistant's 31-day cache on `/local` no longer serves a stale
+  dev build. The registered resource stays the same and no longer needs a
+  `?v=` (#66). See the README's dev-build section.
 
 ## [0.21.0] — Room for deep trees
 
