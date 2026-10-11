@@ -181,6 +181,7 @@ function collectEntities(config) {
   const walk = (g) => {
     if (g.sensor) set.add(g.sensor);
     if (g.switch) set.add(g.switch);
+    if (g.active) set.add(g.active);
     for (const c of g.circuits ?? []) {
       if (c.sensor) set.add(c.sensor);
       if (c.switch) set.add(c.switch);
@@ -234,7 +235,7 @@ export function buildMockHass(config) {
         state: String(value),
         attributes: { unit_of_measurement: 'W', friendly_name: entity },
       };
-    } else if (entity.startsWith('switch.')) {
+    } else if (entity.startsWith('switch.') || entity.startsWith('binary_sensor.')) {
       states[entity] = {
         entity_id: entity,
         state: syntheticSwitch(entity),

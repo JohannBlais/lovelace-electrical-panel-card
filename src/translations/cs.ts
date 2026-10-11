@@ -5,6 +5,7 @@ export const cs: Translations = {
     total: 'Celkem',
     grid: 'Síť',
     sources: 'Zdroje',
+    main_board: 'Hlavní rozvaděč',
   },
   confirm: {
     toggle: 'Opravdu chcete přepnout „{name}"?',

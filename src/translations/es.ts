@@ -5,6 +5,7 @@ export const es: Translations = {
     total: 'Total',
     grid: 'Red',
     sources: 'Fuentes',
+    main_board: 'Cuadro principal',
   },
   confirm: {
     toggle: '¿Estás seguro de que quieres conmutar «{name}»?',

@@ -5,6 +5,7 @@ export const pl: Translations = {
     total: 'Razem',
     grid: 'Sieć',
     sources: 'Źródła',
+    main_board: 'Rozdzielnica główna',
   },
   confirm: {
     toggle: 'Czy na pewno chcesz przełączyć „{name}"?',

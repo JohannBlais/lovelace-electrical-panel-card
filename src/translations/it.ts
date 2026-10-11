@@ -5,6 +5,7 @@ export const it: Translations = {
     total: 'Totale',
     grid: 'Rete',
     sources: 'Fonti',
+    main_board: 'Quadro generale',
   },
   confirm: {
     toggle: 'Sei sicuro di voler commutare «{name}»?',

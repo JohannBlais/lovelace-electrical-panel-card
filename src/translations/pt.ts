@@ -5,6 +5,7 @@ export const pt: Translations = {
     total: 'Total',
     grid: 'Rede',
     sources: 'Fontes',
+    main_board: 'Quadro principal',
   },
   confirm: {
     toggle: 'Tem a certeza de que quer comutar «{name}»?',

@@ -5,6 +5,7 @@ export const ru: Translations = {
     total: 'Всего',
     grid: 'Сеть',
     sources: 'Источники',
+    main_board: 'Главный щит',
   },
   confirm: {
     toggle: 'Вы уверены, что хотите переключить «{name}»?',

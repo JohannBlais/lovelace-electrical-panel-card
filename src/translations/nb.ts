@@ -6,6 +6,7 @@ export const nb: Translations = {
     total: 'Total',
     grid: 'Nett',
     sources: 'Kilder',
+    main_board: 'Hovedtavle',
   },
   confirm: {
     toggle: 'Er du sikker på at du vil veksle «{name}»?',

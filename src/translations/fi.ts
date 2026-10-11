@@ -5,6 +5,7 @@ export const fi: Translations = {
     total: 'Yhteensä',
     grid: 'Verkko',
     sources: 'Lähteet',
+    main_board: 'Pääkeskus',
   },
   confirm: {
     toggle: 'Haluatko varmasti vaihtaa kohteen ”{name}”?',
