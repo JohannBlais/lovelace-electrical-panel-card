@@ -201,7 +201,7 @@ groups:
     sensor: sensor.inverter_battery_power   # negative while charging
 ```
 
-On its own, this enumerates the sources. Nothing above says how the four paths connect, nor which one is live: you read that off the values, where the path carrying the house is the one not at zero. Give each group a `feeds` and the card draws both — see [supply paths](#supply-paths). A source group needs no `circuits` — a bare box and its power bubble is a valid group.
+On its own, this enumerates the sources. Nothing above says how the four paths connect, nor which one is live: you read that off the values, where the path carrying the house is the one not at zero. Give each group a `feeds` and the card draws both — see [supply paths](#supply-paths). A source group needs no `circuits` — a box and its power bubble is a valid group.
 
 Note that `max_w` measures saturation on the absolute value, so a battery charging at 2 kW and discharging at 2 kW fill the bar identically.
 
@@ -390,7 +390,25 @@ groups:
 | Main board | The root, drawn as soon as one group has `feeds`. It taps the trunks on every phase one of its inputs declares. The trunks, their L1 / L2 / L3 captions and the phase readings start on its row. Its label is translated (`Main board`, `Tableau principal`, …). |
 | House load | What enters the main board is the house load, so `sensors.total` is drawn in the main board's bubble rather than in the top-right corner. Its `label` leads the box's tooltip. With `summary: true` it stays in the [table](#card-totals-in-the-table) and the box has no bubble: either way the figure appears once. |
 | Rows | Box, `label` and bubble as on the board: `sensor`, `switch`, `max_w`, the tooltip and the metadata dialog all work. |
+| Circuits | A group keeps its `circuits` and `groups` — a PV array's micro-inverters as zones, an inverter's backup circuits. They hang below its box as on the board, and the next row starts after them. The collector the group feeds runs to the left of its box, its circuits to the right, so the two never cross. When the group is idle, they fade with it. |
 | Height | A row of 30 per group, plus one for the main board. The same groups no longer take a row of 48 each on the board. |
+
+A PV array on micro-inverters, wired straight to the board, keeps them as zones in the tree:
+
+```yaml
+  - id: PV
+    type: solar
+    phases: [L1, L2, L3]
+    sensor: sensor.pv_production
+    feeds: board
+    circuits:
+      - id: MI
+        type: power
+        icon: mdi:solar-power
+        zones:
+          - { room: "Inverter #1", sensor: sensor.inverter_1_power }
+          - { room: "Inverter #2", sensor: sensor.inverter_2_power }
+```
 
 ### Live, idle, unknown
 
@@ -434,7 +452,6 @@ Top level, in watts, 10 by default. Raise it when a path reads a few watts with 
 
 - `feeds` is for top-level groups only. A nested group is fed by its parent.
 - A group named by a `feeds` must have one of its own, and following them must end at `board`. Loops are refused.
-- A group with `feeds` is a bare box: no `circuits`, no `groups`. Move them to a group on the board.
 - `summary` cannot be combined with `feeds`. The tree already draws the reading, and the table would show it a second time.
 - On a card that uses `feeds`, no top-level group can have the id `board`.
 - `active` only applies to a group with `feeds`.

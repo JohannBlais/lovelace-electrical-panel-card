@@ -208,9 +208,10 @@ export interface Group {
    * one. Mains reaching the board by two routes are two groups, one per route,
    * each with its own reading — the same way #3 already modelled them.
    *
-   * Top-level groups only, and only bare ones: no `circuits`, no `groups`.
-   * `summary` is refused alongside it, since the tree already draws the
-   * reading.
+   * Top-level groups only. The group keeps its `circuits` and `groups` — a
+   * PV array's micro-inverters, an inverter's backup circuits — drawn below
+   * its box in the tree as they would be on the board. `summary` is refused
+   * alongside it, since the tree already draws the reading.
    */
   feeds?: string;
   /**

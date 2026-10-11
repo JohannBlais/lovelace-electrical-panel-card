@@ -9,7 +9,7 @@ Sample configurations covering common installation patterns. Drop the body of an
 | [`03-three-phase-no-production.yaml`](03-three-phase-no-production.yaml) | Three-phase residential panel with three single-phase RCDs distributed across L1/L2/L3 plus one three-phase RCD for heat pump and induction cooktop. Per-phase total bubbles. No production. |
 | [`04-three-phase-with-pv.yaml`](04-three-phase-with-pv.yaml) | Realistic full-house setup. Five-storey floor map, six load RCDs, three-phase HVAC, plus a PV group with six microinverters as individual zones. Demonstrates the recommended pattern for monitoring per-microinverter power. |
 | [`05-nested-subboard.yaml`](05-nested-subboard.yaml) | Main breaker feeding a remote pool sub-board: one circuit wired straight off it, plus a nested 30 mA RCD protecting two more. Shows `groups:` inside a group, accent inheritance, and phases on a nested board. |
-| [`06-supply-paths.yaml`](06-supply-paths.yaml) | Grid and a hybrid inverter both feeding the main board, the inverter joining a solar array and a battery. Shows `feeds:` and the supply tree drawn above the phase trunks, with the direction of each path following its reading. |
+| [`06-supply-paths.yaml`](06-supply-paths.yaml) | Grid, a PV array on micro-inverters and a battery inverter all feeding the main board. Shows `feeds:`, the supply tree drawn above the phase trunks with the PV array keeping its micro-inverters as zones, and the house load on the main board box. |
 
 ## How to use
 

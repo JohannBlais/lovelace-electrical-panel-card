@@ -1,12 +1,17 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Example 6 — Supply paths: grid and a hybrid inverter feeding the main board
+# Example 6 — Supply paths: grid, PV and a battery feeding the main board
 #
 # Sources declare where their power goes with `feeds:`, and leave the board to
 # be drawn above the phase trunks as a tree:
 #  - `feeds: board` connects a source straight to the main board — the box
-#    the trunks start from. Here: the grid, and the inverter's AC output.
-#  - `feeds: INV` connects the solar array and the battery to the inverter,
-#    which joins them on the way to the board.
+#    the trunks start from. Here: the grid, the PV array on micro-inverters,
+#    and the battery inverter's AC output.
+#  - `feeds: INV` connects the battery to its inverter, which carries it on
+#    to the board.
+#
+# A source keeps its circuits in the tree: the PV array's micro-inverters
+# hang below its box as zones, each with its own reading, exactly as they
+# would on the board.
 #
 # Each path is drawn live (solid, in its accent, with an arrow), idle
 # (dashed and faded, under `idle_below_w`, 10 W by default) or unknown
@@ -41,7 +46,15 @@ groups:
     accent: 'var(--energy-solar-color, #d97706)'
     sensor: sensor.pv_array_power
     max_w: 6000
-    feeds: INV
+    feeds: board                        # micro-inverters, AC-coupled
+    circuits:
+      - id: MI
+        type: power
+        icon: mdi:solar-power
+        zones:
+          - { room: "Micro-inverter #1", sensor: sensor.pv_unit_1_power }
+          - { room: "Micro-inverter #2", sensor: sensor.pv_unit_2_power }
+          - { room: "Micro-inverter #3", sensor: sensor.pv_unit_3_power }
 
   - id: BAT
     type: battery
@@ -52,10 +65,10 @@ groups:
     feeds: INV
 
   - id: INV
-    label: Hybrid inverter
+    label: Battery inverter
     phases: [L1, L2, L3]
     accent: '#805ad5'
-    sensor: sensor.hybrid_ac_output
+    sensor: sensor.battery_ac_output
     feeds: board
 
   - id: D1

@@ -1706,6 +1706,82 @@ unmountCard(supplied);
   unmountCard(inTable);
 }
 
+// A supply group keeps its circuits: a PV array on micro-inverters, wired
+// straight to the main board, with each inverter a metered zone. They hang
+// below its box as on the board, the next row waits for them, and the
+// collector they feed passes to the left without crossing them.
+{
+  const pvConfig = {
+    type: 'custom:electrical-panel-card',
+    groups: [
+      { id: 'GRID', type: 'grid', phases: ['L1'], sensor: 'sensor.grid', feeds: 'board' },
+      {
+        id: 'PV',
+        type: 'solar',
+        phases: ['L1'],
+        sensor: 'sensor.pv',
+        feeds: 'board',
+        circuits: [
+          {
+            id: 'MI',
+            type: 'power',
+            zones: [
+              { room: 'Inverter 1', sensor: 'sensor.mi1' },
+              { room: 'Inverter 2', sensor: 'sensor.mi2' },
+              { room: 'Inverter 3', sensor: 'sensor.mi3' },
+            ],
+          },
+        ],
+      },
+      { id: 'BAT', type: 'battery', phases: ['L1'], sensor: 'sensor.bat', feeds: 'board' },
+      { id: 'D1', phases: ['L1'], circuits: [{ id: 'A', type: 'socket' }] },
+    ],
+  };
+  const day = { 'sensor.grid': '200', 'sensor.pv': '1500', 'sensor.mi1': '500', 'sensor.mi2': '510', 'sensor.mi3': '490', 'sensor.bat': '0' };
+  const pvCard = await mountCard(pvConfig, { hass: supplyHass(day) });
+  const box = (id) => {
+    const text = [...pvCard.shadowRoot.querySelectorAll('text')].find(
+      (t) => t.textContent.trim() === id && t.getAttribute('font-weight') === 'bold',
+    );
+    const rect = text?.previousElementSibling;
+    return rect ? { x: parseFloat(rect.getAttribute('x')), y: parseFloat(rect.getAttribute('y')), w: parseFloat(rect.getAttribute('width')), rect } : null;
+  };
+  const pv = box('PV');
+  const mi = box('MI');
+  check(
+    "a supply group's circuit hangs below its box, one indent right",
+    pv && mi && mi.y > pv.y && mi.x === pv.x + pv.w + 10,
+    pv && mi ? `PV at (${pv.x}, ${pv.y}), MI at (${mi.x}, ${mi.y})` : 'box missing',
+  );
+  const lastZoneY = parseFloat(pvCard.shadowRoot.querySelector('text.pwr-value[data-id="z-PV-MI-2"]')?.getAttribute('y'));
+  check(
+    "a supply group's zones keep their readings",
+    pvCard.shadowRoot.querySelector('text.pwr-value[data-id="z-PV-MI-0"]')?.textContent.trim() === '500 W' && !Number.isNaN(lastZoneY),
+  );
+  check(
+    'the next row waits for the circuits',
+    box('BAT') && box('BAT').y > lastZoneY,
+    `BAT box at ${box('BAT')?.y}, last zone reading at ${lastZoneY}`,
+  );
+  const collector = pvCard.shadowRoot.querySelector('g[data-collector="board"] line');
+  check(
+    'the collector passes left of the circuits',
+    collector && parseFloat(collector.getAttribute('x1')) < pv.x,
+    `collector at ${collector?.getAttribute('x1')}, PV box at ${pv?.x}`,
+  );
+  unmountCard(pvCard);
+
+  const night = await mountCard(pvConfig, { hass: supplyHass({ ...day, 'sensor.pv': '0', 'sensor.mi1': '0', 'sensor.mi2': '0', 'sensor.mi3': '0' }) });
+  const miRect = [...night.shadowRoot.querySelectorAll('text')]
+    .find((t) => t.textContent.trim() === 'MI' && t.getAttribute('font-weight') === 'bold')?.previousElementSibling;
+  check(
+    'an idle supply group fades with its circuits',
+    miRect?.closest('g[opacity]')?.getAttribute('opacity') === '0.42',
+    miRect?.closest('g[opacity]')?.getAttribute('opacity'),
+  );
+  unmountCard(night);
+}
+
 // A card without `feeds` keeps its trunks where they have always started.
 {
   const plain = await mountCard(config);
@@ -1728,7 +1804,6 @@ const refusals = [
   ['a target that feeds nothing', groupsWith((g) => { delete g[5].feeds; }), 'has no `feeds` of its own'],
   ['a loop', groupsWith((g) => { g[5].feeds = 'INV'; }), 'loops back'],
   ['a group feeding itself', groupsWith((g) => { g[1].feeds = 'PV'; }), 'cannot feed itself'],
-  ['circuits on a supply group', groupsWith((g) => { g[1].circuits = [{ id: 'X', type: 'power' }]; }), 'bare box'],
   ['`summary` with `feeds`', groupsWith((g) => { g[2].summary = true; }), 'twice'],
   ['`feeds` on a nested group', groupsWith((g) => { g[6].groups = [{ id: 'N', phases: [], feeds: 'board' }]; }), 'top-level group'],
   ['`active` without `feeds`', groupsWith((g) => { g[6].active = 'binary_sensor.x'; }), '`active` only applies'],
