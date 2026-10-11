@@ -97,7 +97,8 @@ groups:
     max_w: 6000
     feeds: board                        # micro-inverters, AC-coupled
     # Declared last: the tree shows the array's total, and its
-    # micro-inverters come down to the bottom of the board.
+    # micro-inverters come down to the bottom of the board. Feeding the board
+    # directly, the block is wired to the trunks like any departure.
     circuits:
       - id: MI
         type: power

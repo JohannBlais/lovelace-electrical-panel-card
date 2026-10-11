@@ -1709,8 +1709,9 @@ unmountCard(supplied);
 // A supply group with circuits — a PV array on micro-inverters — splits in
 // two. The tree keeps one row for it, with its reading, so the readings stay
 // at the top of the card. Its circuits come down to the board as a block of
-// their own, at the group's place in `groups`, with no tap on the trunks (the
-// tree already says where it connects) and no reading (the tree has it).
+// their own, at the group's place in `groups`, with no reading (the tree has
+// it). Feeding the board directly, the array is wired into it like any
+// departure, so its block taps the trunks; behind an inverter it would not.
 {
   const pvConfig = {
     type: 'custom:electrical-panel-card',
@@ -1777,9 +1778,10 @@ unmountCard(supplied);
   );
   const blockMid = pvBlock ? pvBlock.y + 12 : NaN;
   check(
-    'the block taps no trunk and does not stretch them',
-    ![...pvCard.shadowRoot.querySelectorAll('circle')].some((c) => parseFloat(c.getAttribute('cy')) === blockMid) &&
-      trunkEnd < blockMid,
+    'a block feeding the board taps the trunks on its phases',
+    [...pvCard.shadowRoot.querySelectorAll('circle')].some(
+      (c) => parseFloat(c.getAttribute('cy')) === blockMid && c.getAttribute('cx') === '48',
+    ) && trunkEnd === blockMid,
     `trunks end at ${trunkEnd}, block row at ${blockMid}`,
   );
   check(
@@ -1793,6 +1795,28 @@ unmountCard(supplied);
       pvCard.shadowRoot.querySelectorAll('text.pwr-value[data-id^="z-PV-MI-"]').length === 3,
   );
   unmountCard(pvCard);
+
+  // The same array behind an inverter reaches the board through it: its block
+  // is not a departure of the board, so it taps nothing and the trunks stop
+  // at the last group that does.
+  const behind = structuredClone(pvConfig);
+  behind.groups.find((g) => g.id === 'PV').feeds = 'INV';
+  behind.groups.splice(2, 0, { id: 'INV', phases: ['L1'], sensor: 'sensor.inv', feeds: 'board' });
+  const behindCard = await mountCard(behind, { hass: supplyHass({ ...day, 'sensor.inv': '1500' }) });
+  const block = [...behindCard.shadowRoot.querySelectorAll('text')]
+    .filter((t) => t.textContent.trim() === 'PV' && t.getAttribute('font-weight') === 'bold')
+    .map((t) => parseFloat(t.previousElementSibling.getAttribute('y')) + 12)
+    .sort((a, b) => a - b)[1];
+  const behindTrunk = [...behindCard.shadowRoot.querySelectorAll('line')].find(
+    (l) => l.getAttribute('x1') === '48' && l.getAttribute('x2') === '48' && l.getAttribute('stroke-width') === '3',
+  );
+  check(
+    'a block fed through another group taps no trunk and does not stretch them',
+    ![...behindCard.shadowRoot.querySelectorAll('circle')].some((c) => parseFloat(c.getAttribute('cy')) === block) &&
+      parseFloat(behindTrunk?.getAttribute('y2')) < block,
+    `trunks end at ${behindTrunk?.getAttribute('y2')}, block row at ${block}`,
+  );
+  unmountCard(behindCard);
 }
 
 // A card without `feeds` keeps its trunks where they have always started.

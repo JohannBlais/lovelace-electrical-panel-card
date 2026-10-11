@@ -7,9 +7,9 @@
     .sat-track { fill: #e2e8f0; opacity: 0.5; }
   </style>
             <!-- Phase trunks -->
-            <line stroke-width="3" x1="24" y1="141" x2="24" y2="374" stroke="var(--electrical-panel-phase-l3-color, #5A6474)"></line>
-            <line stroke-width="3" x1="36" y1="141" x2="36" y2="374" stroke="var(--electrical-panel-phase-l2-color, #1A202C)"></line>
-            <line stroke-width="3" x1="48" y1="141" x2="48" y2="374" stroke="var(--electrical-panel-phase-l1-color, #8B4513)"></line>
+            <line stroke-width="3" x1="24" y1="141" x2="24" y2="464" stroke="var(--electrical-panel-phase-l3-color, #5A6474)"></line>
+            <line stroke-width="3" x1="36" y1="141" x2="36" y2="464" stroke="var(--electrical-panel-phase-l2-color, #1A202C)"></line>
+            <line stroke-width="3" x1="48" y1="141" x2="48" y2="464" stroke="var(--electrical-panel-phase-l1-color, #8B4513)"></line>
 
             <!-- Phase labels -->
             <path d="M21.3 127.7L21.3 132.3L23.7 132.3L23.7 133L20.4 133L20.4 127.7L21.3 127.7M25.3 130.6L25.3 129.9L25.9 129.9Q26.3 129.9 26.5 129.7Q26.8 129.5 26.8 129.1Q26.8 128.7 26.6 128.5Q26.4 128.3 25.9 128.3Q25.6 128.3 25.4 128.5Q25.1 128.7 25.1 129.1L24.2 129.1Q24.2 128.6 24.5 128.3Q24.7 128 25.1 127.8Q25.5 127.6 25.9 127.6Q26.7 127.6 27.2 128Q27.6 128.4 27.6 129.1Q27.6 129.5 27.4 129.8Q27.2 130.1 26.8 130.3Q27.3 130.4 27.5 130.7Q27.7 131.1 27.7 131.5Q27.7 132.2 27.2 132.6Q26.7 133.1 25.9 133.1Q25.2 133.1 24.7 132.7Q24.2 132.3 24.2 131.6L25.1 131.6Q25.1 131.9 25.3 132.1Q25.5 132.4 25.9 132.4Q26.4 132.4 26.6 132.1Q26.8 131.9 26.8 131.5Q26.8 131.1 26.6 130.9Q26.3 130.6 25.8 130.6" class="phase-label"></path>
@@ -255,8 +255,8 @@
       
     
     
-      
-      
+      <circle r="3.5" cx="48" cy="464" fill="var(--energy-solar-color, #d97706)"></circle><circle r="3.5" cx="36" cy="464" fill="var(--energy-solar-color, #d97706)"></circle><circle r="3.5" cx="24" cy="464" fill="var(--energy-solar-color, #d97706)"></circle>
+      <line stroke-width="2" x1="24" y1="464" x2="70" y2="464" stroke="var(--energy-solar-color, #d97706)"></line>
 
       <g class="meta-target">
         <title>Solar array · L1+L2+L3</title>

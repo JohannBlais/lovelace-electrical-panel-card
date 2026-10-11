@@ -1088,13 +1088,14 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // circuits or sub-boards — a PV array's micro-inverters, an inverter's
     // backup circuits — they come down here as a block of their own, at the
     // group's place in `groups`, so the tree stays one row per path and the
-    // readings people open the card for stay at the top. That block taps no
-    // trunk, so it does not stretch them either.
+    // readings people open the card for stay at the top. The block taps the
+    // trunks, and stretches them, only when the group feeds the board
+    // directly; see _renderGroup.
     for (const g of groups) {
       const detail = g.feeds !== undefined;
       if (detail && !g.circuits?.length && !g.groups?.length) continue;
       yCur += GPAD;
-      if (!detail) phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
+      if (!detail || g.feeds === BOARD_TARGET) phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
       yCur += layoutGroup(g, g.id, 0, ML, yCur);
     }
 
@@ -1792,9 +1793,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     feedX?: number,
     /**
      * The circuits of a group drawn in the supply tree. Its row up there
-     * carries the connection and the reading, so this block has neither: no
-     * tap on the trunks, which would draw a departure that does not exist,
-     * and no bubble, which would show the reading a second time.
+     * carries the reading, so this block has no bubble: it would show the
+     * reading a second time. It taps the trunks only when the group feeds
+     * `board` directly, which means it is wired into the board like any
+     * departure. A group that reaches the board through another — a battery
+     * behind its inverter — is not, and a tap would draw a departure that
+     * does not exist.
      */
     detail = false,
   ): unknown {
@@ -1808,7 +1812,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // phases are inherited, so drawing taps there would be a lie.
     const nested = feedX !== undefined;
     const phases = g.phases;
-    const taps = nested || detail
+    const onTrunks = !detail || g.feeds === BOARD_TARGET;
+    const taps = nested || !onTrunks
       ? nothing
       : phases.map(
           (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.stroke}/>`,
@@ -1817,7 +1822,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
     const feedFrom = nested ? feedX : leftmostX;
     const feedLine =
-      !detail && (nested || phases.length > 0)
+      onTrunks && (nested || phases.length > 0)
         ? svg`<line x1=${feedFrom} y1=${midY} x2=${gl.x} y2=${midY}
                     stroke=${colors.stroke} stroke-width="2"/>`
         : nothing;
