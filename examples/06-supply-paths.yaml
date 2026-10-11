@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Example 6 — Supply paths: grid and a hybrid inverter feeding the main board
+#
+# Sources declare where their power goes with `feeds:`, and leave the board to
+# be drawn above the phase trunks as a tree:
+#  - `feeds: board` connects a source straight to the main board — the box
+#    the trunks start from. Here: the grid, and the inverter's AC output.
+#  - `feeds: INV` connects the solar array and the battery to the inverter,
+#    which joins them on the way to the board.
+#
+# Each path is drawn live (solid, in its accent, with an arrow), idle
+# (dashed and faded, under `idle_below_w`, 10 W by default) or unknown
+# (dotted, when its sensor is unavailable). The arrow follows the sign of
+# the reading: positive runs toward the board, so a battery charging or a
+# grid taking an export points back up its path.
+#
+# The board underneath is an ordinary group and does not change.
+# ─────────────────────────────────────────────────────────────────────────────
+type: custom:electrical-panel-card
+title: Home electrical panel
+
+groups:
+  - id: GRID
+    type: grid
+    label: Grid
+    phases: [L1, L2, L3]
+    accent: '#3182ce'
+    sensor: sensor.grid_power           # positive = import
+    feeds: board
+
+  - id: PV
+    type: solar
+    label: Solar array
+    phases: [L1, L2, L3]
+    accent: 'var(--energy-solar-color, #d97706)'
+    sensor: sensor.pv_array_power
+    max_w: 6000
+    feeds: INV
+
+  - id: BAT
+    type: battery
+    label: Home battery
+    phases: [L1, L2, L3]
+    accent: '#38a169'
+    sensor: sensor.home_battery_power   # positive = discharging
+    feeds: INV
+
+  - id: INV
+    label: Hybrid inverter
+    phases: [L1, L2, L3]
+    accent: '#805ad5'
+    sensor: sensor.hybrid_ac_output
+    feeds: board
+
+  - id: D1
+    label: Ground floor
+    phases: [L1]
+    accent: '#5a67d8'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    circuits:
+      - id: A
+        label: Kitchen sockets
+        type: socket
+        amp: 16
+      - id: B
+        label: Lighting
+        type: light
+        amp: 10
+
+  - id: D2
+    label: Heat pump
+    phases: [L1, L2, L3]
+    accent: '#dd6b20'
+    amp: 25
+    mA: 30
+    poles: 4
+    class: A
+    circuits:
+      - id: C
+        label: Outdoor unit
+        type: power
+        amp: 20
+        poles: 4

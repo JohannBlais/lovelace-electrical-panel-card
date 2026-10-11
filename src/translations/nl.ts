@@ -5,6 +5,7 @@ export const nl: Translations = {
     total: 'Totaal',
     grid: 'Net',
     sources: 'Bronnen',
+    main_board: 'Hoofdverdeelkast',
   },
   confirm: {
     toggle: 'Weet je zeker dat je "{name}" wilt schakelen?',

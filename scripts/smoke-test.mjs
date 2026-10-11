@@ -1416,6 +1416,278 @@ for (const [title, entity] of [
 
 unmountCard(switchOnly);
 
+// ─── Supply paths (#41) ───────────────────────────────────────────────────────
+// Groups with `feeds` leave the board and are drawn above the trunks as a tree
+// ending in the main board box. The installation is the one from #3: grid,
+// solar and battery into a hybrid inverter with a built-in bypass, the
+// inverter and a second grid route into a transfer switch, the switch into the
+// board. What must hold is that the drawing says which path carries the house,
+// which way each one runs, and never more than its entities say.
+process.stdout.write('\nSupply paths\n');
+
+const supplyConfig = (extra = {}) => ({
+  type: 'custom:electrical-panel-card',
+  groups: [
+    { id: 'BYP', type: 'grid', label: 'Grid (inverter bypass)', phases: ['L1'], sensor: 'sensor.bypass_power', feeds: 'INV' },
+    { id: 'PV', type: 'solar', label: 'Solar', phases: ['L1'], sensor: 'sensor.pv_power', max_w: 6000, feeds: 'INV' },
+    { id: 'BAT', type: 'battery', label: 'Battery', phases: ['L1'], sensor: 'sensor.battery_power', feeds: 'INV' },
+    { id: 'INV', label: 'Hybrid inverter', phases: ['L1'], feeds: 'ATS' },
+    {
+      id: 'GRD',
+      type: 'grid',
+      label: 'Grid (ATS backup)',
+      phases: ['L1'],
+      sensor: 'sensor.ats_grid_power',
+      active: 'binary_sensor.ats_on_backup',
+      feeds: 'ATS',
+    },
+    { id: 'ATS', label: 'Transfer switch', phases: ['L1'], feeds: 'board' },
+    { id: 'D1', phases: ['L1'], sensor: 'sensor.loads_power', circuits: [{ id: 'A', type: 'socket' }] },
+  ],
+  ...extra,
+});
+
+// Daytime: solar carries the house and charges the battery, the bypass is
+// idle. The backup route reads 2.4 kW but its `active` entity says off, so the
+// entity has to win.
+const supplyStates = (over = {}) => ({
+  'sensor.bypass_power': '0',
+  'sensor.pv_power': '4100',
+  'sensor.battery_power': '-900',
+  'sensor.ats_grid_power': '2400',
+  'binary_sensor.ats_on_backup': 'off',
+  'sensor.loads_power': '900',
+  ...over,
+});
+const supplyHass = (states) => ({
+  states: Object.fromEntries(
+    Object.entries(states).map(([entity, state]) => [
+      entity,
+      {
+        entity_id: entity,
+        state,
+        attributes: entity.startsWith('sensor.') ? { unit_of_measurement: 'W' } : {},
+      },
+    ]),
+  ),
+  locale: { language: 'en' },
+  themes: { darkMode: false },
+  callService: () => Promise.resolve(),
+});
+
+const supplied = await mountCard(supplyConfig(), { hass: supplyHass(supplyStates()) });
+const sq = (sel) => supplied.shadowRoot.querySelector(sel);
+// A group box is the rect just before its bold id text.
+const supplyBox = (id) => {
+  const text = [...supplied.shadowRoot.querySelectorAll('text')].find(
+    (t) => t.textContent.trim() === id && t.getAttribute('font-weight') === 'bold',
+  );
+  const rect = text?.previousElementSibling;
+  return rect
+    ? {
+        x: parseFloat(rect.getAttribute('x')),
+        y: parseFloat(rect.getAttribute('y')),
+        w: parseFloat(rect.getAttribute('width')),
+        rect,
+      }
+    : null;
+};
+const boardLabel = [...supplied.shadowRoot.querySelectorAll('text.board-label')].find(
+  (t) => t.textContent.trim() === 'Main board',
+);
+check('the main board box is drawn and labelled', !!boardLabel);
+const boardRect = boardLabel?.parentElement?.querySelector('rect');
+const boardMidY = boardRect ? parseFloat(boardRect.getAttribute('y')) + 12 : NaN;
+const l1Trunk = [...supplied.shadowRoot.querySelectorAll('line')].find(
+  (l) => l.getAttribute('x1') === '48' && l.getAttribute('x2') === '48' && l.getAttribute('stroke-width') === '3',
+);
+check(
+  'the trunks start on the main board row',
+  parseFloat(l1Trunk?.getAttribute('y1')) === boardMidY,
+  `trunk top ${l1Trunk?.getAttribute('y1')}, board row ${boardMidY}`,
+);
+
+// Every input above what it feeds, and one indent step right of it.
+const order = [['BYP', 'INV'], ['PV', 'INV'], ['BAT', 'INV'], ['INV', 'ATS'], ['GRD', 'ATS']];
+for (const [input, target] of order) {
+  const a = supplyBox(input);
+  const b = supplyBox(target);
+  check(
+    `${input} sits above ${target}, one indent right`,
+    a && b && a.y < b.y && a.x === b.x + b.w + 10,
+    a && b ? `${input} at (${a.x}, ${a.y}), ${target} at (${b.x}, ${b.y}) w ${b.w}` : 'box missing',
+  );
+}
+check(
+  'the transfer switch sits above the main board',
+  supplyBox('ATS') && supplyBox('ATS').y < boardMidY - 12,
+);
+check(
+  'supply groups leave the board: the first board group is below the trunk top',
+  supplyBox('D1') && supplyBox('D1').y > boardMidY,
+);
+check(
+  'a supply group keeps its reading',
+  sq('text.pwr-value[data-id="g-PV"]')?.textContent.trim() === '4.1 kW',
+  sq('text.pwr-value[data-id="g-PV"]')?.textContent,
+);
+
+const feedOf = (card, id) => card.shadowRoot.querySelector(`g[data-feed="${id}"]`);
+const flowOf = (card, id) => feedOf(card, id)?.getAttribute('data-flow');
+const dirOf = (card, id) => feedOf(card, id)?.getAttribute('data-dir');
+check('a feeding source is live and runs toward the board', flowOf(supplied, 'PV') === 'live' && dirOf(supplied, 'PV') === 'feed');
+check(
+  'a charging battery is live and runs back up its path',
+  flowOf(supplied, 'BAT') === 'live' && dirOf(supplied, 'BAT') === 'draw',
+  `${flowOf(supplied, 'BAT')} / ${dirOf(supplied, 'BAT')}`,
+);
+check('a source at 0 W is idle', flowOf(supplied, 'BYP') === 'idle' && dirOf(supplied, 'BYP') == null);
+check('a live path carries an arrow, an idle one none', !!feedOf(supplied, 'PV')?.querySelector('path') && !feedOf(supplied, 'BYP')?.querySelector('path'));
+check(
+  '`active: off` wins over a 2.4 kW reading',
+  flowOf(supplied, 'GRD') === 'idle',
+  flowOf(supplied, 'GRD'),
+);
+check('a group without sensor follows its inputs', flowOf(supplied, 'INV') === 'live' && dirOf(supplied, 'INV') === 'feed');
+check('the main board taps the trunks live', flowOf(supplied, 'board') === 'live');
+check(
+  'the tooltip says why a path is drawn the way it is',
+  feedOf(supplied, 'PV')?.querySelector('title')?.textContent.includes('4.1 kW ≥ 10 W'),
+  feedOf(supplied, 'PV')?.querySelector('title')?.textContent,
+);
+{
+  const idleRow = supplyBox('BYP')?.rect.parentElement?.parentElement;
+  const liveRow = supplyBox('PV')?.rect.parentElement?.parentElement;
+  check(
+    'an idle row recedes, a live one does not',
+    idleRow?.getAttribute('opacity') === '0.42' && !liveRow?.hasAttribute('opacity'),
+    `${idleRow?.getAttribute('opacity')} / ${liveRow?.getAttribute('opacity')}`,
+  );
+}
+
+// Only `active` changes here. If the card did not watch that entity, Lit would
+// never re-render and the backup route would stay idle.
+supplied.hass = supplyHass(supplyStates({ 'binary_sensor.ats_on_backup': 'on' }));
+await supplied.updateComplete;
+check('a change of the `active` entity alone redraws the path', flowOf(supplied, 'GRD') === 'live', flowOf(supplied, 'GRD'));
+supplied.hass = supplyHass(supplyStates({ 'binary_sensor.ats_on_backup': 'on', 'sensor.ats_grid_power': '0' }));
+await supplied.updateComplete;
+check('`active: on` makes a path live whatever it reads', flowOf(supplied, 'GRD') === 'live', flowOf(supplied, 'GRD'));
+
+// The inverter dropped off: everything it reports goes unavailable. The card
+// cannot tell idle from dead, so it claims neither.
+supplied.hass = supplyHass(
+  supplyStates({
+    'sensor.bypass_power': 'unavailable',
+    'sensor.pv_power': 'unavailable',
+    'sensor.battery_power': 'unavailable',
+    'binary_sensor.ats_on_backup': 'on',
+  }),
+);
+await supplied.updateComplete;
+check('an unavailable sensor makes its path unknown', flowOf(supplied, 'PV') === 'unknown', flowOf(supplied, 'PV'));
+check('a junction whose inputs all went quiet is unknown', flowOf(supplied, 'INV') === 'unknown', flowOf(supplied, 'INV'));
+check(
+  'an unknown box gets a dotted outline',
+  supplyBox('PV')?.rect.getAttribute('stroke-dasharray') === '2 1.6',
+);
+check('the backup route still carries the board', flowOf(supplied, 'board') === 'live');
+{
+  const dialog = await openDialogTitled(supplied, 'RCD INV');
+  check('clicking a supply box opens its dialog', !!dialog);
+}
+unmountCard(supplied);
+
+// The threshold is the card's to set.
+{
+  const high = await mountCard(supplyConfig({ idle_below_w: 5000 }), { hass: supplyHass(supplyStates()) });
+  check('`idle_below_w` raises the threshold', flowOf(high, 'PV') === 'idle', flowOf(high, 'PV'));
+  unmountCard(high);
+}
+
+// The generic case: several sources straight on the main board.
+{
+  const direct = await mountCard(
+    {
+      type: 'custom:electrical-panel-card',
+      groups: [
+        { id: 'GRID', type: 'grid', phases: ['L1', 'L2', 'L3'], sensor: 'sensor.grid', feeds: 'board' },
+        { id: 'PV', type: 'solar', phases: ['L1'], sensor: 'sensor.pv', feeds: 'board' },
+        { id: 'D1', phases: ['L2'], circuits: [{ id: 'A', type: 'socket' }] },
+      ],
+    },
+    { hass: supplyHass({ 'sensor.grid': '-1500', 'sensor.pv': '2100' }) },
+  );
+  const dots = direct.shadowRoot.querySelectorAll('g[data-feed="board"] circle');
+  check('the main board taps every phase its inputs run on', dots.length === 3, `${dots.length} tap(s)`);
+  check('an exporting grid runs back up its path', dirOf(direct, 'GRID') === 'draw');
+  unmountCard(direct);
+}
+
+// A card without `feeds` keeps its trunks where they have always started.
+{
+  const plain = await mountCard(config);
+  const trunk = [...plain.shadowRoot.querySelectorAll('line')].find(
+    (l) => l.getAttribute('x1') === '48' && l.getAttribute('x2') === '48' && l.getAttribute('stroke-width') === '3',
+  );
+  check('without `feeds` the trunks start at 20', trunk?.getAttribute('y1') === '20', trunk?.getAttribute('y1'));
+  check('without `feeds` there is no main board', !plain.shadowRoot.querySelector('[data-feed]'));
+  unmountCard(plain);
+}
+
+// Each mistake is refused with a message naming what to fix.
+const groupsWith = (patch) => {
+  const cfg = supplyConfig();
+  patch(cfg.groups);
+  return cfg;
+};
+const refusals = [
+  ['an unknown target', groupsWith((g) => { g[0].feeds = 'NOPE'; }), 'names no top-level group'],
+  ['a target that feeds nothing', groupsWith((g) => { delete g[5].feeds; }), 'has no `feeds` of its own'],
+  ['a loop', groupsWith((g) => { g[5].feeds = 'INV'; }), 'loops back'],
+  ['a group feeding itself', groupsWith((g) => { g[1].feeds = 'PV'; }), 'cannot feed itself'],
+  ['circuits on a supply group', groupsWith((g) => { g[1].circuits = [{ id: 'X', type: 'power' }]; }), 'bare box'],
+  ['`summary` with `feeds`', groupsWith((g) => { g[2].summary = true; }), 'twice'],
+  ['`feeds` on a nested group', groupsWith((g) => { g[6].groups = [{ id: 'N', phases: [], feeds: 'board' }]; }), 'top-level group'],
+  ['`active` without `feeds`', groupsWith((g) => { g[6].active = 'binary_sensor.x'; }), '`active` only applies'],
+  ['a group called `board`', groupsWith((g) => { g[6].id = 'board'; }), 'reserved'],
+  ['a negative `idle_below_w`', supplyConfig({ idle_below_w: -1 }), 'idle_below_w'],
+  ['a string `idle_below_w`', supplyConfig({ idle_below_w: '10 W' }), 'idle_below_w'],
+];
+for (const [what, cfg, expected] of refusals) {
+  let message = '';
+  try {
+    window.document.createElement('electrical-panel-card').setConfig(cfg);
+  } catch (err) {
+    message = err.message;
+  }
+  check(`${what} is refused with a usable message`, message.includes(expected), message || 'accepted');
+}
+
+// The editor owns `idle_below_w` in its form, and must keep it through a YAML
+// edit — and keep a 0, which `||` would have dropped.
+{
+  const editor = window.document.createElement('electrical-panel-card-editor');
+  window.document.body.appendChild(editor);
+  editor.setConfig(supplyConfig({ idle_below_w: 50 }));
+  await editor.updateComplete;
+  let fired = null;
+  editor.addEventListener('config-changed', (ev) => {
+    fired = ev.detail.config;
+  });
+  const form = editor.shadowRoot.querySelector('ha-form');
+  check('the editor form shows idle_below_w', form?.data?.idle_below_w === 50, JSON.stringify(form?.data));
+  editor.shadowRoot.querySelector('ha-yaml-editor').dispatchEvent(
+    new window.CustomEvent('value-changed', {
+      detail: { value: { groups: [{ id: 'B', phases: [] }] }, isValid: true },
+    }),
+  );
+  check('a YAML edit keeps idle_below_w', fired?.idle_below_w === 50, JSON.stringify(fired));
+  form.dispatchEvent(new window.CustomEvent('value-changed', { detail: { value: { idle_below_w: 0 } } }));
+  check('the form keeps an idle_below_w of 0', fired?.idle_below_w === 0, JSON.stringify(fired));
+  editor.remove();
+}
+
 
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,

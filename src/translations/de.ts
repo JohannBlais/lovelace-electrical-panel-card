@@ -5,6 +5,7 @@ export const de: Translations = {
     total: 'Gesamt',
     grid: 'Netz',
     sources: 'Quellen',
+    main_board: 'Hauptverteilung',
   },
   confirm: {
     toggle: 'Möchten Sie „{name}" wirklich umschalten?',

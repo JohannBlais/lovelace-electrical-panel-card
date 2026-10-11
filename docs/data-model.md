@@ -1,12 +1,12 @@
-# Data model (v0.8)
+# Data model (v0.9)
 
 Reference for the YAML configuration consumed by `custom:electrical-panel-card`.
 
 The schema describes _what is on the diagram_. **Everything is a group.** A group has a `type` that says whether it's a load (default) or one of the sources feeding the board (`grid`, `battery`, `solar`, `wind`, `geothermal`, `hydro`). Loads and sources render with the same one-line-diagram visual; production units like PV inverters or wind turbines are expressed as **zones** of a circuit, which lets each unit carry its own sensor through the standard zone mechanics.
 
-Groups nest: a group can declare its own `groups[]` for a sub-board fed by it rather than by the phase trunks — see [nested groups](#nested-groups--sub-boards).
+Groups nest: a group can declare its own `groups[]` for a sub-board fed by it rather than by the phase trunks — see [nested groups](#nested-groups--sub-boards). Sources can also say where their power goes with `feeds`, and are then drawn above the trunks as a tree — see [supply paths](#supply-paths).
 
-> v0.8 adds [`max_width`](#board-width) at the top level; v0.7 added the `grid` and `battery` group types plus `summary` on a group and on each `sensors.*` reading; v0.6 added `Circuit.label` and drew `Group.label` on the board; v0.5 added nested groups. Every v0.4 config remains valid throughout. v0.4 is **not** backward-compatible with versions before it. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
+> v0.9 adds [`feeds` and `active`](#supply-paths) on a group and [`idle_below_w`](#idle_below_w) at the top level; v0.8 added [`max_width`](#board-width) at the top level; v0.7 added the `grid` and `battery` group types plus `summary` on a group and on each `sensors.*` reading; v0.6 added `Circuit.label` and drew `Group.label` on the board; v0.5 added nested groups. Every v0.4 config remains valid throughout. v0.4 is **not** backward-compatible with versions before it. See the [CHANGELOG](../CHANGELOG.md) for migration steps.
 >
 > Three behaviour changes to know about. In v0.6, a `Group.label` set on an existing config used to appear only in the tooltip, and is now drawn beside the group box as well. In v0.7, the `Total` and `Grid` captions are no longer drawn when no entity is configured for them — a card that declared neither used to carry two labels naming readings it did not have. In v0.8, a zone's `room` is bounded like a label — elided before the power bubbles, or left to the tooltip when nesting leaves no room — and its connector starts right after the name instead of at a fixed column.
 
@@ -17,6 +17,7 @@ type: custom:electrical-panel-card
 title: Electrical panel
 language: en        # optional override; auto-detected from hass.locale otherwise
 max_width: 1300     # optional — how wide the card may get, in px (default 700)
+idle_below_w: 10    # optional — supply paths under this many watts are idle
 sensors:            # optional — main / phase / grid totals
   ...
 floors:             # optional — visual style for floor pills
@@ -31,6 +32,7 @@ groups:             # required — at least one
 | `title`    | string                                      | no       | Optional `<ha-card>` header. Omit for no header. |
 | `language` | `'en'` \| `'fr'` (BCP 47 primary subtag)    | no       | Language override. Falls back to `hass.locale.language`, then English. |
 | `max_width` | number (CSS px)                            | no       | How wide the card may get on screen. Default `700`. See [board width](#board-width). |
+| `idle_below_w` | number (W)                              | no       | Below this reading, in absolute value, a [supply path](#supply-paths) is drawn idle. Default `10`. |
 | `sensors`  | [`MainSensors`](#main-sensors)              | no       | Top-of-card live readings. |
 | `floors`   | `Record<string, FloorStyle>`                | no       | Floor pill styles. |
 | `groups`   | [`Group[]`](#groups)                        | **yes**  | One entry per visual group. At least one required. |
@@ -144,7 +146,9 @@ A `Group` is a visual block. The `type` discriminator is informational and group
 | `sensor`   | string (entity ID)                   | no       | Group-level live power. Renders a bubble next to the box. |
 | `max_w`    | number                               | no       | Rated power in watts. With `sensor` set, draws a [saturation bar](#saturation-bar) under the group's bubble. |
 | `switch`   | string (entity ID)                   | no       | Group-level toggle, inline in the bubble — or on its own when there is no `sensor`. Any togglable domain — see [smart-plug toggles](#smart-plug-toggles). |
-| `summary`  | boolean                              | no       | Lists this group in the [source summary](#source-summary) above the diagram. Nested groups qualify. |
+| `summary`  | boolean                              | no       | Lists this group in the [source summary](#source-summary) above the diagram. Nested groups qualify. Refused alongside `feeds`. |
+| `feeds`    | string                               | no       | Where this group's power goes: the `id` of another top-level group, or `board` for the main board. Moves the group off the board into the [supply tree](#supply-paths). |
+| `active`   | string (entity ID)                   | no       | With `feeds`: `on` draws the path live, `off` idle, whatever the reading says. See [`active`](#active). |
 | `circuits` | [`Circuit[]`](#circuits)             | no       | Branches of this group. Optional — a group may render as just a box + tap line. |
 | `groups`   | [`Group[]`](#nested-groups--sub-boards) | no    | Sub-boards fed by this group. Rendered indented, **above** this group's own circuits — see [nested groups](#nested-groups--sub-boards). |
 | `label`    | string                               | no       | Human-readable name, drawn to the right of the box (e.g. `Main board`). Free to change at any time, unlike `id`. Elided if it would reach the power bubbles. Also leads the tooltip. |
@@ -197,7 +201,7 @@ groups:
     sensor: sensor.inverter_battery_power   # negative while charging
 ```
 
-**This enumerates the sources, it does not draw the paths between them.** Nothing above says that `ATS` and `BYP` are the same upstream supply arriving by two routes, and nothing marks which route is live: you read that off the values, where the path carrying the house is the one not at zero. A source group needs no `circuits` — a bare box and its power bubble is a valid group.
+On its own, this enumerates the sources. Nothing above says how the four paths connect, nor which one is live: you read that off the values, where the path carrying the house is the one not at zero. Give each group a `feeds` and the card draws both — see [supply paths](#supply-paths). A source group needs no `circuits` — a bare box and its power bubble is a valid group.
 
 Note that `max_w` measures saturation on the absolute value, so a battery charging at 2 kW and discharging at 2 kW fill the bar identically.
 
@@ -243,7 +247,7 @@ groups:
 | Grid via transfer switch | `0 W` |
 | Grid via inverter bypass | `2.4 kW` |
 
-That is the point of the table on a board with more than one way of being fed: the path carrying the house is the one not at zero. The card cannot say which is live — nothing reports the switch position — so it puts the readings side by side and lets you read it off.
+That is the point of the table on a board with more than one way of being fed: the path carrying the house is the one not at zero. Without more to go on, the card cannot say which is live, so it puts the readings side by side and lets you read it off. [Supply paths](#supply-paths) draw it instead, and a group drawn there cannot also have a row here.
 
 Notes:
 
@@ -333,6 +337,106 @@ Rendering rules:
 | Everything else | Identical to a top-level group: `sensor`, `switch`, `max_w`, metadata, tooltip, dialog. |
 
 Ids are scoped by position in the tree (`P/R1`), so a sub-board may reuse a breaker letter already used on the parent board without the two colliding.
+
+## Supply paths
+
+A group can say where its power goes. With `feeds`, it leaves the board and is drawn above the phase trunks, in a tree that ends in a **main board** box: the point the trunks start from. A card without `feeds` anywhere draws exactly as before.
+
+```yaml
+groups:
+  - id: GRID
+    type: grid
+    label: Grid
+    phases: [L1, L2, L3]
+    sensor: sensor.grid_power          # positive = import
+    feeds: board                       # straight onto the main board
+
+  - id: PV
+    type: solar
+    label: Solar array
+    phases: [L1, L2, L3]
+    sensor: sensor.pv_power
+    max_w: 6000
+    feeds: INV                         # through the inverter
+
+  - id: BAT
+    type: battery
+    label: Home battery
+    phases: [L1, L2, L3]
+    sensor: sensor.battery_power       # positive = discharging
+    feeds: INV
+
+  - id: INV
+    label: Hybrid inverter
+    phases: [L1, L2, L3]
+    sensor: sensor.inverter_ac_power
+    feeds: board
+
+  - id: D1                             # the board itself: unchanged
+    phases: [L1]
+    circuits:
+      - …
+```
+
+![Supply paths](../assets/preview-06-supply-paths.svg)
+
+`feeds` takes the `id` of another top-level group, or `board` for the main board. It is one value, not a list: a path leads to exactly one place, so the supply side is a tree that branches upstream. Mains reaching the board by two routes are two groups, one per route, each with its own reading, as in [multiple sources](#multiple-sources).
+
+### How it is drawn
+
+| Rule | Detail |
+| ---- | ------ |
+| Layout | The board's nesting, upside down. A group's inputs sit above it, one indent step to the right, and join a collector that drops into the top of its box. Inputs are stacked in declaration order. |
+| Main board | The root, drawn as soon as one group has `feeds`. It taps the trunks on every phase one of its inputs declares. The trunks, their L1 / L2 / L3 captions and the phase readings start on its row. Its label is translated (`Main board`, `Tableau principal`, …). |
+| Rows | Box, `label` and bubble as on the board: `sensor`, `switch`, `max_w`, the tooltip and the metadata dialog all work. |
+| Height | A row of 30 per group, plus one for the main board. The same groups no longer take a row of 48 each on the board. |
+
+### Live, idle, unknown
+
+Every path — a group's line into what it feeds, each segment of a collector, the main board's tap into the trunks — is drawn in one of three states.
+
+| State | When | Drawn |
+| ----- | ---- | ----- |
+| Live | The reading is at least [`idle_below_w`](#idle_below_w) (10 W) in absolute value, or `active` is `on`. | Solid, in the group's accent, with an arrow. |
+| Idle | The reading is below that, or `active` is `off`. | Thin and dashed. The row fades. |
+| Unknown | The sensor, or the `active` entity, is unavailable. | Dotted, with a dotted box outline and no arrow. The card does not guess. |
+
+A group with neither `sensor` nor `active` — a transfer switch, an inverter with no output sensor — follows its inputs: live when one of them is, unknown when one of them is and none is live, idle otherwise. The main board follows its inputs the same way. A collector segment is live when an input joining it at or above that point is.
+
+Hovering a path says why it is drawn that way: `4.1 kW ≥ 10 W`, `binary_sensor.ats_on_backup: off`, or, for a group following its inputs, `← PV, BAT`.
+
+**The arrow follows the sign of the reading, for every source.** Positive runs along `feeds`, toward the board. Negative runs back up the path and turns the arrow round, which covers a battery charging and a grid taking an export with one rule. A sensor with the opposite convention, reporting production as negative, draws its arrows backwards; invert it with a template sensor.
+
+### `active`
+
+```yaml
+  - id: GRD
+    type: grid
+    label: Grid (ATS backup)
+    phases: [L1]
+    sensor: sensor.ats_grid_power
+    active: binary_sensor.ats_on_backup
+    feeds: ATS
+```
+
+When the hardware reports which path it is using, or a template binary_sensor can tell from what it does report, `active` takes over from the reading: `on` is live, `off` is idle, any other state is unknown. Any entity whose state is `on` / `off` works. The reading still gives the direction.
+
+### `idle_below_w`
+
+```yaml
+idle_below_w: 30
+```
+
+Top level, in watts, 10 by default. Raise it when a path reads a few watts with nothing flowing — an inverter's standby draw on its grid input, say — and is drawn live when it should not be. `0` draws every available reading live, zero included. A group with `active` ignores it.
+
+### Rules
+
+- `feeds` is for top-level groups only. A nested group is fed by its parent.
+- A group named by a `feeds` must have one of its own, and following them must end at `board`. Loops are refused.
+- A group with `feeds` is a bare box: no `circuits`, no `groups`. Move them to a group on the board.
+- `summary` cannot be combined with `feeds`. The tree already draws the reading, and the table would show it a second time.
+- On a card that uses `feeds`, no top-level group can have the id `board`.
+- `active` only applies to a group with `feeds`.
 
 ## Circuits
 
@@ -463,6 +567,7 @@ Built-in dictionaries: `en` (default), `fr`. Detection chain:
 Translated strings:
 
 - `card.total`, `card.grid` — fallback labels for the top-right bubbles.
+- `card.main_board` — the label of the main board box at the root of the [supply tree](#supply-paths).
 - `confirm.toggle` — confirmation dialog when toggling a `critical` zone.
 
 ## Special concepts
@@ -513,5 +618,7 @@ groups:
 - Each group has an `id` and a `phases` array — nested groups included, reported with a path (`groups[1].groups[0]`).
 - A group's `groups`, when present, is an array.
 - `max_width`, when present, is a positive number.
+- `idle_below_w`, when present, is a number of watts, 0 or more.
+- `feeds` and `active` follow the [supply path rules](#rules).
 
 Anything else is accepted as-is. Unknown fields are ignored without warnings.

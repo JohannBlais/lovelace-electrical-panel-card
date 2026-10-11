@@ -5,6 +5,7 @@ export const ja: Translations = {
     total: '合計',
     grid: '系統',
     sources: '電源',
+    main_board: '主分電盤',
   },
   confirm: {
     toggle: '「{name}」を切り替えてもよろしいですか？',

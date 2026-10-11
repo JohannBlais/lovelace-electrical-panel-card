@@ -5,6 +5,7 @@ export const da: Translations = {
     total: 'Total',
     grid: 'Net',
     sources: 'Kilder',
+    main_board: 'Hovedtavle',
   },
   confirm: {
     toggle: 'Er du sikker på, at du vil skifte „{name}"?',

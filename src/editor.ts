@@ -28,7 +28,15 @@ const TOP_SCHEMA = [
     name: 'max_width',
     selector: { number: { min: 300, step: 10, mode: 'box', unit_of_measurement: 'px' } },
   },
+  {
+    name: 'idle_below_w',
+    selector: { number: { min: 0, step: 1, mode: 'box', unit_of_measurement: 'W' } },
+  },
 ];
+
+// Where title-casing the key would read badly: the unit is already beside the
+// field, so "Idle below w" says it twice and the second time wrongly.
+const LABELS: Record<string, string> = { idle_below_w: 'Idle below' };
 
 @customElement(EDITOR_TAG)
 export class ElectricalPanelCardEditor extends LitElement implements LovelaceCardEditor {
@@ -46,6 +54,7 @@ export class ElectricalPanelCardEditor extends LitElement implements LovelaceCar
       title: this._config.title ?? '',
       language: this._config.language ?? '',
       max_width: this._config.max_width,
+      idle_below_w: this._config.idle_below_w,
     };
     // Pull the nested structures into a YAML payload. We round-trip the whole
     // thing through ha-yaml-editor so users keep full schema control without
@@ -86,6 +95,7 @@ export class ElectricalPanelCardEditor extends LitElement implements LovelaceCar
   // ha-form's computeLabel sees the schema entry; we just title-case the name
   // (`max_width` → "Max width").
   private readonly _computeLabel = (schema: { name: string }): string => {
+    if (LABELS[schema.name]) return LABELS[schema.name];
     const words = schema.name.replace(/_/g, ' ');
     return words.charAt(0).toUpperCase() + words.slice(1);
   };
@@ -93,12 +103,19 @@ export class ElectricalPanelCardEditor extends LitElement implements LovelaceCar
   private _topChanged(ev: CustomEvent): void {
     ev.stopPropagation();
     if (!this._config) return;
-    const v = ev.detail.value as { title?: string; language?: string; max_width?: number };
+    const v = ev.detail.value as {
+      title?: string;
+      language?: string;
+      max_width?: number;
+      idle_below_w?: number;
+    };
     const next: ElectricalPanelCardConfig = {
       ...this._config,
       title: v.title || undefined,
       language: v.language || undefined,
       max_width: v.max_width || undefined,
+      // Not `||`: 0 is a real threshold, meaning no reading is ever idle.
+      idle_below_w: typeof v.idle_below_w === 'number' ? v.idle_below_w : undefined,
     };
     this._fire(next);
   }
@@ -113,6 +130,7 @@ export class ElectricalPanelCardEditor extends LitElement implements LovelaceCar
       ...(this._config.title !== undefined && { title: this._config.title }),
       ...(this._config.language !== undefined && { language: this._config.language }),
       ...(this._config.max_width !== undefined && { max_width: this._config.max_width }),
+      ...(this._config.idle_below_w !== undefined && { idle_below_w: this._config.idle_below_w }),
       ...v,
     } as ElectricalPanelCardConfig;
     this._fire(next);

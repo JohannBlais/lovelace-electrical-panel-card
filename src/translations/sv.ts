@@ -5,6 +5,7 @@ export const sv: Translations = {
     total: 'Totalt',
     grid: 'Nät',
     sources: 'Källor',
+    main_board: 'Huvudcentral',
   },
   confirm: {
     toggle: 'Är du säker på att du vill växla "{name}"?',

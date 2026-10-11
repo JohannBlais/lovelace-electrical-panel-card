@@ -11,10 +11,8 @@ export type CircuitType = 'socket' | 'light' | 'power';
  *
  * A board with more than one way of being fed — an inverter with a built-in
  * bypass sitting behind an external transfer switch, say — declares one group
- * per incoming path (#3). Nothing here encodes that two `grid` groups are the
- * same upstream supply arriving by different routes, nor which route is
- * currently live: that is read off the power values, where the path carrying
- * the house is the one not reading zero.
+ * per incoming path (#3). How those paths connect, and which one is live, is
+ * `Group.feeds`'s business, not the type's (#41).
  */
 export type GroupType =
   | 'distribution' // load — sub-distribution board / RCD / breaker group (default)
@@ -198,6 +196,31 @@ export interface Group {
    */
   summary?: boolean;
   /**
+   * Where this group's power goes, upstream of the board (#41): the `id` of
+   * another top-level group — the inverter a battery runs through, the
+   * transfer switch an inverter feeds — or `board` for the main board itself.
+   * A group with `feeds` leaves the board and is drawn in the supply tree
+   * above the phase trunks, where `board` is a box of its own that the trunks
+   * start from.
+   *
+   * One value rather than a list: a supply path leads to exactly one place,
+   * so the supply side is a tree, branching upstream, and the schema keeps it
+   * one. Mains reaching the board by two routes are two groups, one per route,
+   * each with its own reading — the same way #3 already modelled them.
+   *
+   * Top-level groups only, and only bare ones: no `circuits`, no `groups`.
+   * `summary` is refused alongside it, since the tree already draws the
+   * reading.
+   */
+  feeds?: string;
+  /**
+   * Entity saying whether this supply path is live: `on` live, `off` idle,
+   * anything else unknown. Overrides what the reading would say, for hardware
+   * that reports its switch position, or a template binary_sensor built from
+   * whatever the installation does report. Only meaningful with `feeds`.
+   */
+  active?: string;
+  /**
    * Circuits / branches under this group. Optional — a group may render
    * with just its box and group-level bubble if it has no internal
    * structure. For load groups (`type: 'distribution'`), the convention is
@@ -266,6 +289,12 @@ export interface ElectricalPanelCardConfig extends LovelaceCardConfig {
    * masonry column — draws exactly as it would without the key.
    */
   max_width?: number;
+  /**
+   * In the supply tree, a path whose reading stays under this many watts, in
+   * absolute value, is drawn idle rather than live. Defaults to 10. Ignored
+   * for a group with `active`, whose entity decides instead.
+   */
+  idle_below_w?: number;
   sensors?: MainSensors;
   floors?: Record<string, FloorStyle>;
   groups: Group[];
