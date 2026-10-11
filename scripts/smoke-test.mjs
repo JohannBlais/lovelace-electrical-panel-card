@@ -1882,6 +1882,81 @@ for (const [what, cfg, expected] of refusals) {
   editor.remove();
 }
 
+// ─── Phase readings ──────────────────────────────────────────────────────────
+// The three readings hang off the trunks as a tight staircase: rows 10 apart,
+// kept legible by the sideways stagger. Total and Grid share one column, so
+// they keep the 20 between them that stops their bubbles butting up. Readings
+// are negative here because the minus sign makes them the widest ordinary
+// values — an exporting phase.
+process.stdout.write('\nPhase readings\n');
+{
+  const phased = await mountCard(
+    {
+      type: 'custom:electrical-panel-card',
+      sensors: {
+        total: { entity: 'sensor.total' },
+        grid: { entity: 'sensor.grid', max_w: 6000 },
+        phases: { l1: { entity: 'sensor.l1' }, l2: { entity: 'sensor.l2' }, l3: { entity: 'sensor.l3' } },
+      },
+      groups: [{ id: 'D1', phases: ['L1'], circuits: [{ id: 'A', type: 'socket' }] }],
+    },
+    {
+      hass: {
+        states: Object.fromEntries(
+          [['sensor.total', '3000'], ['sensor.grid', '-1200'], ['sensor.l1', '-1200'], ['sensor.l2', '-1200'], ['sensor.l3', '-1200']]
+            .map(([entity, state]) => [entity, { entity_id: entity, state, attributes: { unit_of_measurement: 'W' } }]),
+        ),
+        locale: { language: 'en' },
+        themes: { darkMode: false },
+        callService: () => Promise.resolve(),
+      },
+    },
+  );
+  const q = (sel) => phased.shadowRoot.querySelector(sel);
+  const y = (id) => parseFloat(q(`text.pwr-value[data-id="${id}"]`)?.getAttribute('y'));
+  const bg = (id) => {
+    const r = q(`rect[data-bg-for="${id}"]`);
+    const n = (a) => parseFloat(r?.getAttribute(a));
+    return { left: n('x'), right: n('x') + n('width'), bottom: n('y') + n('height') };
+  };
+  const lineY = (id) => parseFloat(q(`line[data-ln-for="${id}"]`)?.getAttribute('y1'));
+  check(
+    'phase readings are 10 apart',
+    y('phase_l2') - y('phase_l1') === 10 && y('phase_l3') - y('phase_l2') === 10,
+    `${y('phase_l1')} / ${y('phase_l2')} / ${y('phase_l3')}`,
+  );
+  check('Total and Grid stay 20 apart', y('grid') - y('total') === 20, `${y('total')} / ${y('grid')}`);
+  for (const [upper, lower] of [['phase_l1', 'phase_l2'], ['phase_l2', 'phase_l3']]) {
+    check(
+      `${lower}'s connector runs below ${upper}'s bubble`,
+      lineY(lower) > bg(upper).bottom,
+      `connector at ${lineY(lower)}, bubble bottom ${bg(upper).bottom}`,
+    );
+    check(
+      `${lower}'s bubble clears ${upper}'s sideways`,
+      bg(lower).left >= bg(upper).right,
+      `${upper} ends at ${bg(upper).right.toFixed(1)}, ${lower} starts at ${bg(lower).left.toFixed(1)}`,
+    );
+  }
+  // The board starts right under the header: the first box clears the lowest
+  // thing the header can draw, Grid's saturation bar, without leaving the
+  // empty band it used to.
+  {
+    const d1 = [...phased.shadowRoot.querySelectorAll('text')].find(
+      (t) => t.textContent.trim() === 'D1' && t.getAttribute('font-weight') === 'bold',
+    );
+    const boxTop = parseFloat(d1?.previousElementSibling?.getAttribute('y'));
+    const satBottom = y('grid') + 8;
+    check(
+      'the first group starts just below the header',
+      boxTop - satBottom >= 4 && boxTop - satBottom <= 10,
+      `box top ${boxTop}, Grid saturation bar ends at ${satBottom}`,
+    );
+  }
+
+  unmountCard(phased);
+}
+
 
 process.stdout.write(
   `\n${checks - failures}/${checks} checks passed\n`,

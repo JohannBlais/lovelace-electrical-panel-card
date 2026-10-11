@@ -84,7 +84,20 @@ const INDENT_GAP = 10;
 // Vertical breathing room above a nested group block, so it reads as a
 // separate board rather than another breaker row.
 const SUBGROUP_GAP = 6;
-const PH_TAP_ZONE = 54; // staggered phase taps fit in here (offsets 6/26/46)
+// The three phase readings hang off the trunks as a staircase, each one PH_STEP
+// lower and PH_STAGGER further right than the last. A bubble is 13.5 tall, so
+// at this step two neighbours overlap by 3.5 vertically; the sideways stagger
+// is what keeps them apart, and at 40 a reading as wide as "−1.2 kW" (37 with
+// its padding) clears the next one. Each connector runs 2.25 above its
+// reading, which keeps it below the bubble on the row above.
+const PH_STEP = 10;
+const PH_STAGGER = 40;
+const PH_BUBBLE_X = 150; // L1's reading; L2 and L3 follow PH_STAGGER apart
+// Where the board starts, below the staircase (taps at 6, 16, 26). The first
+// group's box sits GPAD + 6 further down, at 44: 7 clear of the lowest thing
+// the header can draw — the Grid reading, level with L3 at 29, whose
+// saturation bar ends 8 below that — and 10.5 clear of its bubble alone.
+const PH_TAP_ZONE = 26;
 // Id boxes (group square, breaker square, floor pill) grow with their text.
 // SQ / CB_SQ / BW stay the *minimum* width, so every panel whose ids are short
 // — which was the only kind that rendered correctly before — is untouched.
@@ -1252,8 +1265,10 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const phases = sensors.phases ?? {};
     const floors = this._config.floors ?? {};
     const t = this._t();
-    // 20 px between staggered taps so the right-column "Total" / "Grid"
-    // bubbles don't visually butt up against each other.
+    // "Total" and "Grid" share the right-hand column, so they sit on the first
+    // and third phase rows: 20 apart, which keeps the two bubbles from butting
+    // up against each other. The phase readings need no such gap — they are
+    // staggered sideways — so their rows are only PH_STEP apart.
     //
     // Each of the five card-level readings below is skipped when it set
     // `summary: true`, having moved into the summary table above. A phase
@@ -1276,8 +1291,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // interpolated flush against the L1 caption for the reason given in
     // _renderGroup: on its own line it would add whitespace to every preview.
     const phTapY1 = layout.tapTop + 6;
-    const phTapY2 = layout.tapTop + 26;
-    const phTapY3 = layout.tapTop + 46;
+    const phTapY2 = phTapY1 + PH_STEP;
+    const phTapY3 = phTapY2 + PH_STEP;
 
     return html`
       <ha-card .header=${this._config.title ?? ''}>
@@ -1312,7 +1327,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                     <circle cx=${PHASE_X.L1} cy=${phTapY1} r="2" fill=${PHASE_COLOR.L1}/>
                     ${this._bubble({
                       id: 'phase_l1',
-                      x: 150,
+                      x: PH_BUBBLE_X,
                       y: phTapY1,
                       fill: 'var(--primary-text-color)',
                       connX: PHASE_X.L1,
@@ -1328,7 +1343,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                     <circle cx=${PHASE_X.L2} cy=${phTapY2} r="2" fill=${PHASE_COLOR.L2}/>
                     ${this._bubble({
                       id: 'phase_l2',
-                      x: 185,
+                      x: PH_BUBBLE_X + PH_STAGGER,
                       y: phTapY2,
                       fill: 'var(--primary-text-color)',
                       connX: PHASE_X.L2,
@@ -1344,7 +1359,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
                     <circle cx=${PHASE_X.L3} cy=${phTapY3} r="2" fill=${PHASE_COLOR.L3}/>
                     ${this._bubble({
                       id: 'phase_l3',
-                      x: 220,
+                      x: PH_BUBBLE_X + 2 * PH_STAGGER,
                       y: phTapY3,
                       fill: 'var(--primary-text-color)',
                       connX: PHASE_X.L3,
@@ -1377,12 +1392,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
               !sensors.grid?.entity || sensors.grid.summary
                 ? nothing
                 : svg`
-                    <text class="label-secondary" x=${layout.pwrX - 55} y=${phTapY2 + 3}
+                    <text class="label-secondary" x=${layout.pwrX - 55} y=${phTapY3 + 3}
                           text-anchor="end" font-size="7.5">${sensors.grid?.label ?? t.card.grid}</text>
                     ${this._bubble({
                       id: 'grid',
                       x: layout.pwrX,
-                      y: phTapY2 + 3,
+                      y: phTapY3 + 3,
                       powerEntity: sensors.grid?.entity,
                       maxW: sensors.grid?.max_w,
                     })}
