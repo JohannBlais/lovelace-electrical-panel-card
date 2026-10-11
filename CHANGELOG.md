@@ -6,6 +6,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (in pre-1.0, breaking changes may land in minor bumps).
 
+## [0.22.0-beta.1] — How the power gets in (pre-release)
+
+A pre-release: HACS offers it only to installations that turned pre-releases
+on for this card, and everyone else stays on 0.21.0. It carries the supply
+paths of #41, so they can be tried on real boards before 0.22.0.
+
+0.20.0 listed a board's sources in a table, and said nothing of how they
+connect or which one carries the house: you read that off the values. A
+source can now say where its power goes, and the card draws it.
+
+```yaml
+groups:
+  - id: GRID
+    type: grid
+    phases: [L1, L2, L3]
+    sensor: sensor.grid_power
+    feeds: board          # straight onto the main board
+  - id: BAT
+    type: battery
+    phases: [L1, L2, L3]
+    sensor: sensor.battery_power
+    feeds: INV            # through its inverter
+  - id: INV
+    phases: [L1, L2, L3]
+    sensor: sensor.inverter_ac_power
+    feeds: board
+```
+
+- **`feeds`** names the group a source's power goes to, or `board` for the
+  main board (#41). Groups with it leave the board and are drawn above the
+  phase trunks as a tree: the board's nesting upside down, ending in a *Main
+  board* box the trunks start from. It takes one value, not a list, so the
+  supply side is a tree by construction.
+- **Each path is live, idle or unknown.** Live is solid, in the group's
+  accent, with an arrow. Idle is dashed, and its row fades. Unknown, when a
+  sensor is unavailable, is dotted and claims nothing. The reading decides,
+  live from 10 W in absolute value — **`idle_below_w`** moves that threshold,
+  and the visual editor has a field for it — unless **`active:`** names an
+  entity whose `on` / `off` says so directly. Hovering a path says why it is
+  drawn the way it is.
+- **The arrow follows the sign of the reading**, for every source: a battery
+  charging or a grid taking an export points back up its path.
+- **The house load sits on the main board.** Under a supply tree,
+  `sensors.total` is drawn in the main board box's bubble rather than in the
+  top-right corner, since it is what enters the board. `summary: true` still
+  keeps it in the table instead.
+- **A source keeps its circuits.** A PV array on micro-inverters gets one row
+  in the tree, with its total, and its micro-inverters come down to the board
+  as a block of their own, at the array's place in `groups`. Wired straight to
+  the board, that block taps the trunks like any departure. It never repeats
+  the reading.
+- Mistakes are refused with a message naming the fix: an unknown target, a
+  loop, a target that leads nowhere, `summary` together with `feeds` (the
+  reading would show twice), `feeds` or `active` on a nested group, a group
+  called `board`.
+- **Behaviour change, on every card:** the L1 / L2 / L3 readings are stacked
+  10 apart instead of 20, staggered 40 apart sideways instead of 35, and the
+  board starts right below them (#64). Total and Grid keep their 20 between
+  them. Every card is 28 units shorter at the top, and every preview image
+  changed. Apart from that, a card without `feeds` draws exactly as it did.
+- The [data model](docs/data-model.md) moves to v0.9 for `feeds`, `active`
+  and `idle_below_w`. Every v0.8 config is valid as it is. Example 06 shows a
+  grid, a PV array on micro-inverters and a battery inverter on one main
+  board.
+
 ## [0.21.0] — Room for deep trees
 
 The first stable release since 0.20.2. It carries the changes below, first
