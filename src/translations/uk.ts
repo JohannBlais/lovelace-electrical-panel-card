@@ -5,6 +5,7 @@ export const uk: Translations = {
     total: 'Усього',
     grid: 'Мережа',
     sources: 'Джерела',
+    main_board: 'Головний щит',
   },
   confirm: {
     toggle: 'Ви впевнені, що хочете перемкнути «{name}»?',

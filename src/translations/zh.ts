@@ -9,6 +9,7 @@ export const zh: Translations = {
     total: '总计',
     grid: '电网',
     sources: '电源',
+    main_board: '总配电箱',
   },
   confirm: {
     toggle: '确定要切换"{name}"吗？',

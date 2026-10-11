@@ -3,6 +3,8 @@ export const en = {
     total: 'Total',
     grid: 'Grid',
     sources: 'Sources',
+    // The box at the root of the supply tree, which the phase trunks start from.
+    main_board: 'Main board',
   },
   confirm: {
     // {name} is replaced with the zone label at runtime.

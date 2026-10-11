@@ -1,0 +1,109 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Example 6 — Supply paths: grid, PV and a battery feeding the main board
+#
+# Sources declare where their power goes with `feeds:`, and leave the board to
+# be drawn above the phase trunks as a tree:
+#  - `feeds: board` connects a source straight to the main board — the box
+#    the trunks start from. Here: the grid, the PV array on micro-inverters,
+#    and the battery inverter's AC output.
+#  - `feeds: INV` connects the battery to its inverter, which carries it on
+#    to the board.
+#
+# A source with circuits splits in two. The tree keeps one row per source,
+# with its reading, so the figures people open the card for stay at the top.
+# The PV array's micro-inverters come down to the board as a block of their
+# own, at the array's place in `groups` — here the last, so the bottom.
+#
+# Each path is drawn live (solid, in its accent, with an arrow), idle
+# (dashed and faded, under `idle_below_w`, 10 W by default) or unknown
+# (dotted, when its sensor is unavailable). The arrow follows the sign of
+# the reading: positive runs toward the board, so a battery charging or a
+# grid taking an export points back up its path.
+#
+# The house load (`sensors.total`) is what enters the main board, so it is
+# drawn in the main board's bubble rather than in the top-right corner.
+#
+# The board underneath is an ordinary group and does not change.
+# ─────────────────────────────────────────────────────────────────────────────
+type: custom:electrical-panel-card
+title: Home electrical panel
+
+sensors:
+  total: { entity: sensor.house_total_power, label: House load }
+
+groups:
+  - id: GRID
+    type: grid
+    label: Grid
+    phases: [L1, L2, L3]
+    accent: '#3182ce'
+    sensor: sensor.grid_power           # positive = import
+    feeds: board
+
+  - id: BAT
+    type: battery
+    label: Home battery
+    phases: [L1, L2, L3]
+    accent: '#38a169'
+    sensor: sensor.home_battery_power   # positive = discharging
+    feeds: INV
+
+  - id: INV
+    label: Battery inverter
+    phases: [L1, L2, L3]
+    accent: '#805ad5'
+    sensor: sensor.battery_ac_output
+    feeds: board
+
+  - id: D1
+    label: Ground floor
+    phases: [L1]
+    accent: '#5a67d8'
+    amp: 40
+    mA: 30
+    poles: 2
+    class: A
+    circuits:
+      - id: A
+        label: Kitchen sockets
+        type: socket
+        amp: 16
+      - id: B
+        label: Lighting
+        type: light
+        amp: 10
+
+  - id: D2
+    label: Heat pump
+    phases: [L1, L2, L3]
+    accent: '#dd6b20'
+    amp: 25
+    mA: 30
+    poles: 4
+    class: A
+    circuits:
+      - id: C
+        label: Outdoor unit
+        type: power
+        amp: 20
+        poles: 4
+
+  - id: PV
+    type: solar
+    label: Solar array
+    phases: [L1, L2, L3]
+    accent: 'var(--energy-solar-color, #d97706)'
+    sensor: sensor.pv_array_power
+    max_w: 6000
+    feeds: board                        # micro-inverters, AC-coupled
+    # Declared last: the tree shows the array's total, and its
+    # micro-inverters come down to the bottom of the board. Feeding the board
+    # directly, the block is wired to the trunks like any departure.
+    circuits:
+      - id: MI
+        type: power
+        icon: mdi:solar-power
+        zones:
+          - { room: "Micro-inverter #1", sensor: sensor.pv_unit_1_power }
+          - { room: "Micro-inverter #2", sensor: sensor.pv_unit_2_power }
+          - { room: "Micro-inverter #3", sensor: sensor.pv_unit_3_power }

@@ -128,6 +128,41 @@ const LABEL_GAP = 6; // between the box and the label
 // clear of the widest of them.
 const LABEL_CLEARANCE = 46;
 
+// ─── Supply tree (#41) ────────────────────────────────────────────────────────
+// Groups with `feeds` leave the board and are drawn above the phase trunks, as
+// the board's own nesting turned upside down: a node's inputs sit above it,
+// one indent to the right, and join a collector that drops into the top of its
+// box. The root is `board` — a box with no group behind it, which the trunks
+// start from.
+const BOARD_TARGET = 'board';
+const BOARD_ICON = 'mdi:home-lightning-bolt-outline';
+// A supply row is a box, whatever the group carries: its circuits are drawn
+// on the board instead (see _computeLayout). Between two boxes it leaves
+// SUBGROUP_GAP, the room a nested board gets above its own box.
+const SUPPLY_ROW = SQ + SUBGROUP_GAP;
+// Above the first box. The phase captions no longer sit at the top of the
+// board, so this only keeps that box off the card's edge.
+const SUPPLY_TOP = 6;
+// The trunks start on the main board's row, where its tap dot (r = 3.5) sits on
+// their top end. The captions go this far above it: at the 4 they are given
+// above HEADER_H, they would touch the dot.
+const SUPPLY_CAPTION_GAP = 8;
+// And the staggered phase taps start this far below it. The box is on that row
+// now, and its label runs out to the right, where the phase readings sit: the
+// L1 reading is drawn 6 into the tap zone and its bubble reaches 9 above that,
+// so starting the zone 5 past the box's bottom edge leaves 2 between them.
+const SUPPLY_TAP_GAP = SQ / 2 + 5;
+// What a path reads, in absolute watts, before it is drawn live. `idle_below_w`
+// overrides it.
+const DEFAULT_IDLE_BELOW_W = 10;
+// An idle supply row recedes rather than disappearing: its box and reading
+// stay legible, they just stop competing with the path carrying the house.
+const IDLE_OPACITY = 0.42;
+// Lines and boxes that belong to no group — the main board, and every path
+// that is idle or unknown — take the theme's secondary text colour.
+const NEUTRAL = 'var(--secondary-text-color, #718096)';
+const CARD_BG = 'var(--ha-card-background, var(--card-background-color, white))';
+
 /**
  * Width of the board, in user units, for a container `px` CSS pixels wide.
  *
@@ -212,7 +247,7 @@ function resolveColors(g: Group, idx: number, parentAccent?: string): ResolvedCo
     stroke: g.stroke ?? accent,
     fill:
       g.fill ??
-      `color-mix(in srgb, ${accent} 18%, var(--ha-card-background, var(--card-background-color, white)))`,
+      `color-mix(in srgb, ${accent} 18%, ${CARD_BG})`,
   };
 }
 
@@ -294,6 +329,33 @@ interface GroupLayout {
    */
   lastChildMidY?: number;
 }
+/** One row of the supply tree drawn above the trunks. */
+interface SupplyRow {
+  /** The group on this row; undefined for the main board box. */
+  g?: Group;
+  /** Index in `config.groups`, which picks the fallback accent; -1 for the board. */
+  idx: number;
+  /** Left edge of the box. */
+  x: number;
+  w: number;
+  /** Id as drawn. Empty for the board, which shows an icon instead. */
+  text: string;
+  midY: number;
+  /** The groups feeding this row, in declaration order. */
+  inputs: SupplyRow[];
+  /** The row this one feeds; undefined for the board. */
+  consumer?: SupplyRow;
+}
+
+type FlowKind = 'live' | 'idle' | 'unknown';
+interface FlowState {
+  kind: FlowKind;
+  /** 1 while power runs along `feeds`, toward the board; -1 against it. */
+  dir: 1 | -1;
+  /** The reason, for the tooltip — a reading against the threshold, or an entity's state. */
+  why: string;
+}
+
 interface Layout {
   svgW: number;
   svgH: number;
@@ -301,10 +363,146 @@ interface Layout {
   pwrX: number;
   /** Where a label or a room name has to stop. */
   labelRight: number;
+  /** Top end of the phase trunks: HEADER_H, or the main board's row under a supply tree. */
+  trunkTop: number;
+  /** Baseline of the L1 / L2 / L3 captions. */
+  phaseLabelY: number;
+  /** Where the staggered phase taps start; they sit at +6, +26 and +46. */
+  tapTop: number;
+  /** Supply tree rows, top to bottom — the main board last. Empty without `feeds`. */
+  supply: SupplyRow[];
   phLineEnd: number;
   groupWidth: number;
   /** Keyed by group path — `D1`, `X/D7`, … — so nested ids can repeat. */
   byGroup: Map<string, GroupLayout>;
+}
+
+/**
+ * Checks `feeds` and `active` across the groups, throwing on the first problem
+ * with a path to the offending entry, as the rest of setConfig does. A supply
+ * tree that draws half of what was declared would be harder to debug than an
+ * error saying which line to fix.
+ */
+function validateSupply(groups: Group[]): void {
+  // A nested group is fed by its parent, so neither key means anything there.
+  const nested = (list: Group[], prefix: string): void => {
+    list.forEach((g, i) => {
+      const where = `${prefix}[${i}]`;
+      for (const key of ['feeds', 'active'] as const) {
+        if (g[key] !== undefined) {
+          throw new Error(
+            `${where} "${g.id}": \`${key}\` only applies to a top-level group — a nested group is fed by its parent`,
+          );
+        }
+      }
+      nested(g.groups ?? [], `${where}.groups`);
+    });
+  };
+  groups.forEach((g, i) => nested(g.groups ?? [], `groups[${i}].groups`));
+
+  const where = (g: Group): string => `groups[${groups.indexOf(g)}] "${g.id}"`;
+  for (const g of groups) {
+    if (g.active !== undefined && g.feeds === undefined) {
+      throw new Error(`${where(g)}: \`active\` only applies to a group with \`feeds\``);
+    }
+  }
+  const fed = groups.filter((g) => g.feeds !== undefined);
+  if (fed.length === 0) return;
+
+  const reserved = groups.find((g) => g.id === BOARD_TARGET);
+  if (reserved) {
+    throw new Error(
+      `${where(reserved)}: the id \`${BOARD_TARGET}\` is reserved by \`feeds\` for the main board — rename this group`,
+    );
+  }
+  const byId = new Map<string, Group>();
+  const duplicated = new Set<string>();
+  for (const g of groups) {
+    if (byId.has(g.id)) duplicated.add(g.id);
+    else byId.set(g.id, g);
+  }
+
+  for (const g of fed) {
+    const target = g.feeds;
+    if (typeof target !== 'string' || target === '') {
+      throw new Error(`${where(g)}: \`feeds\` must be the id of a top-level group, or \`${BOARD_TARGET}\``);
+    }
+    if (target === g.id) throw new Error(`${where(g)}: a group cannot feed itself`);
+    if (target !== BOARD_TARGET && !byId.has(target)) {
+      throw new Error(
+        `${where(g)}: \`feeds: ${target}\` names no top-level group — use \`feeds: ${BOARD_TARGET}\` for the main board`,
+      );
+    }
+    if (duplicated.has(target)) {
+      throw new Error(`${where(g)}: \`feeds: ${target}\` is ambiguous — two top-level groups are called "${target}"`);
+    }
+    if (g.summary) {
+      throw new Error(
+        `${where(g)}: \`summary\` and \`feeds\` would show its reading twice — the supply tree already draws it, so drop \`summary\``,
+      );
+    }
+  }
+  // Whatever a group feeds into has to lead on to the board in turn.
+  for (const g of fed) {
+    const target = byId.get(g.feeds!);
+    if (target && target.feeds === undefined) {
+      throw new Error(
+        `${where(target)}: fed by "${g.id}" but has no \`feeds\` of its own — set \`feeds: ${BOARD_TARGET}\` if it connects to the main board`,
+      );
+    }
+  }
+  for (const g of fed) {
+    const seen = [g.id];
+    let cur = g;
+    while (cur.feeds !== BOARD_TARGET) {
+      cur = byId.get(cur.feeds!)!;
+      if (seen.includes(cur.id)) {
+        throw new Error(`${where(g)}: \`feeds\` loops back on itself (${[...seen, cur.id].join(' → ')})`);
+      }
+      seen.push(cur.id);
+    }
+  }
+}
+
+// Live paths are drawn in the colour of the group they belong to, at full
+// weight. Idle ones recede to a thin dashed line, and unknown ones are dotted:
+// a sensor that is not reporting says nothing either way, and neither does the
+// drawing.
+function flowLine(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  kind: FlowKind,
+  stroke: string,
+  width: number,
+): unknown {
+  if (kind === 'live') {
+    return svg`<line x1=${x1} y1=${y1} x2=${x2} y2=${y2} stroke=${stroke} stroke-width=${width}/>`;
+  }
+  if (kind === 'idle') {
+    return svg`<line x1=${x1} y1=${y1} x2=${x2} y2=${y2} stroke=${NEUTRAL}
+                     stroke-opacity="0.55" stroke-width="1" stroke-dasharray="3 2.5"/>`;
+  }
+  return svg`<line x1=${x1} y1=${y1} x2=${x2} y2=${y2} stroke=${NEUTRAL}
+                   stroke-width="1.5" stroke-dasharray="0.01 3" stroke-linecap="round"/>`;
+}
+
+/** A filled triangle, 5 long and 6 wide, centred on (x, y) and pointing `to`. */
+function flowArrow(x: number, y: number, to: 'left' | 'right' | 'up' | 'down', fill: string): unknown {
+  const r = (n: number): number => Math.round(n * 100) / 100;
+  const tip = 2.5;
+  const half = 3;
+  const pts: Array<[number, number]> =
+    to === 'left'
+      ? [[x - tip, y], [x + tip, y - half], [x + tip, y + half]]
+      : to === 'right'
+        ? [[x + tip, y], [x - tip, y - half], [x - tip, y + half]]
+        : to === 'down'
+          ? [[x, y + tip], [x - half, y - tip], [x + half, y - tip]]
+          : [[x, y - tip], [x - half, y + tip], [x + half, y + tip]];
+  const d = `M${pts.map(([px, py]) => `${r(px)} ${r(py)}`).join(' L')} Z`;
+  return svg`<path d=${d} fill=${fill}/>`;
 }
 
 /** Path of a nested group, used as its layout key and bubble id prefix. */
@@ -491,6 +689,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const walk = (g: Group): void => {
       if (g.sensor) set.add(g.sensor);
       if (g.switch) set.add(g.switch);
+      if (g.active) set.add(g.active);
       for (const c of g.circuits ?? []) {
         if (c.sensor) set.add(c.sensor);
         if (c.switch) set.add(c.switch);
@@ -532,6 +731,13 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       });
     };
     validate(cfg.groups, 'groups');
+    validateSupply(cfg.groups);
+    if (
+      cfg.idle_below_w !== undefined &&
+      (typeof cfg.idle_below_w !== 'number' || !Number.isFinite(cfg.idle_below_w) || cfg.idle_below_w < 0)
+    ) {
+      throw new Error('`idle_below_w` must be a number of watts, e.g. `idle_below_w: 10`');
+    }
     // A number of CSS pixels. A string like `1300px` is refused rather than
     // parsed: accepting it would invite `80%` or `50em`, which a pixel cap
     // cannot honour.
@@ -621,7 +827,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       1 +
       (g.circuits ?? []).reduce((n, c) => n + Math.max(1, c.zones?.length ?? 0), 0) +
       (g.groups ?? []).reduce((n, sub) => n + countRows(sub), 0);
-    const rows = this._config.groups.reduce((acc, g) => acc + countRows(g), 0);
+    // Plus one for the main board box when a supply tree is drawn.
+    const board = this._config.groups.some((g) => g.feeds !== undefined) ? 1 : 0;
+    const rows = this._config.groups.reduce((acc, g) => acc + countRows(g), board);
     return Math.max(3, Math.ceil(rows / 4));
   }
 
@@ -813,8 +1021,6 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     const family = this._fontFamily();
     this._family = family;
     const byGroup = new Map<string, GroupLayout>();
-    let yCur = HEADER_H + PH_TAP_ZONE;
-    let phLineEnd = HEADER_H + PH_TAP_ZONE;
 
     // Lays out one group and everything below it, returns the total height
     // consumed. A group occupies GHDR for its own box row, then stacks its
@@ -880,9 +1086,29 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       return height;
     };
 
+    // Without a supply tree the trunks start at HEADER_H, captioned at 16, as
+    // they always have. With one they start at the main board's row, the last
+    // of the tree, and everything the header carried moves down with them.
+    const supply = this._layoutSupply(family);
+    const board = supply.length > 0 ? supply[supply.length - 1] : undefined;
+    const trunkTop = board ? board.midY : HEADER_H;
+    const phaseLabelY = board ? trunkTop - SUPPLY_CAPTION_GAP : 16;
+    const tapTop = board ? trunkTop + SUPPLY_TAP_GAP : HEADER_H;
+    let yCur = tapTop + PH_TAP_ZONE;
+    let phLineEnd = tapTop + PH_TAP_ZONE;
+
+    // A group with `feeds` is a single row in the supply tree. If it has
+    // circuits or sub-boards — a PV array's micro-inverters, an inverter's
+    // backup circuits — they come down here as a block of their own, at the
+    // group's place in `groups`, so the tree stays one row per path and the
+    // readings people open the card for stay at the top. The block taps the
+    // trunks, and stretches them, only when the group feeds the board
+    // directly; see _renderGroup.
     for (const g of groups) {
+      const detail = g.feeds !== undefined;
+      if (detail && !g.circuits?.length && !g.groups?.length) continue;
       yCur += GPAD;
-      phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
+      if (!detail || g.feeds === BOARD_TARGET) phLineEnd = Math.max(phLineEnd, yCur + GHDR / 2);
       yCur += layoutGroup(g, g.id, 0, ML, yCur);
     }
 
@@ -893,10 +1119,43 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       svgH: yCur + 24,
       pwrX,
       labelRight: pwrX - LABEL_CLEARANCE,
+      trunkTop,
+      phaseLabelY,
+      tapTop,
+      supply,
       phLineEnd,
       groupWidth: svgW - ML - 4,
       byGroup,
     };
+  }
+
+  // Rows of the supply tree, top to bottom. The walk is post-order from the
+  // main board: a node's inputs first, each with its own inputs above it, then
+  // the node — the board's pre-order turned upside down, which is what puts
+  // every input above the thing it feeds and its last input right on top of
+  // it. Inputs sit one step right of what they feed, the step a nested group
+  // takes from its parent, so that collector never crosses a box.
+  private _layoutSupply(family: string): SupplyRow[] {
+    const groups = this._config!.groups;
+    if (!groups.some((g) => g.feeds !== undefined)) return [];
+    const rows: SupplyRow[] = [];
+    const place = (target: string, g: Group | undefined, idx: number, x: number): SupplyRow => {
+      const box = g ? fitBox(g.id, ID_FONT, family, SQ) : { w: SQ, text: '' };
+      const row: SupplyRow = { g, idx, x, w: box.w, text: box.text, midY: 0, inputs: [] };
+      groups.forEach((input, i) => {
+        if (input.feeds !== target) return;
+        const child = place(input.id, input, i, x + box.w + INDENT_GAP);
+        child.consumer = row;
+        row.inputs.push(child);
+      });
+      rows.push(row);
+      return row;
+    };
+    place(BOARD_TARGET, undefined, -1, ML);
+    rows.forEach((r, i) => {
+      r.midY = SUPPLY_TOP + i * SUPPLY_ROW + SUPPLY_ROW / 2;
+    });
+    return rows;
   }
 
   // ── Bubble: power text + optional toggle + optional connector line ────────
@@ -1026,7 +1285,12 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // declared neither still carried two labels naming readings it did not
     // have, each beside an empty bubble. The phase bubbles have no caption and
     // their tap dots read as part of the trunk, so they are left alone.
-    const phTapY1 = HEADER_H + 6;
+    //
+    // Under a supply tree (#41) the trunks, their captions and these taps all
+    // start lower, on the main board's row; see _computeLayout. The tree is
+    // interpolated flush against the L1 caption for the reason given in
+    // _renderGroup: on its own line it would add whitespace to every preview.
+    const phTapY1 = layout.tapTop + 6;
     const phTapY2 = phTapY1 + PH_STEP;
     const phTapY3 = phTapY2 + PH_STEP;
 
@@ -1040,20 +1304,20 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             xmlns="http://www.w3.org/2000/svg"
           >
             <!-- Phase trunks -->
-            <line x1=${PHASE_X.L3} y1=${HEADER_H} x2=${PHASE_X.L3} y2=${layout.phLineEnd}
+            <line x1=${PHASE_X.L3} y1=${layout.trunkTop} x2=${PHASE_X.L3} y2=${layout.phLineEnd}
                   stroke=${PHASE_COLOR.L3} stroke-width="3"/>
-            <line x1=${PHASE_X.L2} y1=${HEADER_H} x2=${PHASE_X.L2} y2=${layout.phLineEnd}
+            <line x1=${PHASE_X.L2} y1=${layout.trunkTop} x2=${PHASE_X.L2} y2=${layout.phLineEnd}
                   stroke=${PHASE_COLOR.L2} stroke-width="3"/>
-            <line x1=${PHASE_X.L1} y1=${HEADER_H} x2=${PHASE_X.L1} y2=${layout.phLineEnd}
+            <line x1=${PHASE_X.L1} y1=${layout.trunkTop} x2=${PHASE_X.L1} y2=${layout.phLineEnd}
                   stroke=${PHASE_COLOR.L1} stroke-width="3"/>
 
             <!-- Phase labels -->
-            <text class="phase-label" x=${PHASE_X.L3} y="16" text-anchor="middle"
+            <text class="phase-label" x=${PHASE_X.L3} y=${layout.phaseLabelY} text-anchor="middle"
                   font-size="7.5" font-weight="bold">L3</text>
-            <text class="phase-label" x=${PHASE_X.L2} y="16" text-anchor="middle"
+            <text class="phase-label" x=${PHASE_X.L2} y=${layout.phaseLabelY} text-anchor="middle"
                   font-size="7.5" font-weight="bold">L2</text>
-            <text class="phase-label" x=${PHASE_X.L1} y="16" text-anchor="middle"
-                  font-size="7.5" font-weight="bold">L1</text>
+            <text class="phase-label" x=${PHASE_X.L1} y=${layout.phaseLabelY} text-anchor="middle"
+                  font-size="7.5" font-weight="bold">L1</text>${this._renderSupply(layout)}
 
             <!-- Staggered phase taps + bubbles -->
             ${
@@ -1107,7 +1371,9 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
 
             <!-- Main totals (right column) -->
             ${
-              !sensors.total?.entity || sensors.total.summary
+              // Under a supply tree the total is the main board's reading,
+              // drawn on its row by _renderSupply rather than here.
+              !sensors.total?.entity || sensors.total.summary || layout.supply.length > 0
                 ? nothing
                 : svg`
                     <text class="label-secondary" x=${layout.pwrX - 55} y=${phTapY1 + 3}
@@ -1139,14 +1405,251 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
             }
 
             ${this._config.groups.map((g, idx) => {
+              // A group with `feeds` is drawn in the supply tree; only its
+              // circuits, if it has any, come down here — see _renderGroup.
+              const detail = g.feeds !== undefined;
+              if (detail && !g.circuits?.length && !g.groups?.length) return nothing;
               const colors = resolveColors(g, idx);
-              return this._renderGroup(g, g.id, colors, layout, floors);
+              return this._renderGroup(g, g.id, colors, layout, floors, undefined, detail);
             })}
           </svg>
         </div>
       </ha-card>
       ${this._dialog ? this._renderDialog() : nothing}
     `;
+  }
+
+  // ── Supply tree (#41) ─────────────────────────────────────────────────────
+  // Whether a path is live, idle or unknown, and which way it runs. In order:
+  //  - `active`, when set, decides — the installation knows better than a
+  //    reading near zero. The reading's sign still gives the direction.
+  //  - otherwise the reading: live at `idle_below_w` (10 W) and above, in
+  //    absolute value, and running against `feeds` when negative — a battery
+  //    charging, mains taking an export. Unavailable is unknown, not idle.
+  //  - a group with neither, like the main board, follows its inputs: live
+  //    when one of them is, unknown when one of them is and none is live.
+  private _flowState(r: SupplyRow, flow: (r: SupplyRow) => FlowState): FlowState {
+    const g = r.g;
+    const fmt = ElectricalPanelCard._fmt;
+    if (g?.active) {
+      const v = this._power(g.sensor);
+      const dir = v !== null && v < 0 ? -1 : 1;
+      const state = this.hass?.states[g.active]?.state ?? '—';
+      const on = this._switch(g.active);
+      const kind: FlowKind = on === true ? 'live' : on === false ? 'idle' : 'unknown';
+      return { kind, dir, why: `${g.active}: ${state}` };
+    }
+    if (g?.sensor) {
+      const v = this._power(g.sensor);
+      if (v === null) {
+        return { kind: 'unknown', dir: 1, why: `${g.sensor}: ${this.hass?.states[g.sensor]?.state ?? '—'}` };
+      }
+      const below = this._config?.idle_below_w ?? DEFAULT_IDLE_BELOW_W;
+      return Math.abs(v) >= below
+        ? { kind: 'live', dir: v < 0 ? -1 : 1, why: `${fmt(Math.abs(v))} ≥ ${below} W` }
+        : { kind: 'idle', dir: 1, why: `${fmt(Math.abs(v))} < ${below} W` };
+    }
+    const ins = r.inputs.map(flow);
+    const ids = (kind?: FlowKind): string =>
+      `← ${r.inputs.filter((_, i) => !kind || ins[i].kind === kind).map((i) => i.g!.id).join(', ')}`;
+    if (ins.some((s) => s.kind === 'live')) {
+      const feeding = ins.some((s) => s.kind === 'live' && s.dir > 0);
+      return { kind: 'live', dir: feeding ? 1 : -1, why: ids('live') };
+    }
+    if (ins.length === 0) return { kind: 'unknown', dir: 1, why: '—' };
+    if (ins.some((s) => s.kind === 'unknown')) return { kind: 'unknown', dir: 1, why: ids('unknown') };
+    return { kind: 'idle', dir: 1, why: ids() };
+  }
+
+  // Drawn in three passes so nothing is painted over a box: the collectors and
+  // the stubs into them, then the main board's tap into the trunks, then the
+  // rows themselves. Every line carries its state in `data-flow`.
+  private _renderSupply(layout: Layout): unknown {
+    const rows = layout.supply;
+    if (rows.length === 0) return nothing;
+    const t = this._t();
+    const states = new Map<SupplyRow, FlowState>();
+    const flow = (r: SupplyRow): FlowState => {
+      let s = states.get(r);
+      if (!s) {
+        s = this._flowState(r, flow);
+        states.set(r, s);
+      }
+      return s;
+    };
+    const stroke = (r: SupplyRow): string => (r.g ? resolveColors(r.g, r.idx).stroke : NEUTRAL);
+    const cx = (r: SupplyRow): number => r.x + r.w / 2;
+    const name = (r: SupplyRow): string => r.g?.id ?? t.card.main_board;
+    const board = rows[rows.length - 1];
+
+    // A collector rises from the top of a box to its first input, one segment
+    // per input joining it. Each segment is live when something at or above it
+    // is, so a collector reads as carrying exactly what has joined it so far.
+    // The arrow sits on the last segment, the one entering the box: down while
+    // an input feeds, up when the only live ones draw — a battery charging
+    // from the AC side, say.
+    const collectors = rows.flatMap((r) =>
+      r.inputs.map((input, i) => {
+        const last = i === r.inputs.length - 1;
+        const y1 = input.midY;
+        const y2 = last ? r.midY - SQ / 2 : r.inputs[i + 1].midY;
+        const joined = r.inputs.slice(0, i + 1).map(flow);
+        const kind: FlowKind = joined.some((s) => s.kind === 'live')
+          ? 'live'
+          : joined.some((s) => s.kind === 'unknown')
+            ? 'unknown'
+            : 'idle';
+        const down = r.inputs.map(flow).some((s) => s.kind === 'live' && s.dir > 0);
+        return svg`
+          <g data-collector=${r.g?.id ?? BOARD_TARGET} data-flow=${kind}>
+            ${flowLine(cx(r), y1, cx(r), y2, kind, stroke(r), 3)}
+            ${last && kind === 'live' ? flowArrow(cx(r), (y1 + y2) / 2, down ? 'down' : 'up', stroke(r)) : nothing}
+          </g>
+        `;
+      }),
+    );
+
+    // Each group's own stub: out of the left edge of its box and into the
+    // collector of what it feeds, with an arrow toward it while it feeds and
+    // back toward the box while it draws. The tooltip says why it is drawn
+    // the way it is; the wide transparent line gives that tooltip something
+    // to hover.
+    const stubs = rows
+      .filter((r) => r.consumer)
+      .map((r) => {
+        const s = flow(r);
+        const to = cx(r.consumer!);
+        return svg`
+          <g data-feed=${r.g!.id} data-flow=${s.kind}
+             data-dir=${s.kind === 'live' ? (s.dir > 0 ? 'feed' : 'draw') : nothing}>
+            <title>${r.g!.id} → ${name(r.consumer!)} · ${s.why}</title>
+            ${flowLine(r.x, r.midY, to, r.midY, s.kind, stroke(r), 2)}
+            ${s.kind === 'live' ? flowArrow((r.x + to) / 2, r.midY, s.dir > 0 ? 'left' : 'right', stroke(r)) : nothing}
+            <line x1=${r.x} y1=${r.midY} x2=${to} y2=${r.midY} stroke="transparent" stroke-width="8"/>
+          </g>
+        `;
+      });
+
+    // The main board taps the trunks the way a top-level group does, on every
+    // phase one of its inputs runs on. Where its arrow goes, a group's feed
+    // line would carry no arrow at all: between the box and the first trunk.
+    const boardState = flow(board);
+    const phases = (['L1', 'L2', 'L3'] as Phase[]).filter((p) =>
+      board.inputs.some((i) => i.g!.phases.includes(p)),
+    );
+    const tap =
+      phases.length === 0
+        ? nothing
+        : svg`
+          <g data-feed=${BOARD_TARGET} data-flow=${boardState.kind}>
+            <title>${t.card.main_board} · ${boardState.why}</title>
+            ${flowLine(
+              Math.min(...phases.map((p) => PHASE_X[p])),
+              board.midY,
+              board.x,
+              board.midY,
+              boardState.kind,
+              NEUTRAL,
+              2,
+            )}
+            ${phases.map((p) => svg`<circle cx=${PHASE_X[p]} cy=${board.midY} r="3.5" fill=${NEUTRAL}/>`)}
+            ${
+              boardState.kind === 'live'
+                ? flowArrow((board.x + PHASE_X.L1) / 2, board.midY, boardState.dir > 0 ? 'left' : 'right', NEUTRAL)
+                : nothing
+            }
+          </g>
+        `;
+
+    // What enters the main board is the house load, so `sensors.total` is drawn
+    // on this row rather than in the top-right corner — still in one place
+    // only, and not at all when `summary` has moved it into the table. The row
+    // already has a label, so the total's own caption leads the tooltip.
+    const boardLabelX = board.x + board.w + LABEL_GAP;
+    const boardLabel = fitLabel(t.card.main_board, this._family, boardLabelX, layout.labelRight);
+    const total = this._config?.sensors?.total;
+    const showTotal = !!total?.entity && !total.summary;
+    const boardRow = svg`
+      <g>
+        <title>${showTotal ? `${t.card.main_board} · ${total!.label ?? t.card.total}` : t.card.main_board}</title>
+        <rect x=${board.x} y=${board.midY - SQ / 2} width=${board.w} height=${SQ}
+              fill=${CARD_BG} stroke=${NEUTRAL} stroke-width="1.8" rx="2"/>
+        <foreignObject x=${cx(board) - 6} y=${board.midY - 6} width="12" height="12"
+                       style="overflow: visible">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="zone-icon-wrap">
+            <ha-icon icon=${BOARD_ICON} class="zone-icon"></ha-icon>
+          </div>
+        </foreignObject>
+        ${
+          boardLabel
+            ? svg`<text class="board-label" x=${boardLabelX} y=${board.midY + 4}
+                        text-anchor="start" font-size=${LABEL_FONT}>${boardLabel.text}</text>`
+            : nothing
+        }
+        ${
+          showTotal
+            ? this._bubble({
+                id: 'total',
+                x: layout.pwrX,
+                y: board.midY + 3,
+                fill: '#c53030',
+                connX: boardLabel ? boardLabelX + boardLabel.w + LABEL_GAP : board.x + board.w,
+                powerEntity: total!.entity,
+                maxW: total!.max_w,
+              })
+            : nothing
+        }
+      </g>
+    `;
+
+    // Group rows: the same box, label and bubble as on the board, and the same
+    // dialog on click. An idle row recedes; an unknown one keeps full strength
+    // but a dotted outline, like its line.
+    const groupRows = rows
+      .filter((r) => r.g)
+      .map((r) => {
+        const g = r.g!;
+        const s = flow(r);
+        const colors = resolveColors(g, r.idx);
+        const labelX = r.x + r.w + LABEL_GAP;
+        const label = fitLabel(g.label, this._family, labelX, layout.labelRight);
+        const connX = label ? labelX + label.w + LABEL_GAP : r.x + r.w;
+        const tt = withFullId(g.id, r.text, groupTooltip(g));
+        return svg`
+          <g opacity=${s.kind === 'idle' ? IDLE_OPACITY : nothing}>
+            <g class="meta-target" @click=${(ev: Event) => this._openGroupDialog(ev, g)}>
+              ${tt ? svg`<title>${tt}</title>` : nothing}
+              <rect x=${r.x} y=${r.midY - SQ / 2} width=${r.w} height=${SQ}
+                    fill=${colors.fill} stroke=${colors.stroke} stroke-width="1.8" rx="2"
+                    stroke-dasharray=${s.kind === 'unknown' ? '2 1.6' : nothing}/>
+              <text x=${r.x + r.w / 2} y=${r.midY + 4} text-anchor="middle"
+                    font-size=${ID_FONT} font-weight="bold" fill=${colors.color}>${r.text}</text>
+              ${
+                label
+                  ? svg`<text class="board-label" x=${labelX} y=${r.midY + 4}
+                              text-anchor="start" font-size=${LABEL_FONT}>${label.text}</text>`
+                  : nothing
+              }
+            </g>
+            ${
+              g.sensor || g.switch
+                ? this._bubble({
+                    id: `g-${g.id}`,
+                    x: layout.pwrX,
+                    y: r.midY + 3,
+                    fill: colors.color,
+                    connX,
+                    switchEntity: g.switch,
+                    powerEntity: g.sensor,
+                    maxW: g.max_w,
+                  })
+                : nothing
+            }
+          </g>
+        `;
+      });
+
+    return svg`${collectors}${stubs}${tap}${boardRow}${groupRows}`;
   }
 
   // ── Source summary ────────────────────────────────────────────────────────
@@ -1303,6 +1806,16 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     layout: Layout,
     floors: Record<string, FloorStyle>,
     feedX?: number,
+    /**
+     * The circuits of a group drawn in the supply tree. Its row up there
+     * carries the reading, so this block has no bubble: it would show the
+     * reading a second time. It taps the trunks only when the group feeds
+     * `board` directly, which means it is wired into the board like any
+     * departure. A group that reaches the board through another — a battery
+     * behind its inverter — is not, and a tap would draw a departure that
+     * does not exist.
+     */
+    detail = false,
   ): unknown {
     const gl = layout.byGroup.get(path)!;
     const midY = gl.yOff + GHDR / 2;
@@ -1314,7 +1827,8 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
     // phases are inherited, so drawing taps there would be a lie.
     const nested = feedX !== undefined;
     const phases = g.phases;
-    const taps = nested
+    const onTrunks = !detail || g.feeds === BOARD_TARGET;
+    const taps = nested || !onTrunks
       ? nothing
       : phases.map(
           (p) => svg`<circle cx=${PHASE_X[p]} cy=${midY} r="3.5" fill=${colors.stroke}/>`,
@@ -1323,7 +1837,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       phases.length > 0 ? Math.min(...phases.map((p) => PHASE_X[p])) : ML;
     const feedFrom = nested ? feedX : leftmostX;
     const feedLine =
-      nested || phases.length > 0
+      onTrunks && (nested || phases.length > 0)
         ? svg`<line x1=${feedFrom} y1=${midY} x2=${gl.x} y2=${midY}
                     stroke=${colors.stroke} stroke-width="2"/>`
         : nothing;
@@ -1369,7 +1883,7 @@ export class ElectricalPanelCard extends LitElement implements LovelaceCard {
       </g>
 
       ${
-        g.sensor || g.switch
+        !detail && (g.sensor || g.switch)
           ? this._bubble({
               id: `g-${path}`,
               x: layout.pwrX,
